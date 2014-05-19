@@ -1,0 +1,323 @@
+/*
+ * Jitsi, the OpenSource Java VoIP and Instant Messaging client.
+ *
+ * Distributable under LGPL license.
+ * See terms of license at gnu.org.
+ */
+package net.java.sip.communicator.impl.gui.main.contactlist;
+
+import java.util.*;
+import java.util.regex.*;
+
+import net.java.sip.communicator.impl.gui.*;
+import net.java.sip.communicator.impl.gui.main.contactlist.contactsource.*;
+import net.java.sip.communicator.service.contactsource.*;
+import net.java.sip.communicator.service.gui.*;
+import net.java.sip.communicator.service.gui.event.*;
+
+/**
+ * The <tt>SearchFilter</tt> is a <tt>ContactListFilter</tt> that filters the
+ * contact list content by a filter string.
+ *
+ * @author Yana Stamcheva
+ */
+public class SearchFilter
+    implements ContactListSearchFilter
+{
+    /**
+     * The string, which we're searching.
+     */
+    protected String filterString;
+
+    /**
+     * The pattern to filter.
+     */
+    protected Pattern filterPattern;
+
+    /**
+     * The <tt>MetaContactListSource</tt> to search in.
+     */
+    private final MetaContactListSource mclSource;
+
+    /**
+     * The source contact list.
+     */
+    protected ContactList sourceContactList;
+
+    /**
+     * The name of the property indicating if searches in call history are
+     * enabled.
+     */
+    protected String DISABLE_CALL_HISTORY_SEARCH_PROP
+        = "net.java.sip.communicator.impl.gui"
+                + ".DISABLE_CALL_HISTORY_SEARCH_IN_CONTACT_LIST";
+    
+    /**
+     * Defines custom order for the contact sources.
+     */
+    private static Map<Integer, Integer> contactSourceOrder 
+        = new HashMap<Integer, Integer>();
+
+    /**
+     * Creates an instance of <tt>SearchFilter</tt>.
+     */
+    public SearchFilter(MetaContactListSource contactListSource)
+    {
+        this.mclSource = contactListSource;
+        initContactSourceOrder();
+    }
+
+    /**
+     * Creates an instance of <tt>SearchFilter</tt>.
+     */
+    public SearchFilter(ContactList sourceContactList)
+    {
+        this.mclSource = null;
+        this.sourceContactList = sourceContactList;
+        initContactSourceOrder();
+    }
+    
+    /**
+     * Initializes the custom contact source order map. 
+     */
+    private void initContactSourceOrder()
+    {
+        //This entry will be used to set the index for chat room contact sources
+        //The index is used to order the contact sources in the contact list.
+        //The chat room sources will be ordered after the meta contact list.
+        contactSourceOrder.put(ContactSourceService.CHAT_ROOM_TYPE, 
+            GuiActivator.getContactListService().getSourceIndex() + 1);
+    }
+
+    /**
+     * Applies this filter to the default contact source.
+     * @param filterQuery the query that tracks this filter.
+     */
+    public void applyFilter(FilterQuery filterQuery)
+    {
+        if (sourceContactList == null)
+            sourceContactList = GuiActivator.getContactList();
+
+        Iterator<UIContactSource> filterSources
+            = sourceContactList.getContactSources().iterator();
+
+        if (sourceContactList.getDefaultFilter()
+                .equals(TreeContactList.presenceFilter))
+        {
+            MetaContactQuery defaultQuery
+                = mclSource.queryMetaContactSource(filterPattern);
+
+            defaultQuery.addContactQueryListener(sourceContactList);
+
+            // First add the MetaContactListSource
+            filterQuery.addContactQuery(defaultQuery);
+        }
+        else if (sourceContactList.getDefaultFilter()
+                    .equals(TreeContactList.historyFilter))
+        {
+            filterSources = sourceContactList.getContactSources(
+                ContactSourceService.HISTORY_TYPE).iterator();
+        }
+
+        // If we have stopped filtering in the mean time we return here.
+        if (filterQuery.isCanceled())
+            return;
+
+        // Then we apply the filter on all its contact sources.
+        while (filterSources.hasNext())
+        {
+            final UIContactSource filterSource
+                = filterSources.next();
+            
+            // Don't search in history sources if this is disabled from the
+            // corresponding configuration property.
+            if (sourceContactList.getDefaultFilter()
+                    .equals(TreeContactList.presenceFilter)
+                && GuiActivator.getConfigurationService().getBoolean(
+                    DISABLE_CALL_HISTORY_SEARCH_PROP, false)
+                && filterSource.getContactSourceService().getType()
+                    == ContactSourceService.HISTORY_TYPE)
+                continue;
+
+            if (sourceContactList.getDefaultFilter()
+                .equals(TreeContactList.presenceFilter))
+            {
+                Integer contactSourceIndex = contactSourceOrder.get(
+                    filterSource.getContactSourceService().getType());
+                if(contactSourceIndex != null)
+                {
+                    //We are setting the index from contactSourceOrder map. This 
+                    //index is set to reorder the sources in the contact list.
+                    filterSource.setContactSourceIndex(contactSourceIndex);
+                }
+            }
+            // If we have stopped filtering in the mean time we return here.
+            if (filterQuery.isCanceled())
+                return;
+
+            ContactQuery query = applyFilter(filterSource);
+
+            if (query.getStatus() == ContactQuery.QUERY_IN_PROGRESS)
+                filterQuery.addContactQuery(query);
+        }
+
+        // Closes this filter to indicate that we finished adding queries to it.
+        if (filterQuery.isRunning())
+            filterQuery.close();
+        else if (!sourceContactList.isEmpty())
+            sourceContactList.selectFirstContact();
+    }
+
+    /**
+     * Applies this filter to the given <tt>contactSource</tt>.
+     *
+     * @param contactSource the <tt>ExternalContactSource</tt> to apply the
+     * filter to
+     * @return the <tt>ContactQuery</tt> that tracks this filter
+     */
+    protected ContactQuery applyFilter(UIContactSource contactSource)
+    {
+        ContactSourceService sourceService
+            = contactSource.getContactSourceService();
+
+        ContactQuery contactQuery;
+        if (sourceService instanceof ExtendedContactSourceService)
+            contactQuery
+                = ((ExtendedContactSourceService) sourceService)
+                    .queryContactSource(filterPattern);
+        else
+            contactQuery = sourceService.queryContactSource(filterString);
+
+        // Add first available results.
+        this.addMatching(contactQuery.getQueryResults());
+
+        contactQuery.addContactQueryListener(sourceContactList);
+
+        return contactQuery;
+    }
+
+    /**
+     * Indicates if the given <tt>uiGroup</tt> matches this filter.
+     * @param uiContact the <tt>UIGroup</tt> to check
+     * @return <tt>true</tt> if the given <tt>uiGroup</tt> matches the current
+     * filter, <tt>false</tt> - otherwise
+     */
+    public boolean isMatching(UIContact uiContact)
+    {
+        Iterator<String> searchStrings = uiContact.getSearchStrings();
+
+        if (searchStrings != null)
+        {
+            while (searchStrings.hasNext())
+            {
+                if (isMatching(searchStrings.next()))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * For all groups we return false. If some of the child contacts of this
+     * group matches this filter the group would be automatically added when
+     * the contact is added in the list.
+     * @param uiGroup the <tt>UIGroup</tt> to check
+     * @return false
+     */
+    public boolean isMatching(UIGroup uiGroup)
+    {
+        return false;
+    }
+
+    /**
+     * Creates the <tt>SearchFilter</tt> by specifying the string used for
+     * filtering.
+     * @param filter the String used for filtering
+     */
+    public void setFilterString(String filter)
+    {
+        // First escape all special characters from the given filter string.
+        this.filterString = filter;
+
+        // Then create the pattern.
+        // By default, case-insensitive matching assumes that only characters
+        // in the US-ASCII charset are being matched, that's why we use
+        // the UNICODE_CASE flag to enable unicode case-insensitive matching.
+        // Sun Bug ID: 6486934 "RegEx case_insensitive match is broken"
+        this.filterPattern
+                = Pattern.compile(
+                        Pattern.quote(filterString),
+                        Pattern.MULTILINE
+                            | Pattern.CASE_INSENSITIVE
+                            | Pattern.UNICODE_CASE);
+    }
+
+    /**
+     * Checks if the given <tt>contact</tt> is matching the current filter.
+     * A <tt>SourceContact</tt> would be matching the filter if its display
+     * name is matching the search string.
+     * @param contact the <tt>ContactListContactDescriptor</tt> to check
+     * @return <tt>true</tt> to indicate that the given <tt>contact</tt> is
+     * matching the current filter, otherwise returns <tt>false</tt>
+     */
+    private boolean isMatching(SourceContact contact)
+    {
+        return isMatching(contact.getDisplayName());
+    }
+
+    /**
+     * Indicates if the given string matches this filter.
+     * @param text the text to check
+     * @return <tt>true</tt> to indicate that the given <tt>text</tt> matches
+     * this filter, <tt>false</tt> - otherwise
+     */
+    private boolean isMatching(String text)
+    {
+        if (filterPattern != null)
+            return filterPattern.matcher(text).find();
+
+        return true;
+    }
+
+    /**
+     * Adds the list of <tt>sourceContacts</tt> to the contact list.
+     * @param sourceContacts the list of <tt>SourceContact</tt>s to add
+     */
+    protected void addMatching(List<SourceContact> sourceContacts)
+    {
+        Iterator<SourceContact> contactsIter = sourceContacts.iterator();
+
+        while (contactsIter.hasNext())
+            addSourceContact(contactsIter.next());
+    }
+
+    /**
+     * Adds the given <tt>sourceContact</tt> to the contact list.
+     * @param sourceContact the <tt>SourceContact</tt> to add
+     */
+    private void addSourceContact(SourceContact sourceContact)
+    {
+        ContactSourceService contactSource
+            = sourceContact.getContactSource();
+
+        UIContactSource sourceUI
+            = sourceContactList.getContactSource(contactSource);
+
+        if (sourceUI != null
+            // ExtendedContactSourceService has already matched the
+            // SourceContact over the pattern
+            && (contactSource instanceof ExtendedContactSourceService)
+                || isMatching(sourceContact))
+        {
+            boolean isSorted = (sourceContact.getIndex() > -1) ? true : false;
+
+            sourceContactList.addContact(
+                sourceUI.createUIContact(sourceContact),
+                sourceUI.getUIGroup(),
+                isSorted,
+                true);
+        }
+        else
+            sourceUI.removeUIContact(sourceContact);
+    }
+}
