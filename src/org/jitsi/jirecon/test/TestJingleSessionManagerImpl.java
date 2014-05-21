@@ -2,6 +2,7 @@ package org.jitsi.jirecon.test;
 
 import org.jitsi.jirecon.session.JingleSessionManager;
 import org.jitsi.jirecon.session.JingleSessionManagerImpl;
+import org.jivesoftware.smack.XMPPException;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -12,17 +13,19 @@ public class TestJingleSessionManagerImpl extends TestCase
     private static String hostname = "jitmeet.example.com";
     private static int port = 5222;
     private static JingleSessionManager mgr = new JingleSessionManagerImpl(hostname, port);
-    private static boolean isInitialized = false;
     
     @Override
     protected void setUp()
     {
-        isInitialized = mgr.init();
-    }
-    
-    public void testInit()
-    {
-        assertTrue(isInitialized);
+        try
+        {
+            mgr.init();
+        }
+        catch (XMPPException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
     
     public void testOpenAndCloseJingleSession()
@@ -30,8 +33,15 @@ public class TestJingleSessionManagerImpl extends TestCase
         final String cf1 = "6dqdr7254abrzfr";
         final String cf2 = "1bcw4c1rsuuzbyb9";
         
-        assertTrue(mgr.openAJingleSession(cf1));
-        assertTrue(mgr.openAJingleSession(cf2));
+        try
+        {
+            mgr.openJingleSession(cf1);
+            mgr.openJingleSession(cf2);
+        }
+        catch (XMPPException e1)
+        {
+            e1.printStackTrace();
+        }
         
         try
         {
@@ -42,8 +52,8 @@ public class TestJingleSessionManagerImpl extends TestCase
             e.printStackTrace();
         }
         
-        assertTrue(mgr.closeAJingleSession(cf1));
-        assertTrue(mgr.closeAJingleSession(cf2));
+        mgr.closeJingleSession(cf1);
+        mgr.closeJingleSession(cf2);
     }
     
     @Override

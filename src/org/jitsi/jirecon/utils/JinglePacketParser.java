@@ -257,4 +257,9 @@ public class JinglePacketParser
             return jiq.getTo().split("@")[0];
         }
     }
+    
+    public static String getSid(JingleIQ jiq)
+    {
+        return jiq.getSID();
+    }
 }

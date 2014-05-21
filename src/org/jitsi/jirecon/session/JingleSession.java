@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.net.BindException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.util.Logger;
@@ -15,6 +17,8 @@ import org.ice4j.ice.*;
 import org.jitsi.impl.neomedia.format.MediaFormatFactoryImpl;
 import org.jitsi.jirecon.utils.JinglePacketBuilder;
 import org.jitsi.jirecon.utils.JinglePacketParser;
+import org.jitsi.jirecon.utils.JireconMessageReceiver;
+import org.jitsi.jirecon.utils.JireconMessageSender;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.MediaFormat;
@@ -30,7 +34,10 @@ import org.jivesoftware.smackx.muc.MultiUserChat;
  * 
  */
 public class JingleSession
+    implements JireconMessageSender
 {
+    Set<JireconMessageReceiver> msgReceivers;
+
     /**
      * The id of the conference which is binded with this Jingle session.
      */
@@ -58,6 +65,12 @@ public class JingleSession
      */
     private JingleSessionInfo info;
 
+    private String from;
+
+    private String to;
+
+    private String sid;
+
     /**
      * The log generator.
      */
@@ -80,7 +93,9 @@ public class JingleSession
      */
     public JingleSession(XMPPConnection connection)
     {
+        msgReceivers = new HashSet<JireconMessageReceiver>();
         this.connection = connection;
+        logger = Logger.getLogger(JingleSession.class);
         logger.setLevelInfo();
         this.info = new JingleSessionInfo();
     }
@@ -93,7 +108,7 @@ public class JingleSession
     public void join(String conferenceId) throws XMPPException
     {
         this.conferenceId = conferenceId;
-        LibJitsi.start(); // TODO: do some things in case Libjitsi start failed
+        LibJitsi.start();
         iceAgent = new Agent();
         conference =
             new MultiUserChat(connection, conferenceId + "@" + CONFERENCE_ADDR);
@@ -130,8 +145,16 @@ public class JingleSession
     {
         if (IQ.Type.SET == JinglePacketParser.getType(jiq))
         {
+            from = JinglePacketParser.getFrom(jiq);
+            to = JinglePacketParser.getTo(jiq);
+            sid = JinglePacketParser.getSid(jiq);
             handleSetPacket(jiq);
         }
+    }
+
+    public void handleJingleResultPacket(JingleIQ jiq)
+    {
+        // TODO: Add result packet handler and set status in that handler.
     }
 
     /**
@@ -150,7 +173,13 @@ public class JingleSession
             harvestDynamicPayload(jiq);
             sendAccept(jiq);
             checkIceConnectivity();
+            harvestCandidatePairs();
         }
+    }
+
+    private void harvestCandidatePairs()
+    {
+        // TODO
     }
 
     /**
@@ -172,7 +201,6 @@ public class JingleSession
             }
             catch (InterruptedException e)
             {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
@@ -234,6 +262,12 @@ public class JingleSession
     private void sendAck(JingleIQ jiq)
     {
         connection.sendPacket(IQ.createResultIQ(jiq));
+    }
+
+    public void sendTerminate(Reason reason, String text)
+    {
+        connection.sendPacket(JinglePacketBuilder
+            .createJingleSessionTerminatePacket(from, to, sid, reason, text));
     }
 
     /**
@@ -393,5 +427,36 @@ public class JingleSession
             return component.findRemoteCandidate(relatedAddress);
         }
         return null;
+    }
+
+    public JingleSessionStatus getStatus()
+    {
+        return info.getJingleSessionStatus();
+    }
+
+    public String getConferenceId()
+    {
+        return conferenceId;
+    }
+
+    @Override
+    public void addReceiver(JireconMessageReceiver receiver)
+    {
+        msgReceivers.add(receiver);
+    }
+
+    @Override
+    public void removeReceiver(JireconMessageReceiver receiver)
+    {
+        msgReceivers.remove(receiver);
+    }
+
+    @Override
+    public void sendMsg(String msg)
+    {
+        for (JireconMessageReceiver r : msgReceivers)
+        {
+            r.receiveMsg(this, msg);
+        }
     }
 }

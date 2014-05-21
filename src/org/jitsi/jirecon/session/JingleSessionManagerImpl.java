@@ -2,13 +2,17 @@ package org.jitsi.jirecon.session;
 
 // TODO: Rewrite those import statements to package import statement.
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQProvider;
 
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
 import org.jitsi.jirecon.utils.JinglePacketParser;
+import org.jitsi.jirecon.utils.JireconMessageReceiver;
+import org.jitsi.jirecon.utils.JireconMessageSender;
 import org.jitsi.util.Logger;
 import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.PacketListener;
@@ -26,8 +30,11 @@ import org.jivesoftware.smack.provider.ProviderManager;
  * 
  */
 public class JingleSessionManagerImpl
-    implements JingleSessionManager
+    implements JingleSessionManager, JireconMessageSender,
+    JireconMessageReceiver
 {
+    Set<JireconMessageReceiver> msgReceivers;
+
     /**
      * The hostname of XMPP server. This properties should be set in configure
      * file.
@@ -62,33 +69,36 @@ public class JingleSessionManagerImpl
      */
     public JingleSessionManagerImpl(String hostname, int port)
     {
+        msgReceivers = new HashSet<JireconMessageReceiver>();
         this.hostname = hostname;
         this.port = port;
-        logger = Logger.getLogger(JingleSessionManagerImpl.class);
+        logger = Logger.getLogger(this.getClass());
     }
 
     /**
      * Initialize the manager. This method should be called before open any
      * Jingle session.
+     * 
+     * @throws XMPPException Throws XMPPException if can't construct XMPP
+     *             connection.
      */
     @Override
-    public boolean init()
+    public void init() throws XMPPException
     {
         try
         {
             connect();
             login();
-
-            initiatePacketProviders();
-            initiatePacketListeners();
         }
         catch (XMPPException e)
         {
+            logger.fatal(e.getXMPPError() + "\nDisconnect XMPP connection.");
             disconnect();
-            return false;
+            throw e;
         }
 
-        return true;
+        initiatePacketProviders();
+        initiatePacketListeners();
     }
 
     /**
@@ -220,28 +230,31 @@ public class JingleSessionManagerImpl
      * 
      * @param conferenceId The conference id which you want to join.
      * @return True if succeeded, false if failed.
+     * @throws XMPPException
      */
     @Override
-    public boolean openAJingleSession(String conferenceId)
+    public void openJingleSession(String conferenceId) throws XMPPException
     {
         if (null == sessions)
             sessions = new HashMap<String, JingleSession>();
         if (sessions.containsKey(conferenceId))
-            return false;
+            return;
 
         JingleSession js = new JingleSession(connection);
-        sessions.put(conferenceId, js);
+        js.addReceiver(this);
         try
         {
             js.join(conferenceId);
         }
         catch (XMPPException e)
         {
-            e.printStackTrace();
-            return false;
+            logger
+                .fatal(e.getXMPPError()
+                    + "\nOpen Jingle session failed, can not join the JitMeet conference: "
+                    + conferenceId + ".");
+            throw e;
         }
-
-        return true;
+        sessions.put(conferenceId, js);
     }
 
     /**
@@ -251,16 +264,67 @@ public class JingleSessionManagerImpl
      * @return True if succeeded, false if failed.
      */
     @Override
-    public boolean closeAJingleSession(String conferenceId)
+    public void closeJingleSession(String conferenceId)
     {
         if (null == sessions || !sessions.containsKey(conferenceId))
-            return false;
+            return;
 
         JingleSession js = sessions.get(conferenceId);
         sessions.remove(conferenceId);
         js.leave();
+    }
 
-        return true;
+    @Override
+    public void addReceiver(JireconMessageReceiver receiver)
+    {
+        msgReceivers.add(receiver);
+    }
+
+    @Override
+    public void removeReceiver(JireconMessageReceiver receiver)
+    {
+        msgReceivers.remove(receiver);
+    }
+
+    @Override
+    public JingleSessionInfo getJingleSessionInfo(String conferenceId)
+    {
+        return sessions.get(conferenceId).getJingleSessionInfo();
+    }
+
+    @Override
+    public void receiveMsg(JireconMessageSender sender, String msg)
+    {
+        // JingleSession send session status message
+        if (sender instanceof JingleSession)
+        {
+            final JingleSession session = (JingleSession) sender;
+            switch (session.getStatus())
+            {
+            case ABORTED:
+                // TODO
+                break;
+            case CONSTRUCTED:
+                sendMsg(session.getConferenceId());
+                break;
+            default:
+                break;
+            }
+        }
+        else
+        {
+            logger
+                .info("JingleSessionManager receive a message from unknown sender.");
+        }
+    }
+
+    @Override
+    public void sendMsg(String msg)
+    {
+        for (JireconMessageReceiver r : msgReceivers)
+        {
+            r.receiveMsg(this, msg);
+        }
     }
 
 }

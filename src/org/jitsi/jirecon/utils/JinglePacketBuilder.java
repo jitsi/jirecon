@@ -11,6 +11,7 @@ import org.ice4j.ice.Component;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.AudioMediaFormat;
 import org.jitsi.service.neomedia.format.MediaFormat;
+import org.jivesoftware.smack.packet.IQ;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidatePacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension;
@@ -22,6 +23,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JinglePacketFactory;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ParameterPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.PayloadTypePacketExtension;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.Reason;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.RtpDescriptionPacketExtension;
 
 /**
@@ -51,6 +53,16 @@ public class JinglePacketBuilder
         return accept;
     }
 
+    public static JingleIQ createJingleSessionTerminatePacket(String from,
+        String to, String sid, Reason reason, String text)
+    {
+        JingleIQ terminate =
+            JinglePacketFactory.createSessionTerminate(from, to, sid, reason,
+                text);
+        
+        return terminate;
+    }
+    
     /**
      * Create content packet extension.
      * 
@@ -132,6 +144,7 @@ public class JinglePacketBuilder
 
     /**
      * Create transport packet extension.
+     * 
      * @param password The password in this transport packet extension.
      * @param ufrag The ufrag in this transport packet extension.
      * @param candidates The candidates in this transport packet extension.
@@ -155,6 +168,7 @@ public class JinglePacketBuilder
 
     /**
      * Create a list of candidate packet extensions.
+     * 
      * @param components The media component which contains candidates.
      * @param generation The generation in candidate packet extension.
      * @return List of candidate packet extension.
@@ -187,7 +201,7 @@ public class JinglePacketBuilder
                 candidates.add(candidate);
             }
         }
-        
+
         // DtlsFingerprintPacketExtension
         // Do nothing here
 

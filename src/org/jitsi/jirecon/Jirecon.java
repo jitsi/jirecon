@@ -13,11 +13,16 @@ public interface Jirecon
      * Start providing service.
      * @return
      */
-    public boolean start();
+    public void initiate();
 
     /**
      * Stop providing service.
      * @return
      */
-    public boolean stop();
+    public void uninitiate();
+    
+    public void startRecording(String conferenceId);
+    public void stopRecording(String conferenceId);
+    
+    public void execCmd(JireconCmd cmd);
 }

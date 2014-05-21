@@ -4,6 +4,7 @@ package org.jitsi.jirecon.session;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.ice4j.ice.CandidatePair;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.MediaFormat;
 
@@ -32,6 +33,12 @@ public class JingleSessionInfo
      */
     private Map<MediaType, String> remoteSsrcs;
 
+    private Map<MediaType, CandidatePair> rtpCandidatePairs;
+
+    private Map<MediaType, CandidatePair> rtcpCandidatePairs;
+    
+    private JingleSessionStatus status;
+
     /**
      * Constructor of JingleSessionInfo
      */
@@ -40,6 +47,9 @@ public class JingleSessionInfo
         formats = new HashMap<MediaType, MediaFormat>();
         dynamicPayloadTypeIds = new HashMap<MediaType, Byte>();
         remoteSsrcs = new HashMap<MediaType, String>();
+        rtpCandidatePairs = new HashMap<MediaType, CandidatePair>();
+        rtcpCandidatePairs = new HashMap<MediaType, CandidatePair>();
+        status = JingleSessionStatus.INITIATING;
     }
 
     /**
@@ -108,5 +118,35 @@ public class JingleSessionInfo
     public String getRemoteSsrc(MediaType media)
     {
         return remoteSsrcs.get(media);
+    }
+    
+    public void addRtpCandidatePair(MediaType media, CandidatePair candidatePair)
+    {
+        rtpCandidatePairs.put(media, candidatePair);
+    }
+    
+    public void addRtcpCandidatePair(MediaType media, CandidatePair candidatePair)
+    {
+        rtcpCandidatePairs.put(media, candidatePair);
+    }
+    
+    public CandidatePair getRtpCandidatePair(MediaType media)
+    {
+        return rtpCandidatePairs.get(media);
+    }
+    
+    public CandidatePair getRtcpCandidatePair(MediaType media)
+    {
+        return rtcpCandidatePairs.get(media);
+    }
+    
+    public void setJingleSessionStatus(JingleSessionStatus status)
+    {
+        this.status = status;
+    }
+    
+    public JingleSessionStatus getJingleSessionStatus()
+    {
+        return status;
     }
 }

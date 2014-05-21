@@ -1,5 +1,7 @@
 package org.jitsi.jirecon.session;
 
+import org.jivesoftware.smack.XMPPException;
+
 /**
  * JingleSessionManager is responsible for managing various JingleSessions.
  * 
@@ -12,9 +14,10 @@ public interface JingleSessionManager
      * Initialize JingleSessoinManager, such as applying for some system
      * resources. This method should be called at the very beginning.
      * 
-     * @return True if succeeded, false if failed.
+     * @throws XMPPException Throws XMPPException if can't construct XMPP
+     *             connection.
      */
-    public boolean init();
+    public void init() throws XMPPException;
 
     /**
      * Uninitialize JingleSessionManager, such as release some system resources.
@@ -28,16 +31,17 @@ public interface JingleSessionManager
      * Open an new Jingle session with specified conference id.
      * 
      * @param conferenceId The conference id which you want to join.
-     * @return True if succeeded, false if failed.
+     * @throws XMPPException
      */
-    public boolean openAJingleSession(String conferenceId);
+    public void openJingleSession(String conferenceId) throws XMPPException;
 
     /**
      * Close an existed Jingle session with specified conference id.
      * 
      * @param conferenceId
-     * @return True if succeeded, false if failed.
      */
-    public boolean closeAJingleSession(String conferenceId);
+    public void closeJingleSession(String conferenceId);
+    
+    public JingleSessionInfo getJingleSessionInfo(String conferenceId);
 
 }
