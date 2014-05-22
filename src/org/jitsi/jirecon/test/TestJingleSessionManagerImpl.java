@@ -1,18 +1,17 @@
 package org.jitsi.jirecon.test;
 
-import org.jitsi.jirecon.session.JingleSessionManager;
-import org.jitsi.jirecon.session.JingleSessionManagerImpl;
+import org.jitsi.jirecon.session.JireconSessionManager;
+import org.jitsi.jirecon.session.JireconSessionManagerImpl;
+import org.jitsi.jirecon.session.JireconSessionStatus;
 import org.jivesoftware.smack.XMPPException;
 
-import junit.framework.Test;
 import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
 public class TestJingleSessionManagerImpl extends TestCase
 {
     private static String hostname = "jitmeet.example.com";
     private static int port = 5222;
-    private static JingleSessionManager mgr = new JingleSessionManagerImpl(hostname, port);
+    private static JireconSessionManager mgr = new JireconSessionManagerImpl(hostname, port);
     
     @Override
     protected void setUp()
@@ -30,13 +29,13 @@ public class TestJingleSessionManagerImpl extends TestCase
     
     public void testOpenAndCloseJingleSession()
     {
-        final String cf1 = "6dqdr7254abrzfr";
-        final String cf2 = "1bcw4c1rsuuzbyb9";
+        final String cf1 = "eifb7fii8dunmi";
+        //final String cf2 = "1bcw4c1rsuuzbyb9";
         
         try
         {
             mgr.openJingleSession(cf1);
-            mgr.openJingleSession(cf2);
+            //mgr.openJingleSession(cf2);
         }
         catch (XMPPException e1)
         {
@@ -52,8 +51,11 @@ public class TestJingleSessionManagerImpl extends TestCase
             e.printStackTrace();
         }
         
+        System.out.println(mgr.getJingleSessionInfo(cf1).getJingleSessionStatus());
+        assertEquals(mgr.getJingleSessionInfo(cf1).getJingleSessionStatus(), JireconSessionStatus.CONSTRUCTED);
+        
         mgr.closeJingleSession(cf1);
-        mgr.closeJingleSession(cf2);
+        //mgr.closeJingleSession(cf2);
     }
     
     @Override

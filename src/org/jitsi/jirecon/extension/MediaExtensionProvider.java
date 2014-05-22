@@ -22,7 +22,7 @@ public class MediaExtensionProvider
             case XmlPullParser.END_TAG:
             {
                 String name = parser.getName();
-                int count = parser.getAttributeCount();
+//                int count = parser.getAttributeCount();
 
                 if (MediaExtension.ELEMENT_NAME.equals(name))
                 {
@@ -33,7 +33,7 @@ public class MediaExtensionProvider
 
             case XmlPullParser.START_TAG:
             {
-                String name = parser.getName();
+//                String name = parser.getName();
                 int count = parser.getAttributeCount();
 
                 if (count > 0)
@@ -47,8 +47,8 @@ public class MediaExtensionProvider
 
             case XmlPullParser.TEXT:
             {
-                String name = parser.getName();
-                int count = parser.getAttributeCount();
+//                String name = parser.getName();
+//                int count = parser.getAttributeCount();
                 break;
             }
             }

@@ -1,21 +1,18 @@
 package org.jitsi.jirecon;
 
 // TODO: Rewrite those import statements to package import statement.
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import org.jitsi.jirecon.recorder.ConferenceRecorderManager;
-import org.jitsi.jirecon.recorder.ConferenceRecorderManagerImpl;
-import org.jitsi.jirecon.session.JingleSessionManager;
-import org.jitsi.jirecon.session.JingleSessionManagerImpl;
+import org.jitsi.jirecon.recorder.JireconRecorderManager;
+import org.jitsi.jirecon.recorder.JireconRecorderManagerImpl;
+import org.jitsi.jirecon.session.JireconSessionManager;
+import org.jitsi.jirecon.session.JireconSessionManagerImpl;
 import org.jitsi.jirecon.utils.JireconMessageReceiver;
 import org.jitsi.jirecon.utils.JireconMessageSender;
 import org.jitsi.util.Logger;
 import org.jivesoftware.smack.XMPPException;
 
-// TODO: This class hasn't finished yet.
 /**
  * This is an implementation of Jirecon
  * 
@@ -25,6 +22,9 @@ import org.jivesoftware.smack.XMPPException;
 public class JireconImpl
     implements Jirecon
 {
+    /**
+     * JireconImpl can send message to these message receivers.
+     */
     Set<JireconMessageReceiver> msgReceivers;
 
     /**
@@ -40,12 +40,18 @@ public class JireconImpl
     private int xmppServerPort = 5222;
 
     /**
-     * The Jingle session manager.
+     * The session manager.
      */
-    private JingleSessionManager jingleSessionManager;
+    private JireconSessionManager jingleSessionManager;
 
-    private ConferenceRecorderManager conferenceRecorderManager;
+    /**
+     * The recorder manager.
+     */
+    private JireconRecorderManager conferenceRecorderManager;
 
+    /**
+     * The laborious logger.
+     */
     private Logger logger;
 
     /**
@@ -56,8 +62,8 @@ public class JireconImpl
         msgReceivers = new HashSet<JireconMessageReceiver>();
         logger = Logger.getLogger(JireconImpl.class);
         jingleSessionManager =
-            new JingleSessionManagerImpl(jitsiMeetHostname, xmppServerPort);
-        conferenceRecorderManager = new ConferenceRecorderManagerImpl();
+            new JireconSessionManagerImpl(jitsiMeetHostname, xmppServerPort);
+        conferenceRecorderManager = new JireconRecorderManagerImpl();
     }
 
     /**
@@ -92,12 +98,20 @@ public class JireconImpl
         conferenceRecorderManager.uninit();
     }
 
+    /**
+     * Execute a command, this method provide another way to get service.
+     */
     @Override
     public void execCmd(JireconCmd cmd)
     {
         cmd.exec();
     }
 
+    /**
+     * Start a conference recording
+     * 
+     * @param conferenceId The conference to be recorded.
+     */
     @Override
     public void startRecording(String conferenceId)
     {
@@ -113,6 +127,11 @@ public class JireconImpl
         }
     }
 
+    /**
+     * Stop a conference recording.
+     * 
+     * @param conferenceId The conference to be stopped recording.
+     */
     @Override
     public void stopRecording(String conferenceId)
     {

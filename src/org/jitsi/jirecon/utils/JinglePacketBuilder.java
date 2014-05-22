@@ -11,7 +11,6 @@ import org.ice4j.ice.Component;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.AudioMediaFormat;
 import org.jitsi.service.neomedia.format.MediaFormat;
-import org.jivesoftware.smack.packet.IQ;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidatePacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension;
@@ -53,16 +52,26 @@ public class JinglePacketBuilder
         return accept;
     }
 
+    /**
+     * Create Jingle session-terminate packet.
+     * 
+     * @param from Who will send this session-terminate packet.
+     * @param to Who will receive this session-terminate packet.
+     * @param sid Session id.
+     * @param reason The reason to terminate session.
+     * @param text Human read text in packet.
+     * @return Session-terminate packet.
+     */
     public static JingleIQ createJingleSessionTerminatePacket(String from,
         String to, String sid, Reason reason, String text)
     {
         JingleIQ terminate =
             JinglePacketFactory.createSessionTerminate(from, to, sid, reason,
                 text);
-        
+
         return terminate;
     }
-    
+
     /**
      * Create content packet extension.
      * 

@@ -3,7 +3,6 @@ package org.jitsi.jirecon.test;
 import org.jitsi.jirecon.Jirecon;
 import org.jitsi.jirecon.JireconCmd;
 import org.jitsi.jirecon.JireconCmdInitiate;
-import org.jitsi.jirecon.JireconCmdStartRecording;
 import org.jitsi.jirecon.JireconCmdUninitiate;
 import org.jitsi.jirecon.JireconImpl;
 
