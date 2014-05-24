@@ -1,3 +1,9 @@
+/*
+ * Jirecon, the Jitsi recorder container.
+ *
+ * Distributable under LGPL license.
+ * See terms of license at gnu.org.
+ */
 package org.jitsi.jirecon.recorder;
 
 import java.util.Map;
@@ -8,20 +14,26 @@ import org.jitsi.service.neomedia.DefaultStreamConnector;
 import org.jitsi.service.neomedia.MediaDirection;
 import org.jitsi.service.neomedia.MediaService;
 import org.jitsi.service.neomedia.MediaStream;
+import org.jitsi.service.neomedia.MediaStreamStats;
 import org.jitsi.service.neomedia.MediaStreamTarget;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.RTPTranslator;
 import org.jitsi.service.neomedia.SrtpControlType;
 import org.jitsi.service.neomedia.StreamConnector;
+import org.jitsi.util.Logger;
 
 public class JireconRecorderImpl implements JireconRecorder
 {
     private Map<MediaType, MediaStream> streams;
 
     private MediaService mediaService;
-
+    
+    private RecorderInfo info;
+    
     // TODO:
     // private Map<MediaType, Recorder> recorders;
+    
+    private Logger logger;
 
     /**
      * The conference recorder need an active media service.
@@ -31,12 +43,16 @@ public class JireconRecorderImpl implements JireconRecorder
     public JireconRecorderImpl(MediaService mediaService)
     {
         this.mediaService = mediaService;
+        info = new RecorderInfo();
+        logger = Logger.getLogger(this.getClass());
     }
 
     // This method may throw exceptions in the future.
     @Override
     public void start(SessionInfo info)
     {
+        logger.info("JireconRecorder start");
+        updateStatus(JireconRecorderStatus.INITIATING);
         startReceivingStreams(info);
         prepareRecorders();
         startRecording();
@@ -45,13 +61,20 @@ public class JireconRecorderImpl implements JireconRecorder
     @Override
     public void stop()
     {
+        logger.info("JireconRecorder end");
         stopRecording();
         releaseRecorders();
         releaseMediaStreams();
     }
+    
+    private void updateStatus(JireconRecorderStatus status)
+    {
+        info.setStatus(status);
+    }
 
     private void startRecording()
     {
+        logger.info("JireconRecorder start recording");
     }
 
     private void prepareRecorders()
@@ -77,11 +100,26 @@ public class JireconRecorderImpl implements JireconRecorder
 
     private boolean startReceivingStreams(SessionInfo info)
     {
+        logger.info("Jirecon start receiving streams");
+        int startCount = 0;
         for (MediaType media : MediaType.values())
         {
             MediaStream stream = createMediaStream(info, media);
             streams.put(media, stream);
             stream.start();
+            if (stream.isStarted())
+            {
+                startCount += 1;
+            }
+        }
+        
+        if (streams.size() == startCount)
+        {
+            updateStatus(JireconRecorderStatus.RECVEIVING);
+        }
+        else
+        {
+            updateStatus(JireconRecorderStatus.RECVEIVING_ERROR);
         }
 
         return true;

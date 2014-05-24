@@ -1,3 +1,9 @@
+/*
+ * Jirecon, the Jitsi recorder container.
+ *
+ * Distributable under LGPL license.
+ * See terms of license at gnu.org.
+ */
 package org.jitsi.jirecon.test;
 
 import org.jitsi.jirecon.session.JireconSessionManager;
@@ -7,7 +13,7 @@ import org.jivesoftware.smack.XMPPException;
 
 import junit.framework.TestCase;
 
-public class TestJingleSessionManagerImpl extends TestCase
+public class TestJireconSessionManagerImpl extends TestCase
 {
     private static String hostname = "jitmeet.example.com";
     private static int port = 5222;
@@ -29,13 +35,13 @@ public class TestJingleSessionManagerImpl extends TestCase
     
     public void testOpenAndCloseJingleSession()
     {
-        final String cf1 = "eifb7fii8dunmi";
-        //final String cf2 = "1bcw4c1rsuuzbyb9";
+        final String cf1 = "n2qer2v6zn3tyb9";
+        final String cf2 = "jvxmxznhy4jnstt9";
         
         try
         {
             mgr.openJingleSession(cf1);
-            //mgr.openJingleSession(cf2);
+            mgr.openJingleSession(cf2);
         }
         catch (XMPPException e1)
         {
@@ -44,18 +50,20 @@ public class TestJingleSessionManagerImpl extends TestCase
         
         try
         {
-            Thread.sleep(10000);
+            Thread.sleep(20000);
         }
         catch (InterruptedException e)
         {
             e.printStackTrace();
         }
         
-        System.out.println(mgr.getJingleSessionInfo(cf1).getJingleSessionStatus());
-        assertEquals(mgr.getJingleSessionInfo(cf1).getJingleSessionStatus(), JireconSessionStatus.CONSTRUCTED);
+        System.out.println(mgr.getSessionInfo(cf1).getSessionStatus());
+        System.out.println(mgr.getSessionInfo(cf2).getSessionStatus());
+        assertEquals(mgr.getSessionInfo(cf1).getSessionStatus(), JireconSessionStatus.CONSTRUCTED);
+        assertEquals(mgr.getSessionInfo(cf2).getSessionStatus(), JireconSessionStatus.CONSTRUCTED);
         
         mgr.closeJingleSession(cf1);
-        //mgr.closeJingleSession(cf2);
+        mgr.closeJingleSession(cf2);
     }
     
     @Override

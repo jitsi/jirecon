@@ -6,11 +6,10 @@
  */
 package org.jitsi.jirecon.recorder;
 
-import org.jitsi.jirecon.session.SessionInfo;
-
-public interface JireconRecorder
+public enum JireconRecorderStatus
 {
-    public void start(SessionInfo info);
-
-    public void stop();
+    INITIATING,
+    ABORTED,
+    RECVEIVING,
+    RECVEIVING_ERROR
 }
