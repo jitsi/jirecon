@@ -1,3 +1,9 @@
+/*
+ * Jirecon, the Jitsi recorder container.
+ *
+ * Distributable under LGPL license.
+ * See terms of license at gnu.org.
+ */
 package org.jitsi.jirecon.session;
 
 import org.jivesoftware.smack.XMPPException;
@@ -42,6 +48,6 @@ public interface JireconSessionManager
      */
     public void closeJingleSession(String conferenceId);
     
-    public SessionInfo getJingleSessionInfo(String conferenceId);
+    public SessionInfo getSessionInfo(String conferenceId);
 
 }

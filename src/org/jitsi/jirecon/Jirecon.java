@@ -1,4 +1,14 @@
+/*
+ * Jirecon, the Jitsi recorder container.
+ *
+ * Distributable under LGPL license.
+ * See terms of license at gnu.org.
+ */
 package org.jitsi.jirecon;
+
+import java.io.IOException;
+
+import org.jivesoftware.smack.XMPPException;
 
 /**
  * Jirecon is responsible for recording conferences.
@@ -11,9 +21,14 @@ public interface Jirecon
     /**
      * Start providing service.
      * 
+     * @param configurationPath The path of configuration file.
+     * @throws IOException Failed to load configuration.
+     * @throws XMPPException Failed to create XMPP conenction.
      * @return
      */
-    public void initiate();
+    public void initiate(String configurationPath)
+        throws IOException,
+        XMPPException;
 
     /**
      * Stop providing service.
@@ -35,12 +50,4 @@ public interface Jirecon
      * @param conferenceId The conference to be stopped.
      */
     public void stopRecording(String conferenceId);
-
-    /**
-     * Execute Jirecon command. Jirecon provides two kinds of calling method:
-     * first, call the method directly, second, call the execCmd method.
-     * 
-     * @param cmd The command to be executed.
-     */
-    public void execCmd(JireconCmd cmd);
 }

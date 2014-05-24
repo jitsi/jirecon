@@ -1,31 +1,45 @@
+/*
+ * Jirecon, the Jitsi recorder container.
+ *
+ * Distributable under LGPL license.
+ * See terms of license at gnu.org.
+ */
 package org.jitsi.jirecon.session;
 
 // TODO: Rewrite those import statements to package import statement.
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.net.BindException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import net.java.sip.communicator.impl.protocol.jabber.IceUdpTransportManager;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.CreatorEnum;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.SendersEnum;
+import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.JingleUtils;
 import net.java.sip.communicator.util.Logger;
 
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.jitsi.impl.neomedia.format.MediaFormatFactoryImpl;
-import org.jitsi.jirecon.utils.JinglePacketBuilder;
 import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.jirecon.utils.JireconMessageReceiver;
 import org.jitsi.jirecon.utils.JireconMessageSender;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.MediaType;
+import org.jitsi.service.neomedia.format.AudioMediaFormat;
+import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smackx.muc.MultiUserChat;
-
 
 /**
  * This class is responsible for managing a Jingle session and extract some
@@ -60,12 +74,6 @@ public class JireconSessionImpl
      * outside through getJingleSessionInfo method.
      */
     private SessionInfo info;
-
-    private String from;
-
-    private String to;
-
-    private String sid;
 
     /**
      * The log generator.
@@ -106,8 +114,10 @@ public class JireconSessionImpl
     {
         info.setConferenceId(conferenceId);
         LibJitsi.start();
-        iceAgent = new Agent();
+        initiateIceAgent();
         joinConference();
+        // After joining the conference, JireconSessionImpl will automatically
+        // build a Jingle session with remote peer.
     }
 
     /**
@@ -118,10 +128,10 @@ public class JireconSessionImpl
     {
         closeSession();
         leaveConference();
-        iceAgent.free();
+        uninitiateIceAgent();
         LibJitsi.stop();
     }
-    
+
     /**
      * Get key information about this Jingle session.
      * 
@@ -132,7 +142,7 @@ public class JireconSessionImpl
     {
         return info;
     }
-    
+
     /**
      * Receive Jingle packet and handle them.
      * 
@@ -150,33 +160,81 @@ public class JireconSessionImpl
             handleAckPacket();
         }
     }
-    
+
+    private void initiateIceAgent()
+    {
+        iceAgent = new Agent();
+        PropertyChangeListener stateChangeListener =
+            new PropertyChangeListener()
+            {
+                public void propertyChange(PropertyChangeEvent evt)
+                {
+                    Object newValue = evt.getNewValue();
+                    IceAgentStatusChanged((IceProcessingState) newValue);
+                }
+            };
+        iceAgent.addStateChangeListener(stateChangeListener);
+    }
+
+    private void uninitiateIceAgent()
+    {
+        iceAgent.free();
+    }
+
     private void handleJingleSessionPacket(JingleIQ jiq)
     {
-        if (IQ.Type.SET == JinglePacketParser.getType(jiq))
+        if (IQ.Type.SET == jiq.getType())
         {
-            from = JinglePacketParser.getFrom(jiq);
-            to = JinglePacketParser.getTo(jiq);
-            sid = JinglePacketParser.getSid(jiq);
+            recordLocalNode(jiq);
+            recordRemoteNode(jiq);
+            recordSid(jiq);
             handleSetPacket(jiq);
         }
     }
 
+    private void recordLocalNode(JingleIQ jiq)
+    {
+        info.setLocalNode(jiq.getFrom());
+    }
+
+    private void recordRemoteNode(JingleIQ jiq)
+    {
+        info.setRemoteNode(jiq.getTo());
+    }
+
+    private void recordSid(JingleIQ jiq)
+    {
+        info.setSid(jiq.getSID());
+    }
+
+    private void updateStatus(JireconSessionStatus status, String msg)
+    {
+        // TODO: Change to state machine mode.
+        info.setSessionStatus(status);
+        sendMsg(msg);
+    }
+
     private void handleAckPacket()
     {
-        if (JireconSessionStatus.INITIATING == info.getJingleSessionStatus())
+        switch (info.getSessionStatus())
         {
-            info.setJingleSessionStatus(JireconSessionStatus.CONSTRUCTED);
-            logger.info("JingleSession session constructed.");
-            sendMsg(info.getConferenceId());
+        case INITIATING:
+            updateStatus(JireconSessionStatus.INTIATING_SESSION_OK,
+                "Build Jingle complete.");
+            checkIceConnectivity();
+            break;
+        default:
+            break;
         }
     }
 
     private void joinConference() throws XMPPException
     {
         conference =
-            new MultiUserChat(connection, info.getConferenceId() + "@" + CONFERENCE_ADDR);
+            new MultiUserChat(connection, info.getConferenceId() + "@"
+                + CONFERENCE_ADDR);
         conference.join(NICKNAME);
+        updateStatus(JireconSessionStatus.INITIATING, "Start session.");
     }
 
     private void leaveConference()
@@ -187,7 +245,7 @@ public class JireconSessionImpl
 
     private void closeSession()
     {
-        if (JireconSessionStatus.CONSTRUCTED == info.getJingleSessionStatus())
+        if (JireconSessionStatus.CONSTRUCTED == info.getSessionStatus())
             sendTerminate(Reason.SUCCESS, "OK, gotta go!");
     }
 
@@ -200,14 +258,15 @@ public class JireconSessionImpl
     {
         sendAck(jiq);
 
-        if (JingleAction.SESSION_INITIATE == JinglePacketParser.getAction(jiq))
+        if (JingleAction.SESSION_INITIATE == jiq.getAction())
         {
             harvestLocalCandidates();
             harvestRemoteCandidates(jiq);
             harvestDynamicPayload(jiq);
             sendAccept(jiq);
-            checkIceConnectivity();
-            harvestCandidatePairs();
+            // When we get ack packet from remote peer, start checking ICE
+            // connectivity
+
         }
     }
 
@@ -225,6 +284,8 @@ public class JireconSessionImpl
             info.addRtcpCandidatePair(media, rtcpComponent.getSelectedPair());
         }
         logger.info("harvestCandidatePairs finished");
+        updateStatus(JireconSessionStatus.CONSTRUCTED,
+            "Jirecon session constructed.");
     }
 
     /**
@@ -233,23 +294,25 @@ public class JireconSessionImpl
     private void checkIceConnectivity()
     {
         logger.info("checkIceConnectivity begin");
-        // ICE check
         iceAgent.startConnectivityEstablishment();
-        // TODO: When check is finished, send a message to
-        // ConferenceRecorderManager
-        while (iceAgent.getState() != IceProcessingState.TERMINATED)
+    }
+
+    private void IceAgentStatusChanged(IceProcessingState state)
+    {
+        switch (state)
         {
-            try
-            {
-                Thread.sleep(1000);
-                logger.info(IceProcessingState.TERMINATED);
-            }
-            catch (InterruptedException e)
-            {
-                e.printStackTrace();
-            }
+        case TERMINATED:
+            updateStatus(JireconSessionStatus.INITIATING_CONNECTIVITY_OK,
+                "Check ICE connectivity OK.");
+            harvestCandidatePairs();
+            break;
+        case FAILED:
+            updateStatus(JireconSessionStatus.INITIATING_CONNECTIVITY_FAILED,
+                "Check ICE connectivity failed.");
+            break;
+        default:
+            break;
         }
-        logger.info("checkIceConnectivity finished");
     }
 
     /**
@@ -262,41 +325,88 @@ public class JireconSessionImpl
         logger.info("sendAccept begin");
         final List<ContentPacketExtension> contents =
             new ArrayList<ContentPacketExtension>();
-        // Audio content & Video content
         for (MediaType media : MediaType.values())
         {
-            final List<CandidatePacketExtension> candidates =
-                JinglePacketBuilder.createCandidatePacketExtList(iceAgent
-                    .getStream(media.toString()).getComponents(), iceAgent
-                    .getGeneration());
-
-            final IceUdpTransportPacketExtension transport =
-                JinglePacketBuilder.createTransportPacketExt(
-                    iceAgent.getLocalPassword(), iceAgent.getLocalUfrag(),
-                    candidates);
-
-            final PayloadTypePacketExtension payloadType =
-                JinglePacketBuilder.createPayloadTypePacketExt(
-                    info.getDynamicPayloadTypeId(media), info.getFormat(media));
-
-            final RtpDescriptionPacketExtension description =
-                JinglePacketBuilder.createDescriptionPacketExt(media,
-                    payloadType);
-
-            final ContentPacketExtension content =
-                JinglePacketBuilder.createContentPacketExt(description,
-                    transport);
-
-            contents.add(content);
+            contents.add(createContentPacketExtension(media));
         }
 
         JingleIQ acceptJiq =
-            JinglePacketBuilder.createJingleSessionAcceptPacket(jiq.getTo(),
-                jiq.getFrom(), jiq.getSID(), contents);
+            JinglePacketFactory.createSessionAccept(info.getLocalNode(),
+                info.getRemoteNode(), info.getSid(), contents);
 
         connection.sendPacket(acceptJiq);
 
         logger.info("sendAccept finished");
+    }
+
+    private ContentPacketExtension createContentPacketExtension(MediaType media)
+    {
+        List<CandidatePacketExtension> candidates =
+            new ArrayList<CandidatePacketExtension>();
+        int id = 1;
+        for (Component c : iceAgent.getStream(media.toString()).getComponents())
+        {
+            for (Candidate<?> can : c.getLocalCandidates())
+            {
+                CandidatePacketExtension candidate =
+                    new CandidatePacketExtension();
+                candidate.setComponent(c.getComponentID());
+                candidate.setFoundation(can.getFoundation());
+                candidate.setGeneration(iceAgent.getGeneration());
+                candidate.setID(String.valueOf(id++));
+                candidate.setNetwork(1);
+                TransportAddress ta = can.getTransportAddress();
+                candidate.setIP(ta.getHostAddress());
+                candidate.setPort(ta.getPort());
+                candidate.setPriority(can.getPriority());
+                candidate.setProtocol(can.getTransport().toString());
+                candidate.setType(CandidateType.valueOf(can.getType()
+                    .toString()));
+                candidates.add(candidate);
+            }
+        }
+
+        IceUdpTransportPacketExtension transport =
+            new IceUdpTransportPacketExtension();
+        transport.setPassword(iceAgent.getLocalPassword());
+        transport.setUfrag(iceAgent.getLocalUfrag());
+        for (CandidatePacketExtension c : candidates)
+        {
+            transport.addCandidate(c);
+        }
+
+        PayloadTypePacketExtension payloadType =
+            new PayloadTypePacketExtension();
+        MediaFormat format = info.getFormat(media);
+        payloadType.setId(info.getDynamicPayloadTypeId(media));
+        payloadType.setName(format.getEncoding());
+        if (format instanceof AudioMediaFormat)
+        {
+            payloadType.setChannels(((AudioMediaFormat) format).getChannels());
+        }
+        payloadType.setClockrate((int) format.getClockRate());
+        for (Map.Entry<String, String> e : format.getFormatParameters()
+            .entrySet())
+        {
+            ParameterPacketExtension parameter = new ParameterPacketExtension();
+            parameter.setName(e.getKey());
+            parameter.setValue(e.getValue());
+            payloadType.addParameter(parameter);
+        }
+
+        RtpDescriptionPacketExtension description =
+            new RtpDescriptionPacketExtension();
+        description.setMedia(media.toString());
+        description.addPayloadType(payloadType);
+
+        ContentPacketExtension content = new ContentPacketExtension();
+        content.setCreator(CreatorEnum.responder);
+        content.setName(description.getMedia());
+        content.setSenders(SendersEnum.initiator);
+        content.addChildExtension(description);
+        content.addChildExtension(transport);
+
+        return content;
     }
 
     /**
@@ -309,10 +419,11 @@ public class JireconSessionImpl
         connection.sendPacket(IQ.createResultIQ(jiq));
     }
 
-    public void sendTerminate(Reason reason, String text)
+    public void sendTerminate(Reason reason, String reasonText)
     {
-        connection.sendPacket(JinglePacketBuilder
-            .createJingleSessionTerminatePacket(from, to, sid, reason, text));
+        connection.sendPacket(JinglePacketFactory.createSessionTerminate(
+            info.getLocalNode(), info.getRemoteNode(), info.getSid(), reason,
+            reasonText));
     }
 
     /**
@@ -331,9 +442,6 @@ public class JireconSessionImpl
             // FIXME: We only choose the first payloadtype
             final PayloadTypePacketExtension payloadType =
                 JinglePacketParser.getPayloadTypePacketExts(jiq, media).get(0);
-//            MediaFormat f =
-//                fmtFactory.createMediaFormat(payloadType.getName(),
-//                    payloadType.getClockrate(), payloadType.getChannels());
             info.addFormat(
                 media,
                 fmtFactory.createMediaFormat(payloadType.getName(),

@@ -1,3 +1,9 @@
+/*
+ * Jirecon, the Jitsi recorder container.
+ *
+ * Distributable under LGPL license.
+ * See terms of license at gnu.org.
+ */
 package org.jitsi.jirecon.session;
 
 // TODO: Rewrite those import statements to package import statement.
@@ -16,10 +22,18 @@ import org.jitsi.service.neomedia.format.MediaFormat;
  */
 public class SessionInfo
 {
+    private String localNode;
+
+    private String remoteNode;
+
+    private String sid;
+
     private String conferenceId;
+
     /**
      * The video or audio format which will be used in transferring RTP stream.
      */
+    // TODO 使用formatlist，把所有的format都记录下来
     private Map<MediaType, MediaFormat> formats;
 
     /**
@@ -37,7 +51,7 @@ public class SessionInfo
     private Map<MediaType, CandidatePair> rtpCandidatePairs;
 
     private Map<MediaType, CandidatePair> rtcpCandidatePairs;
-    
+
     private JireconSessionStatus status;
 
     /**
@@ -120,44 +134,75 @@ public class SessionInfo
     {
         return remoteSsrcs.get(media);
     }
-    
+
     public void addRtpCandidatePair(MediaType media, CandidatePair candidatePair)
     {
         rtpCandidatePairs.put(media, candidatePair);
     }
-    
-    public void addRtcpCandidatePair(MediaType media, CandidatePair candidatePair)
+
+    public void addRtcpCandidatePair(MediaType media,
+        CandidatePair candidatePair)
     {
         rtcpCandidatePairs.put(media, candidatePair);
     }
-    
+
     public CandidatePair getRtpCandidatePair(MediaType media)
     {
         return rtpCandidatePairs.get(media);
     }
-    
+
     public CandidatePair getRtcpCandidatePair(MediaType media)
     {
         return rtcpCandidatePairs.get(media);
     }
-    
-    public void setJingleSessionStatus(JireconSessionStatus status)
+
+    public void setSessionStatus(JireconSessionStatus status)
     {
         this.status = status;
     }
-    
-    public JireconSessionStatus getJingleSessionStatus()
+
+    public JireconSessionStatus getSessionStatus()
     {
         return status;
     }
-    
+
     public String getConferenceId()
     {
         return conferenceId;
     }
-    
+
     public void setConferenceId(String conferenceId)
     {
         this.conferenceId = conferenceId;
+    }
+    
+    public String getLocalNode()
+    {
+        return localNode;
+    }
+    
+    public void setLocalNode(String localNode)
+    {
+        this.localNode = localNode;
+    }
+    
+    public String getRemoteNode()
+    {
+        return remoteNode;
+    }
+    
+    public void setRemoteNode(String remoteNode)
+    {
+        this.remoteNode = remoteNode;
+    }
+    
+    public String getSid()
+    {
+        return sid;
+    }
+    
+    public void setSid(String sid)
+    {
+        this.sid = sid;
     }
 }

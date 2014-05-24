@@ -1,6 +1,13 @@
+/*
+ * Jirecon, the Jitsi recorder container.
+ *
+ * Distributable under LGPL license.
+ * See terms of license at gnu.org.
+ */
 package org.jitsi.jirecon;
 
 // TODO: Rewrite those import statements to package import statement.
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -8,8 +15,8 @@ import org.jitsi.jirecon.recorder.JireconRecorderManager;
 import org.jitsi.jirecon.recorder.JireconRecorderManagerImpl;
 import org.jitsi.jirecon.session.JireconSessionManager;
 import org.jitsi.jirecon.session.JireconSessionManagerImpl;
+import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.jirecon.utils.JireconMessageReceiver;
-import org.jitsi.jirecon.utils.JireconMessageSender;
 import org.jitsi.util.Logger;
 import org.jivesoftware.smack.XMPPException;
 
@@ -28,31 +35,24 @@ public class JireconImpl
     Set<JireconMessageReceiver> msgReceivers;
 
     /**
-     * The host name of JitsiMeet. This property should be set in configuration
-     * files.
-     */
-    private String jitsiMeetHostname = "jitmeet.example.com";
-
-    /**
-     * The port of XMPP server. This property should be set in configuration
-     * file.
-     */
-    private int xmppServerPort = 5222;
-
-    /**
      * The session manager.
      */
-    private JireconSessionManager jingleSessionManager;
+    private JireconSessionManager sessionManager;
 
     /**
      * The recorder manager.
      */
-    private JireconRecorderManager conferenceRecorderManager;
+    private JireconRecorderManager recorderManager;
+
+    private JireconConfiguration configuration;
 
     /**
      * The laborious logger.
      */
     private Logger logger;
+    
+    private final String MEETING_HOST_KEY = "MEETING_HOST";
+    private final String XMPP_PORT_KEY = "XMPP_PORT";
 
     /**
      * Constructor.
@@ -61,31 +61,34 @@ public class JireconImpl
     {
         msgReceivers = new HashSet<JireconMessageReceiver>();
         logger = Logger.getLogger(JireconImpl.class);
-        jingleSessionManager =
-            new JireconSessionManagerImpl(jitsiMeetHostname, xmppServerPort);
-        conferenceRecorderManager = new JireconRecorderManagerImpl();
     }
 
     /**
      * Start providing service.
+     * 
+     * @throws IOException
+     * @throws XMPPException
      */
     @Override
-    public void initiate()
+    public void initiate(String configurationPath)
+        throws IOException,
+        XMPPException
     {
-        try
-        {
-            jingleSessionManager.init();
-            conferenceRecorderManager.init();
-        }
-        catch (XMPPException e)
-        {
-            logger.fatal("Jirecon initialize failed, exit");
-            return;
-        }
+        configuration = new JireconConfiguration();
+        configuration.loadConfiguration(configurationPath);
+        
+        String meetingHost = configuration.getProperty(MEETING_HOST_KEY);
+        int xmppPort = Integer.valueOf(configuration.getProperty(XMPP_PORT_KEY));
+        sessionManager =
+            new JireconSessionManagerImpl(meetingHost, xmppPort);
+        recorderManager = new JireconRecorderManagerImpl();
+
+        sessionManager.init();
+        recorderManager.init();
 
         // Binding message receiver and sender
-        ((JireconMessageSender) jingleSessionManager)
-            .addReceiver((JireconMessageReceiver) conferenceRecorderManager);
+//        ((JireconMessageSender) sessionManager)
+//            .addReceiver((JireconMessageReceiver) recorderManager);
     }
 
     /**
@@ -94,17 +97,8 @@ public class JireconImpl
     @Override
     public void uninitiate()
     {
-        jingleSessionManager.uninit();
-        conferenceRecorderManager.uninit();
-    }
-
-    /**
-     * Execute a command, this method provide another way to get service.
-     */
-    @Override
-    public void execCmd(JireconCmd cmd)
-    {
-        cmd.exec();
+        sessionManager.uninit();
+        recorderManager.uninit();
     }
 
     /**
@@ -117,8 +111,8 @@ public class JireconImpl
     {
         try
         {
-            jingleSessionManager.openJingleSession(conferenceId);
-            conferenceRecorderManager.startRecording(conferenceId);
+            sessionManager.openJingleSession(conferenceId);
+            recorderManager.startRecording(conferenceId);
         }
         catch (XMPPException e)
         {
@@ -135,7 +129,7 @@ public class JireconImpl
     @Override
     public void stopRecording(String conferenceId)
     {
-        conferenceRecorderManager.stopRecording(conferenceId);
-        jingleSessionManager.closeJingleSession(conferenceId);
+        recorderManager.stopRecording(conferenceId);
+        sessionManager.closeJingleSession(conferenceId);
     }
 }

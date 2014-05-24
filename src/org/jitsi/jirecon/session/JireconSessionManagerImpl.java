@@ -1,3 +1,9 @@
+/*
+ * Jirecon, the Jitsi recorder container.
+ *
+ * Distributable under LGPL license.
+ * See terms of license at gnu.org.
+ */
 package org.jitsi.jirecon.session;
 
 // TODO: Rewrite those import statements to package import statement.
@@ -10,6 +16,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQProvider;
 
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
+import org.jitsi.jirecon.recorder.JireconRecorderManager;
 import org.jitsi.jirecon.utils.JireconFactory;
 import org.jitsi.jirecon.utils.JireconFactoryImpl;
 import org.jitsi.jirecon.utils.JireconMessageReceiver;
@@ -219,12 +226,9 @@ public class JireconSessionManagerImpl
             for (Map.Entry<String, JireconSession> e : sessions.entrySet())
             {
                 e.getValue().terminateSession();
-                ;
             }
         }
-
         disconnect();
-
         return true;
     }
 
@@ -268,6 +272,7 @@ public class JireconSessionManagerImpl
     @Override
     public void closeJingleSession(String conferenceId)
     {
+        // TODO
         if (null == sessions || !sessions.containsKey(conferenceId))
             return;
 
@@ -289,18 +294,37 @@ public class JireconSessionManagerImpl
     }
 
     @Override
-    public SessionInfo getJingleSessionInfo(String conferenceId)
+    public SessionInfo getSessionInfo(String conferenceId)
     {
+        // TODO: null check
         return sessions.get(conferenceId).getSessionInfo();
     }
 
     @Override
     public void receiveMsg(JireconMessageSender sender, String msg)
     {
+        System.out.println("JireconSessionManager receive a message " + msg);
         if (sender instanceof JireconSessionImpl)
         {
-            sendMsg(((JireconSession) sender).getSessionInfo()
-                .getConferenceId());
+            final JireconSession session = (JireconSession) sender;
+            // Send message to JireconRecorderManager
+            switch (session.getSessionInfo().getSessionStatus())
+            {
+            case CONSTRUCTED:
+                sendMsg(session.getSessionInfo().getConferenceId());
+                break;
+            case ABORTED:
+                sendMsg(session.getSessionInfo().getConferenceId());
+                closeJingleSession(session.getSessionInfo().getConferenceId());
+                break;
+            default:
+                break;
+            }
+        }
+        else if (sender instanceof JireconRecorderManager)
+        {
+            logger
+                .info("Oh? JireconSessionManager receive a message from JireconRecorderManager");
         }
         else
         {
