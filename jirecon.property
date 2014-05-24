@@ -1,0 +1,3 @@
+MEETING_HOST = jitmeet.example.com
+
+XMPP_PORT = 5222
