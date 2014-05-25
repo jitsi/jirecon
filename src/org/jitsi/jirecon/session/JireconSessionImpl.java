@@ -1,8 +1,7 @@
 /*
  * Jirecon, the Jitsi recorder container.
- *
- * Distributable under LGPL license.
- * See terms of license at gnu.org.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
  */
 package org.jitsi.jirecon.session;
 
@@ -51,7 +50,8 @@ import org.jivesoftware.smackx.muc.MultiUserChat;
 public class JireconSessionImpl
     implements JireconSession
 {
-    List<JireconEventListener> listeners = new ArrayList<JireconEventListener>(); 
+    List<JireconEventListener> listeners =
+        new ArrayList<JireconEventListener>();
 
     /**
      * The XMPP connection, it is used to send Jingle packet.
@@ -142,11 +142,12 @@ public class JireconSessionImpl
      */
     public void handleSessionPacket(Packet packet)
     {
-        if (null != info.getLocalJid() && !packet.getTo().equals(info.getLocalJid()))
+        if (null != info.getLocalJid()
+            && !packet.getTo().equals(info.getLocalJid()))
         {
             return;
         }
-        
+
         if (JingleIQ.class == packet.getClass())
         {
             handleJingleSessionPacket((JingleIQ) packet);
@@ -180,7 +181,8 @@ public class JireconSessionImpl
 
     private void handleJingleSessionPacket(JingleIQ jiq)
     {
-        if (IQ.Type.SET == jiq.getType() && JingleAction.SESSION_INITIATE == jiq.getAction())
+        if (IQ.Type.SET == jiq.getType()
+            && JingleAction.SESSION_INITIATE == jiq.getAction())
         {
             info.setLocalJid(jiq.getTo());
             info.setRemoteJid(jiq.getFrom());
@@ -193,7 +195,8 @@ public class JireconSessionImpl
     {
         // TODO: fire some event
         info.setSessionStatus(status);
-        if (status == JireconSessionStatus.CONSTRUCTED || status == JireconSessionStatus.ABORTED)
+        if (status == JireconSessionStatus.CONSTRUCTED
+            || status == JireconSessionStatus.ABORTED)
         {
             for (JireconEventListener listener : listeners)
             {
@@ -218,8 +221,7 @@ public class JireconSessionImpl
 
     private void joinConference() throws XMPPException
     {
-        conference =
-            new MultiUserChat(connection, info.getConferenceJid());
+        conference = new MultiUserChat(connection, info.getConferenceJid());
         conference.join(NICKNAME);
         updateStatus(JireconSessionStatus.INITIATING, "Start session.");
     }
@@ -264,8 +266,8 @@ public class JireconSessionImpl
                 iceStream.getComponent(org.ice4j.ice.Component.RTP);
             Component rtcpComponent =
                 iceStream.getComponent(org.ice4j.ice.Component.RTCP);
-            info.addRtpCandidatePair(media, rtpComponent.getSelectedPair());
-            info.addRtcpCandidatePair(media, rtcpComponent.getSelectedPair());
+            info.setRtpCandidatePair(media, rtpComponent.getSelectedPair());
+            info.setRtcpCandidatePair(media, rtcpComponent.getSelectedPair());
         }
         logger.info("harvestCandidatePairs finished");
         updateStatus(JireconSessionStatus.CONSTRUCTED,
@@ -359,29 +361,40 @@ public class JireconSessionImpl
             transport.addCandidate(c);
         }
 
-        PayloadTypePacketExtension payloadType =
-            new PayloadTypePacketExtension();
-        MediaFormat format = info.getFormat(media);
-        payloadType.setId(info.getDynamicPayloadTypeId(media));
-        payloadType.setName(format.getEncoding());
-        if (format instanceof AudioMediaFormat)
-        {
-            payloadType.setChannels(((AudioMediaFormat) format).getChannels());
-        }
-        payloadType.setClockrate((int) format.getClockRate());
-        for (Map.Entry<String, String> e : format.getFormatParameters()
+        List<PayloadTypePacketExtension> payloadTypes =
+            new ArrayList<PayloadTypePacketExtension>();
+        for (Map.Entry<MediaFormat, Byte> e : info.getPayloadTypes(media)
             .entrySet())
         {
-            ParameterPacketExtension parameter = new ParameterPacketExtension();
-            parameter.setName(e.getKey());
-            parameter.setValue(e.getValue());
-            payloadType.addParameter(parameter);
+            PayloadTypePacketExtension payloadType =
+                new PayloadTypePacketExtension();
+            payloadType.setId(e.getValue());
+            payloadType.setName(e.getKey().getEncoding());
+            if (e.getKey() instanceof AudioMediaFormat)
+            {
+                payloadType.setChannels(((AudioMediaFormat) e.getKey())
+                    .getChannels());
+            }
+            payloadType.setClockrate((int) e.getKey().getClockRate());
+            for (Map.Entry<String, String> en : e.getKey()
+                .getFormatParameters().entrySet())
+            {
+                ParameterPacketExtension parameter =
+                    new ParameterPacketExtension();
+                parameter.setName(en.getKey());
+                parameter.setValue(en.getValue());
+                payloadType.addParameter(parameter);
+            }
+            payloadTypes.add(payloadType);
         }
 
         RtpDescriptionPacketExtension description =
             new RtpDescriptionPacketExtension();
         description.setMedia(media.toString());
-        description.addPayloadType(payloadType);
+        for (PayloadTypePacketExtension p : payloadTypes)
+        {
+            description.addPayloadType(p);
+        }
 
         ContentPacketExtension content = new ContentPacketExtension();
         content.setCreator(CreatorEnum.responder);
@@ -424,14 +437,22 @@ public class JireconSessionImpl
         {
             // TODO: Video format has some problem, RED payload
             // FIXME: We only choose the first payloadtype
-            final PayloadTypePacketExtension payloadType =
-                JinglePacketParser.getPayloadTypePacketExts(jiq, media).get(0);
-            info.addFormat(
-                media,
-                fmtFactory.createMediaFormat(payloadType.getName(),
-                    payloadType.getClockrate(), payloadType.getChannels()));
-            info.addDynamicPayloadTypeId(media, (byte) payloadType.getID());
-            info.addRemoteSsrc(media, JinglePacketParser
+            for (PayloadTypePacketExtension payloadTypePacketExt : JinglePacketParser
+                .getPayloadTypePacketExts(jiq, media))
+            {
+                MediaFormat format =
+                    fmtFactory.createMediaFormat(
+                        payloadTypePacketExt.getName(),
+                        payloadTypePacketExt.getClockrate(),
+                        payloadTypePacketExt.getChannels());
+                if (format != null)
+                {
+                    info.addPayloadType(media, format,
+                        (byte) (payloadTypePacketExt.getID()));
+                }
+            }
+
+            info.setRemoteSsrc(media, JinglePacketParser
                 .getDescriptionPacketExt(jiq, media).getSsrc());
         }
 
@@ -570,13 +591,13 @@ public class JireconSessionImpl
     public void addEventListener(JireconEventListener listener)
     {
         // TODO Auto-generated method stub
-        
+
     }
 
     @Override
     public void removeEventListener(JireconEventListener listener)
     {
         // TODO Auto-generated method stub
-        
+
     }
 }

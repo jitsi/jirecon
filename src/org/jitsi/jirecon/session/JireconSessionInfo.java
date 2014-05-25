@@ -1,8 +1,7 @@
 /*
  * Jirecon, the Jitsi recorder container.
- *
- * Distributable under LGPL license.
- * See terms of license at gnu.org.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
  */
 package org.jitsi.jirecon.session;
 
@@ -31,41 +30,20 @@ public class JireconSessionInfo
 
     private String conferenceJid;
 
-    /**
-     * The video or audio format which will be used in transferring RTP stream.
-     */
-    // TODO 使用formatlist，把所有的format都记录下来
-    private Map<MediaType, MediaFormat> formats;
-
-    /**
-     * The dynamic payloadtype id of video or audio format which will be used in
-     * transferring RTP stream.
-     */
-    private Map<MediaType, Byte> dynamicPayloadTypeIds;
-
-    /**
-     * The video or audio remote SSRC property, it will be used in receiving RTP
-     * stream.
-     */
-    private Map<MediaType, String> remoteSsrcs;
-
-    private Map<MediaType, CandidatePair> rtpCandidatePairs;
-
-    private Map<MediaType, CandidatePair> rtcpCandidatePairs;
-
     private JireconSessionStatus status;
+    
+    private Map<MediaType, InfoBox> infoBoxes = new HashMap<MediaType, InfoBox>();
 
     /**
      * Constructor of JingleSessionInfo
      */
     public JireconSessionInfo()
     {
-        formats = new HashMap<MediaType, MediaFormat>();
-        dynamicPayloadTypeIds = new HashMap<MediaType, Byte>();
-        remoteSsrcs = new HashMap<MediaType, String>();
-        rtpCandidatePairs = new HashMap<MediaType, CandidatePair>();
-        rtcpCandidatePairs = new HashMap<MediaType, CandidatePair>();
         status = JireconSessionStatus.INITIATING;
+        for (MediaType media : MediaType.values())
+        {
+            infoBoxes.put(media, new InfoBox());
+        }
     }
 
     /**
@@ -74,22 +52,9 @@ public class JireconSessionInfo
      * @param media The media type, video or audio.
      * @param format The format which will be added.
      */
-    public void addFormat(MediaType media, MediaFormat format)
+    public void addPayloadType(MediaType media, MediaFormat format, byte payloadTypeId)
     {
-        formats.put(media, format);
-    }
-
-    /**
-     * Add dynamic payloadtype id and bind it with specified type of media.
-     * 
-     * @param media The media type, video or audio.
-     * @param dynamicPayloadTypeId The dynamic payloadtype id which will be
-     *            added.
-     */
-    public void addDynamicPayloadTypeId(MediaType media,
-        Byte dynamicPayloadTypeId)
-    {
-        dynamicPayloadTypeIds.put(media, dynamicPayloadTypeId);
+        infoBoxes.get(media).payloadTypes.put(format, payloadTypeId);
     }
 
     /**
@@ -98,9 +63,9 @@ public class JireconSessionInfo
      * @param media The media type, video or audio.
      * @param ssrc The remote SSRC which wll be added.
      */
-    public void addRemoteSsrc(MediaType media, String ssrc)
+    public void setRemoteSsrc(MediaType media, String ssrc)
     {
-        remoteSsrcs.put(media, ssrc);
+        infoBoxes.get(media).remoteSsrc = ssrc;
     }
 
     /**
@@ -109,20 +74,9 @@ public class JireconSessionInfo
      * @param media The media type, video or audio.
      * @return
      */
-    public MediaFormat getFormat(MediaType media)
+    public Map<MediaFormat, Byte> getPayloadTypes(MediaType media)
     {
-        return formats.get(media);
-    }
-
-    /**
-     * Get the dynamic payloadtype id of a specified media type.
-     * 
-     * @param media The media type, video or audio.
-     * @return
-     */
-    public Byte getDynamicPayloadTypeId(MediaType media)
-    {
-        return dynamicPayloadTypeIds.get(media);
+        return infoBoxes.get(media).payloadTypes;
     }
 
     /**
@@ -133,28 +87,28 @@ public class JireconSessionInfo
      */
     public String getRemoteSsrc(MediaType media)
     {
-        return remoteSsrcs.get(media);
+        return infoBoxes.get(media).remoteSsrc;
     }
 
-    public void addRtpCandidatePair(MediaType media, CandidatePair candidatePair)
+    public void setRtpCandidatePair(MediaType media, CandidatePair candidatePair)
     {
-        rtpCandidatePairs.put(media, candidatePair);
+        infoBoxes.get(media).rtpCandidatePair = candidatePair;
     }
 
-    public void addRtcpCandidatePair(MediaType media,
+    public void setRtcpCandidatePair(MediaType media,
         CandidatePair candidatePair)
     {
-        rtcpCandidatePairs.put(media, candidatePair);
+        infoBoxes.get(media).rtcpCandidatePair = candidatePair;
     }
 
     public CandidatePair getRtpCandidatePair(MediaType media)
     {
-        return rtpCandidatePairs.get(media);
+        return infoBoxes.get(media).rtpCandidatePair;
     }
 
     public CandidatePair getRtcpCandidatePair(MediaType media)
     {
-        return rtcpCandidatePairs.get(media);
+        return infoBoxes.get(media).rtcpCandidatePair;
     }
 
     public void setSessionStatus(JireconSessionStatus status)
@@ -176,34 +130,61 @@ public class JireconSessionInfo
     {
         this.conferenceJid = conferenceJid;
     }
-    
+
     public String getLocalJid()
     {
         return localJid;
     }
-    
+
     public void setLocalJid(String localNode)
     {
         this.localJid = localNode;
     }
-    
+
     public String getRemoteJid()
     {
         return remoteJid;
     }
-    
+
     public void setRemoteJid(String remoteNode)
     {
         this.remoteJid = remoteNode;
     }
-    
+
     public String getSid()
     {
         return sid;
     }
-    
+
     public void setSid(String sid)
     {
         this.sid = sid;
+    }
+    
+    public void setRemoteFingerprint(MediaType media, String fingerprint)
+    {
+        infoBoxes.get(media).remoteFingerprint = fingerprint;
+    }
+    
+    public String getRemoteFingerprint(MediaType media)
+    {
+        return infoBoxes.get(media).remoteFingerprint;
+    }
+
+    private class InfoBox
+    {
+        /**
+         * <format, payloadTypeId>
+         */
+        public Map<MediaFormat, Byte> payloadTypes =
+            new HashMap<MediaFormat, Byte>();
+
+        private String remoteSsrc;
+
+        private String remoteFingerprint;
+
+        private CandidatePair rtpCandidatePair;
+
+        private CandidatePair rtcpCandidatePair;
     }
 }

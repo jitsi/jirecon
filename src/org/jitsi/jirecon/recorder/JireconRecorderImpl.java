@@ -1,12 +1,12 @@
 /*
  * Jirecon, the Jitsi recorder container.
- *
- * Distributable under LGPL license.
- * See terms of license at gnu.org.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
  */
 package org.jitsi.jirecon.recorder;
 
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.ice4j.ice.CandidatePair;
 import org.jitsi.jirecon.session.JireconSessionInfo;
@@ -20,19 +20,21 @@ import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.RTPTranslator;
 import org.jitsi.service.neomedia.SrtpControlType;
 import org.jitsi.service.neomedia.StreamConnector;
+import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jitsi.util.Logger;
 
-public class JireconRecorderImpl implements JireconRecorder
+public class JireconRecorderImpl
+    implements JireconRecorder
 {
     private Map<MediaType, MediaStream> streams;
 
     private MediaService mediaService;
-    
+
     private RecorderInfo info;
-    
+
     // TODO:
     // private Map<MediaType, Recorder> recorders;
-    
+
     private Logger logger;
 
     /**
@@ -66,7 +68,7 @@ public class JireconRecorderImpl implements JireconRecorder
         releaseRecorders();
         releaseMediaStreams();
     }
-    
+
     private void updateStatus(JireconRecorderStatus status)
     {
         info.setStatus(status);
@@ -112,7 +114,7 @@ public class JireconRecorderImpl implements JireconRecorder
                 startCount += 1;
             }
         }
-        
+
         if (streams.size() == startCount)
         {
             updateStatus(JireconRecorderStatus.RECVEIVING);
@@ -137,9 +139,15 @@ public class JireconRecorderImpl implements JireconRecorder
 
         stream.setName(media.toString());
         stream.setDirection(MediaDirection.RECVONLY);
-        stream.addDynamicRTPPayloadType(info.getDynamicPayloadTypeId(media),
-            info.getFormat(media));
-        stream.setFormat(info.getFormat(media));
+        for (Entry<MediaFormat, Byte> e : info.getPayloadTypes(media)
+            .entrySet())
+        {
+            stream.addDynamicRTPPayloadType(e.getValue(), e.getKey());
+            if (null == stream.getFormat())
+            {
+                stream.setFormat(e.getKey());
+            }
+        }
         stream.setTarget(createStreamTarget(info, media));
 
         return stream;
