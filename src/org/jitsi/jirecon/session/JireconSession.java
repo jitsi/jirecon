@@ -6,6 +6,9 @@
  */
 package org.jitsi.jirecon.session;
 
+import java.beans.PropertyChangeListener;
+
+import org.jitsi.jirecon.JireconEventListener;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.Packet;
 
@@ -17,5 +20,9 @@ public interface JireconSession
 
     public void handleSessionPacket(Packet packet);
 
-    public SessionInfo getSessionInfo();
+    public JireconSessionInfo getSessionInfo();
+    
+    public void addEventListener(JireconEventListener listener);
+    
+    public void removeEventListener(JireconEventListener listener);
 }

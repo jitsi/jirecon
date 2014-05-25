@@ -9,6 +9,7 @@ package org.jitsi.jirecon.session;
 // TODO: Rewrite those import statements to package import statement.
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.IOException;
 import java.net.BindException;
 import java.util.ArrayList;
@@ -29,9 +30,8 @@ import net.java.sip.communicator.util.Logger;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.jitsi.impl.neomedia.format.MediaFormatFactoryImpl;
+import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.utils.JinglePacketParser;
-import org.jitsi.jirecon.utils.JireconMessageReceiver;
-import org.jitsi.jirecon.utils.JireconMessageSender;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.AudioMediaFormat;
@@ -49,9 +49,9 @@ import org.jivesoftware.smackx.muc.MultiUserChat;
  * 
  */
 public class JireconSessionImpl
-    implements JireconSession, JireconMessageSender
+    implements JireconSession
 {
-    Set<JireconMessageReceiver> msgReceivers;
+    List<JireconEventListener> listeners = new ArrayList<JireconEventListener>(); 
 
     /**
      * The XMPP connection, it is used to send Jingle packet.
@@ -73,7 +73,7 @@ public class JireconSessionImpl
      * Some information about this Jingle session. It can be accessed by the
      * outside through getJingleSessionInfo method.
      */
-    private SessionInfo info;
+    private JireconSessionInfo info;
 
     /**
      * The log generator.
@@ -92,11 +92,10 @@ public class JireconSessionImpl
      */
     public JireconSessionImpl(XMPPConnection connection)
     {
-        msgReceivers = new HashSet<JireconMessageReceiver>();
         this.connection = connection;
         logger = Logger.getLogger(JireconSessionImpl.class);
         logger.setLevelInfo();
-        this.info = new SessionInfo();
+        this.info = new JireconSessionInfo();
     }
 
     /**
@@ -131,7 +130,7 @@ public class JireconSessionImpl
      * @return JingleSessionInfo.
      */
     @Override
-    public SessionInfo getSessionInfo()
+    public JireconSessionInfo getSessionInfo()
     {
         return info;
     }
@@ -187,9 +186,15 @@ public class JireconSessionImpl
 
     private void updateStatus(JireconSessionStatus status, String msg)
     {
-        // TODO: Change to state machine mode.
+        // TODO: fire some event
         info.setSessionStatus(status);
-        sendMsg(msg);
+        if (status == JireconSessionStatus.CONSTRUCTED || status == JireconSessionStatus.ABORTED)
+        {
+            for (JireconEventListener listener : listeners)
+            {
+                listener.handleEvent(new JireconSessionEvent(this, info));
+            }
+        }
     }
 
     private void handleAckPacket()
@@ -241,9 +246,6 @@ public class JireconSessionImpl
             harvestRemoteCandidates(jiq);
             harvestDynamicPayload(jiq);
             sendAccept(jiq);
-            // When we get ack packet from remote peer, start checking ICE
-            // connectivity
-
         }
     }
 
@@ -560,23 +562,16 @@ public class JireconSessionImpl
     }
 
     @Override
-    public void addReceiver(JireconMessageReceiver receiver)
+    public void addEventListener(JireconEventListener listener)
     {
-        msgReceivers.add(receiver);
+        // TODO Auto-generated method stub
+        
     }
 
     @Override
-    public void removeReceiver(JireconMessageReceiver receiver)
+    public void removeEventListener(JireconEventListener listener)
     {
-        msgReceivers.remove(receiver);
-    }
-
-    @Override
-    public void sendMsg(String msg)
-    {
-        for (JireconMessageReceiver r : msgReceivers)
-        {
-            r.receiveMsg(this, msg);
-        }
+        // TODO Auto-generated method stub
+        
     }
 }

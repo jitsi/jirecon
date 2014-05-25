@@ -9,7 +9,7 @@ package org.jitsi.jirecon.recorder;
 import java.util.Map;
 
 import org.ice4j.ice.CandidatePair;
-import org.jitsi.jirecon.session.SessionInfo;
+import org.jitsi.jirecon.session.JireconSessionInfo;
 import org.jitsi.service.neomedia.DefaultStreamConnector;
 import org.jitsi.service.neomedia.MediaDirection;
 import org.jitsi.service.neomedia.MediaService;
@@ -49,7 +49,7 @@ public class JireconRecorderImpl implements JireconRecorder
 
     // This method may throw exceptions in the future.
     @Override
-    public void start(SessionInfo info)
+    public void start(JireconSessionInfo info)
     {
         logger.info("JireconRecorder start");
         updateStatus(JireconRecorderStatus.INITIATING);
@@ -98,7 +98,7 @@ public class JireconRecorderImpl implements JireconRecorder
         }
     }
 
-    private boolean startReceivingStreams(SessionInfo info)
+    private boolean startReceivingStreams(JireconSessionInfo info)
     {
         logger.info("Jirecon start receiving streams");
         int startCount = 0;
@@ -125,7 +125,7 @@ public class JireconRecorderImpl implements JireconRecorder
         return true;
     }
 
-    private MediaStream createMediaStream(SessionInfo info,
+    private MediaStream createMediaStream(JireconSessionInfo info,
         MediaType media)
     {
         MediaStream stream =
@@ -145,7 +145,7 @@ public class JireconRecorderImpl implements JireconRecorder
         return stream;
     }
 
-    private StreamConnector createConnector(SessionInfo info,
+    private StreamConnector createConnector(JireconSessionInfo info,
         MediaType media)
     {
         final CandidatePair rtpPair = info.getRtpCandidatePair(media);
@@ -155,7 +155,7 @@ public class JireconRecorderImpl implements JireconRecorder
             .getDatagramSocket());
     }
 
-    private MediaStreamTarget createStreamTarget(SessionInfo info,
+    private MediaStreamTarget createStreamTarget(JireconSessionInfo info,
         MediaType media)
     {
         final CandidatePair rtpPair = info.getRtpCandidatePair(media);

@@ -12,6 +12,7 @@ import org.jitsi.jirecon.session.JireconSessionManagerImpl;
 import org.jitsi.jirecon.session.JireconSessionStatus;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.jirecon.utils.JireconConfigurationImpl;
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jivesoftware.smack.XMPPException;
 
 import junit.framework.TestCase;
@@ -24,6 +25,7 @@ public class TestJireconSessionManagerImpl
     @Override
     protected void setUp()
     {
+        LibJitsi.start();
         final JireconConfiguration configuration =
             new JireconConfigurationImpl();
         try
@@ -49,12 +51,12 @@ public class TestJireconSessionManagerImpl
 
     public void testOpenAndCloseJingleSession()
     {
-        final String cf1 = "lqrxqzms9hehfr@conference.example.com";
+        final String cf1 = "6ig1as48bluqsemi@conference.example.com";
 //        final String cf2 = "jvxmxznhy4jnstt9";
 
         try
         {
-            mgr.openJingleSession(cf1);
+            mgr.openJireconSession(cf1);
 //            mgr.openJingleSession(cf2);
         }
         catch (XMPPException e1)
@@ -78,7 +80,7 @@ public class TestJireconSessionManagerImpl
 //        assertEquals(mgr.getSessionInfo(cf2).getSessionStatus(),
 //            JireconSessionStatus.CONSTRUCTED);
 
-        mgr.closeJingleSession(cf1);
+        mgr.closeJireconSession(cf1);
 //        mgr.closeJingleSession(cf2);
     }
 

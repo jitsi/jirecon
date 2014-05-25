@@ -6,22 +6,23 @@
 package org.jitsi.jirecon.session;
 
 // TODO: Rewrite those import statements to package import statement.
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQProvider;
 
+import org.jitsi.jirecon.JireconEvent;
+import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
-import org.jitsi.jirecon.recorder.JireconRecorderManager;
 import org.jitsi.jirecon.utils.JireconConfiguration;
-import org.jitsi.jirecon.utils.JireconConfigurationImpl;
 import org.jitsi.jirecon.utils.JireconFactory;
 import org.jitsi.jirecon.utils.JireconFactoryImpl;
-import org.jitsi.jirecon.utils.JireconMessageReceiver;
-import org.jitsi.jirecon.utils.JireconMessageSender;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.util.Logger;
 import org.jivesoftware.smack.ConnectionConfiguration;
@@ -30,7 +31,6 @@ import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.filter.PacketFilter;
 import org.jivesoftware.smack.packet.Packet;
-import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.provider.ProviderManager;
 
 // TODO: Add configuration file support.
@@ -41,10 +41,10 @@ import org.jivesoftware.smack.provider.ProviderManager;
  * 
  */
 public class JireconSessionManagerImpl
-    implements JireconSessionManager, JireconMessageSender,
-    JireconMessageReceiver
+    implements JireconSessionManager, JireconEventListener
 {
-    Set<JireconMessageReceiver> msgReceivers;
+    List<JireconEventListener> listeners =
+        new ArrayList<JireconEventListener>();
 
     /**
      * The XMPP connection, it will be shared with all Jingle session.
@@ -54,7 +54,8 @@ public class JireconSessionManagerImpl
     /**
      * The Jingle sessions to be managed.
      */
-    private Map<String, JireconSession> sessions;
+    private Map<String, JireconSession> sessions =
+        new HashMap<String, JireconSession>();
 
     private JireconFactory factory;
 
@@ -75,7 +76,6 @@ public class JireconSessionManagerImpl
      */
     public JireconSessionManagerImpl()
     {
-        msgReceivers = new HashSet<JireconMessageReceiver>();
         this.factory = new JireconFactoryImpl();
         logger = Logger.getLogger(this.getClass());
         logger.setLevelAll();
@@ -91,7 +91,6 @@ public class JireconSessionManagerImpl
     @Override
     public void init(JireconConfiguration configuration) throws XMPPException
     {
-        LibJitsi.start();
         final String xmppHost = configuration.getProperty(XMPP_HOST_KEY);
         final int xmppPort =
             Integer.valueOf(configuration.getProperty(XMPP_PORT_KEY));
@@ -227,8 +226,6 @@ public class JireconSessionManagerImpl
             }
         }
         disconnect();
-        
-        LibJitsi.stop();
     }
 
     /**
@@ -239,10 +236,8 @@ public class JireconSessionManagerImpl
      * @throws XMPPException
      */
     @Override
-    public void openJingleSession(String conferenceJid) throws XMPPException
+    public void openJireconSession(String conferenceJid) throws XMPPException
     {
-        if (null == sessions)
-            sessions = new HashMap<String, JireconSession>();
         if (sessions.containsKey(conferenceJid))
         {
             String err =
@@ -252,7 +247,7 @@ public class JireconSessionManagerImpl
         }
 
         JireconSession js = factory.createSession(connection);
-        ((JireconMessageSender) js).addReceiver(this);
+        js.addEventListener(this);
         try
         {
             js.startSession(conferenceJid);
@@ -268,15 +263,15 @@ public class JireconSessionManagerImpl
     }
 
     /**
-     * Close an existed Jingle session with specified conference id.
+     * Close an existed Jirecon session with specified conference id.
      * 
      * @param conferenceJid
      * @return True if succeeded, false if failed.
      */
     @Override
-    public void closeJingleSession(String conferenceJid)
+    public void closeJireconSession(String conferenceJid)
     {
-        if (null == sessions || !sessions.containsKey(conferenceJid))
+        if (!sessions.containsKey(conferenceJid))
         {
             return;
         }
@@ -288,19 +283,7 @@ public class JireconSessionManagerImpl
     }
 
     @Override
-    public void addReceiver(JireconMessageReceiver receiver)
-    {
-        msgReceivers.add(receiver);
-    }
-
-    @Override
-    public void removeReceiver(JireconMessageReceiver receiver)
-    {
-        msgReceivers.remove(receiver);
-    }
-
-    @Override
-    public SessionInfo getSessionInfo(String conferenceJid)
+    public JireconSessionInfo getSessionInfo(String conferenceJid)
     {
         final JireconSession session = sessions.get(conferenceJid);
         if (null != session)
@@ -313,51 +296,53 @@ public class JireconSessionManagerImpl
         }
     }
 
-    @Override
-    public void receiveMsg(JireconMessageSender sender, String msg)
+    // TODO: If we plan to use full jid, then this method should be changed.
+    private String parseConferenceJid(String conferenceFullJid)
     {
-        System.out.println("JireconSessionManager receive a message " + msg);
-        if (sender instanceof JireconSessionImpl)
+        return conferenceFullJid.split("/")[0];
+    }
+
+    @Override
+    public void addStateChangeListener(PropertyChangeListener listener)
+    {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void removeStateChangeListener(PropertyChangeListener listener)
+    {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void handleEvent(JireconEvent evt)
+    {
+        if (evt instanceof JireconSessionEvent)
         {
-            final JireconSession session = (JireconSession) sender;
-            // Send message to JireconRecorderManager
-            switch (session.getSessionInfo().getSessionStatus())
+            JireconSessionEvent jsEvt = (JireconSessionEvent) evt;
+            JireconSessionInfo info = jsEvt.getJireconSessionInfo();
+            JireconSessionEvent newEvent = new JireconSessionEvent(this, info);
+            for (JireconEventListener listener : listeners)
+            {
+                listener.handleEvent(newEvent);
+            }
+
+            switch (info.getSessionStatus())
             {
             case CONSTRUCTED:
-                sendMsg(session.getSessionInfo().getConferenceJid());
+                logger.info("JireconSessionManager: session "
+                    + info.getConferenceJid() + " constructed.");
                 break;
             case ABORTED:
-                sendMsg(session.getSessionInfo().getConferenceJid());
-                closeJingleSession(session.getSessionInfo().getConferenceJid());
+                logger.fatal("JireconSessionManager: session "
+                    + info.getConferenceJid() + " aborted.");
+                closeJireconSession(info.getConferenceJid());
                 break;
             default:
                 break;
             }
         }
-        else if (sender instanceof JireconRecorderManager)
-        {
-            logger
-                .info("Oh? JireconSessionManager receive a message from JireconRecorderManager");
-        }
-        else
-        {
-            logger
-                .info("JingleSessionManager receive a message from unknown sender.");
-        }
-    }
-
-    @Override
-    public void sendMsg(String msg)
-    {
-        for (JireconMessageReceiver r : msgReceivers)
-        {
-            r.receiveMsg(this, msg);
-        }
-    }
-
-    // TODO: If we plan to use full jid, then this method should be changed.
-    private String parseConferenceJid(String conferenceFullJid)
-    {
-        return conferenceFullJid.split("/")[0];
     }
 }

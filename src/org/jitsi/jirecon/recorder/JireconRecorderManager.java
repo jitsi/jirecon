@@ -6,13 +6,14 @@
  */
 package org.jitsi.jirecon.recorder;
 
+import org.jitsi.jirecon.session.JireconSessionInfo;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 
 public interface JireconRecorderManager
 {
-    public void startRecording(String conferenceJid);
+    public void startJireconRecorder(JireconSessionInfo info);
 
-    public void stopRecording(String conferenceJid);
+    public void stopJireconRecorder(String conferenceJid);
 
     public void init(JireconConfiguration configuration);
 

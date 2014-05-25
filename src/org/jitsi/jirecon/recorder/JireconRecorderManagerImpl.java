@@ -9,19 +9,17 @@ package org.jitsi.jirecon.recorder;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.jitsi.jirecon.session.SessionInfo;
+import org.jitsi.jirecon.session.JireconSessionInfo;
 import org.jitsi.jirecon.session.JireconSessionManager;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.jirecon.utils.JireconFactory;
 import org.jitsi.jirecon.utils.JireconFactoryImpl;
-import org.jitsi.jirecon.utils.JireconMessageReceiver;
-import org.jitsi.jirecon.utils.JireconMessageSender;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.MediaService;
 import org.jitsi.util.Logger;
 
 public class JireconRecorderManagerImpl
-    implements JireconRecorderManager, JireconMessageReceiver
+    implements JireconRecorderManager
 {
 
     /**
@@ -42,14 +40,15 @@ public class JireconRecorderManagerImpl
     }
 
     @Override
-    public void startRecording(String conferenceJid)
+    public void startJireconRecorder(JireconSessionInfo info)
     {
         final JireconRecorder recorder = factory.createRecorder(mediaService);
-        recorders.put(conferenceJid, recorder);
+        recorders.put(info.getConferenceJid(), recorder);
+        // TODO
     }
 
     @Override
-    public void stopRecording(String conferenceJid)
+    public void stopJireconRecorder(String conferenceJid)
     {
         final JireconRecorder recorder = recorders.get(conferenceJid);
         recorder.stop();
@@ -57,36 +56,9 @@ public class JireconRecorderManagerImpl
     }
 
     @Override
-    public void receiveMsg(JireconMessageSender sender, String conferenceJid)
-    {
-        System.out.println("JireconRecorderManager receive a message");
-        if (sender instanceof JireconSessionManager)
-        {
-            final SessionInfo info =
-                ((JireconSessionManager) sender).getSessionInfo(conferenceJid);
-            switch (info.getSessionStatus())
-            {
-            case CONSTRUCTED:
-                recorders.get(conferenceJid).start(info);
-                break;
-            case ABORTED:
-                recorders.get(conferenceJid).stop();
-                recorders.remove(conferenceJid);
-            default:
-                break;
-            }
-        }
-        else
-        {
-            logger
-                .info("ConferenceRecorderManager receive a message from unknown sender");
-        }
-    }
-
-    @Override
     public void init(JireconConfiguration configuration)
     {
-        LibJitsi.start();
+        // NOTE: We must make sure that the LibJitsi has been initiated.
         mediaService = LibJitsi.getMediaService();
         factory = new JireconFactoryImpl();
     }
@@ -94,7 +66,5 @@ public class JireconRecorderManagerImpl
     @Override
     public void uninit()
     {
-        LibJitsi.stop();
     }
-
 }

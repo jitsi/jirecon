@@ -5,6 +5,8 @@
  */
 package org.jitsi.jirecon.session;
 
+import java.beans.PropertyChangeListener;
+
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jivesoftware.smack.XMPPException;
 
@@ -34,7 +36,7 @@ public interface JireconSessionManager
     public void uninit();
 
     /**
-     * Open an new Jingle session with specified conference id.
+     * Open an new Jirecon session with specified conference id.
      * 
      * @param conferenceName The conference's name which you want to join. The
      *            conference jid will be pattern
@@ -42,15 +44,19 @@ public interface JireconSessionManager
      *            jid.
      * @throws XMPPException
      */
-    public void openJingleSession(String conferenceName) throws XMPPException;
+    public void openJireconSession(String conferenceName) throws XMPPException;
 
     /**
      * Close an existed Jingle session with specified conference id.
      * 
      * @param conferenceJid
      */
-    public void closeJingleSession(String conferenceJid);
+    public void closeJireconSession(String conferenceJid);
 
-    public SessionInfo getSessionInfo(String conferenceJid);
+    public JireconSessionInfo getSessionInfo(String conferenceJid);
+
+    public void addStateChangeListener(PropertyChangeListener listener);
+
+    public void removeStateChangeListener(PropertyChangeListener listener);
 
 }
