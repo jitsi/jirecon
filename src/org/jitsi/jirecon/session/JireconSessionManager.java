@@ -31,7 +31,7 @@ public interface JireconSessionManager
      * 
      * @return True if succeeded, false if failed.
      */
-    public boolean uninit();
+    public void uninit();
 
     /**
      * Open an new Jingle session with specified conference id.

@@ -108,7 +108,6 @@ public class JireconSessionImpl
     public void startSession(String conferenceJid) throws XMPPException
     {
         info.setConferenceJid(conferenceJid);
-        LibJitsi.start();
         initiateIceAgent();
         joinConference();
         // After joining the conference, JireconSessionImpl will automatically
@@ -124,7 +123,6 @@ public class JireconSessionImpl
         closeSession();
         leaveConference();
         uninitiateIceAgent();
-        LibJitsi.stop();
     }
 
     /**

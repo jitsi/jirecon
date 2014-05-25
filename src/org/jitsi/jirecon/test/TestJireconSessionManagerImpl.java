@@ -49,7 +49,7 @@ public class TestJireconSessionManagerImpl
 
     public void testOpenAndCloseJingleSession()
     {
-        final String cf1 = "jzqoo719x0pv6lxr@conference.example.com";
+        final String cf1 = "lqrxqzms9hehfr@conference.example.com";
 //        final String cf2 = "jvxmxznhy4jnstt9";
 
         try

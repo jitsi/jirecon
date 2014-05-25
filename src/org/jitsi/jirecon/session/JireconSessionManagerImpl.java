@@ -22,6 +22,7 @@ import org.jitsi.jirecon.utils.JireconFactory;
 import org.jitsi.jirecon.utils.JireconFactoryImpl;
 import org.jitsi.jirecon.utils.JireconMessageReceiver;
 import org.jitsi.jirecon.utils.JireconMessageSender;
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.util.Logger;
 import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.PacketListener;
@@ -61,10 +62,11 @@ public class JireconSessionManagerImpl
      * The laborious logger
      */
     private Logger logger;
-    
+
     private final String XMPP_HOST_KEY = "XMPP_HOST";
+
     private final String XMPP_PORT_KEY = "XMPP_PORT";
-    
+
     /**
      * Constructor
      * 
@@ -89,8 +91,10 @@ public class JireconSessionManagerImpl
     @Override
     public void init(JireconConfiguration configuration) throws XMPPException
     {
+        LibJitsi.start();
         final String xmppHost = configuration.getProperty(XMPP_HOST_KEY);
-        final int xmppPort = Integer.valueOf(configuration.getProperty(XMPP_PORT_KEY));
+        final int xmppPort =
+            Integer.valueOf(configuration.getProperty(XMPP_PORT_KEY));
         try
         {
             connect(xmppHost, xmppPort);
@@ -213,7 +217,7 @@ public class JireconSessionManagerImpl
      * Uninitialize this Jingle session manager.
      */
     @Override
-    public boolean uninit()
+    public void uninit()
     {
         if (sessions != null && sessions.isEmpty())
         {
@@ -223,7 +227,8 @@ public class JireconSessionManagerImpl
             }
         }
         disconnect();
-        return true;
+        
+        LibJitsi.stop();
     }
 
     /**
@@ -241,8 +246,7 @@ public class JireconSessionManagerImpl
         if (sessions.containsKey(conferenceJid))
         {
             String err =
-                "You have already join the conference " + conferenceJid
-                    + ".";
+                "You have already join the conference " + conferenceJid + ".";
             logger.fatal("JireconSessionManager: " + err);
             throw new XMPPException(err);
         }
@@ -272,13 +276,15 @@ public class JireconSessionManagerImpl
     @Override
     public void closeJingleSession(String conferenceJid)
     {
-        // TODO
         if (null == sessions || !sessions.containsKey(conferenceJid))
+        {
             return;
-
-        JireconSession js = sessions.get(conferenceJid);
-        sessions.remove(conferenceJid);
-        js.terminateSession();
+        }
+        JireconSession js = sessions.remove(conferenceJid);
+        if (null != js)
+        {
+            js.terminateSession();
+        }
     }
 
     @Override
@@ -296,8 +302,15 @@ public class JireconSessionManagerImpl
     @Override
     public SessionInfo getSessionInfo(String conferenceJid)
     {
-        // TODO: null check
-        return sessions.get(conferenceJid).getSessionInfo();
+        final JireconSession session = sessions.get(conferenceJid);
+        if (null != session)
+        {
+            return session.getSessionInfo();
+        }
+        else
+        {
+            return null;
+        }
     }
 
     @Override
@@ -341,7 +354,7 @@ public class JireconSessionManagerImpl
             r.receiveMsg(this, msg);
         }
     }
-    
+
     // TODO: If we plan to use full jid, then this method should be changed.
     private String parseConferenceJid(String conferenceFullJid)
     {
