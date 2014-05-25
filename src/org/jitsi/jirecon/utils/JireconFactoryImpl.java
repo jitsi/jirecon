@@ -1,8 +1,7 @@
 /*
  * Jirecon, the Jitsi recorder container.
- *
- * Distributable under LGPL license.
- * See terms of license at gnu.org.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
  */
 package org.jitsi.jirecon.utils;
 
@@ -33,10 +32,10 @@ public class JireconFactoryImpl
         return new JireconSessionImpl(connection);
     }
 
-     @Override
-     public JireconRecorder createRecorder(MediaService service)
-     {
-     return new JireconRecorderImpl(service);
-     }
+    @Override
+    public JireconRecorder createRecorder(MediaService service)
+    {
+        return new JireconRecorderImpl(service);
+    }
 
 }
