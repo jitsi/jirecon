@@ -22,9 +22,10 @@ import org.jitsi.service.neomedia.format.MediaFormat;
  */
 public class JireconSessionInfo
 {
-    private String localNode;
+    private String localJid;
 
-    private String remoteNode;
+    // This is actually the conference jid
+    private String remoteJid;
 
     private String sid;
 
@@ -176,24 +177,24 @@ public class JireconSessionInfo
         this.conferenceJid = conferenceJid;
     }
     
-    public String getLocalNode()
+    public String getLocalJid()
     {
-        return localNode;
+        return localJid;
     }
     
-    public void setLocalNode(String localNode)
+    public void setLocalJid(String localNode)
     {
-        this.localNode = localNode;
+        this.localJid = localNode;
     }
     
-    public String getRemoteNode()
+    public String getRemoteJid()
     {
-        return remoteNode;
+        return remoteJid;
     }
     
-    public void setRemoteNode(String remoteNode)
+    public void setRemoteJid(String remoteNode)
     {
-        this.remoteNode = remoteNode;
+        this.remoteJid = remoteNode;
     }
     
     public String getSid()

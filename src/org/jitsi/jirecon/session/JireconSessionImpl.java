@@ -142,6 +142,11 @@ public class JireconSessionImpl
      */
     public void handleSessionPacket(Packet packet)
     {
+        if (null != info.getLocalJid() && !packet.getTo().equals(info.getLocalJid()))
+        {
+            return;
+        }
+        
         if (JingleIQ.class == packet.getClass())
         {
             handleJingleSessionPacket((JingleIQ) packet);
@@ -177,8 +182,8 @@ public class JireconSessionImpl
     {
         if (IQ.Type.SET == jiq.getType() && JingleAction.SESSION_INITIATE == jiq.getAction())
         {
-            info.setLocalNode(jiq.getTo());
-            info.setRemoteNode(jiq.getFrom());
+            info.setLocalJid(jiq.getTo());
+            info.setRemoteJid(jiq.getFrom());
             info.setSid(jiq.getSID());
             handleSetPacket(jiq);
         }
@@ -310,8 +315,8 @@ public class JireconSessionImpl
         }
 
         JingleIQ acceptJiq =
-            JinglePacketFactory.createSessionAccept(info.getLocalNode(),
-                info.getRemoteNode(), info.getSid(), contents);
+            JinglePacketFactory.createSessionAccept(info.getLocalJid(),
+                info.getRemoteJid(), info.getSid(), contents);
 
         connection.sendPacket(acceptJiq);
 
@@ -401,7 +406,7 @@ public class JireconSessionImpl
     public void sendTerminate(Reason reason, String reasonText)
     {
         connection.sendPacket(JinglePacketFactory.createSessionTerminate(
-            info.getLocalNode(), info.getRemoteNode(), info.getSid(), reason,
+            info.getLocalJid(), info.getRemoteJid(), info.getSid(), reason,
             reasonText));
     }
 
