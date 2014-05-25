@@ -40,14 +40,14 @@ public interface Jirecon
     /**
      * Start recording a conference
      * 
-     * @param conferenceId The conference to be recorded.
+     * @param conferenceJid The conference to be recorded.
      */
-    public void startRecording(String conferenceId);
+    public void startRecording(String conferenceJid);
 
     /**
      * Stop recording a conference
      * 
-     * @param conferenceId The conference to be stopped.
+     * @param conferenceJid The conference to be stopped.
      */
-    public void stopRecording(String conferenceId);
+    public void stopRecording(String conferenceJid);
 }

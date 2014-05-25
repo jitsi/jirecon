@@ -28,7 +28,7 @@ public class SessionInfo
 
     private String sid;
 
-    private String conferenceId;
+    private String conferenceJid;
 
     /**
      * The video or audio format which will be used in transferring RTP stream.
@@ -166,14 +166,14 @@ public class SessionInfo
         return status;
     }
 
-    public String getConferenceId()
+    public String getConferenceJid()
     {
-        return conferenceId;
+        return conferenceJid;
     }
 
-    public void setConferenceId(String conferenceId)
+    public void setConferenceJid(String conferenceJid)
     {
-        this.conferenceId = conferenceId;
+        this.conferenceJid = conferenceJid;
     }
     
     public String getLocalNode()

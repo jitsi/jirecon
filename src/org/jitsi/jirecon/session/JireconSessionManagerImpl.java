@@ -1,8 +1,7 @@
 /*
  * Jirecon, the Jitsi recorder container.
- *
- * Distributable under LGPL license.
- * See terms of license at gnu.org.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
  */
 package org.jitsi.jirecon.session;
 
@@ -17,6 +16,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ
 
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
 import org.jitsi.jirecon.recorder.JireconRecorderManager;
+import org.jitsi.jirecon.utils.JireconConfiguration;
+import org.jitsi.jirecon.utils.JireconConfigurationImpl;
 import org.jitsi.jirecon.utils.JireconFactory;
 import org.jitsi.jirecon.utils.JireconFactoryImpl;
 import org.jitsi.jirecon.utils.JireconMessageReceiver;
@@ -28,6 +29,7 @@ import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.filter.PacketFilter;
 import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.provider.ProviderManager;
 
 // TODO: Add configuration file support.
@@ -42,17 +44,6 @@ public class JireconSessionManagerImpl
     JireconMessageReceiver
 {
     Set<JireconMessageReceiver> msgReceivers;
-
-    /**
-     * The hostname of XMPP server. This properties should be set in configure
-     * file.
-     */
-    private String hostname;
-
-    /**
-     * The port of XMPP server. This properties should be set in configure file.
-     */
-    private int port;
 
     /**
      * The XMPP connection, it will be shared with all Jingle session.
@@ -70,18 +61,19 @@ public class JireconSessionManagerImpl
      * The laborious logger
      */
     private Logger logger;
-
+    
+    private final String XMPP_HOST_KEY = "XMPP_HOST";
+    private final String XMPP_PORT_KEY = "XMPP_PORT";
+    
     /**
      * Constructor
      * 
      * @param hostname The hostname of XMPP server
      * @param port The port of XMPP connection
      */
-    public JireconSessionManagerImpl(String hostname, int port)
+    public JireconSessionManagerImpl()
     {
         msgReceivers = new HashSet<JireconMessageReceiver>();
-        this.hostname = hostname;
-        this.port = port;
         this.factory = new JireconFactoryImpl();
         logger = Logger.getLogger(this.getClass());
         logger.setLevelAll();
@@ -95,11 +87,13 @@ public class JireconSessionManagerImpl
      *             connection.
      */
     @Override
-    public void init() throws XMPPException
+    public void init(JireconConfiguration configuration) throws XMPPException
     {
+        final String xmppHost = configuration.getProperty(XMPP_HOST_KEY);
+        final int xmppPort = Integer.valueOf(configuration.getProperty(XMPP_PORT_KEY));
         try
         {
-            connect();
+            connect(xmppHost, xmppPort);
             login();
         }
         catch (XMPPException e)
@@ -118,10 +112,10 @@ public class JireconSessionManagerImpl
      * 
      * @throws XMPPException If connect failed, throw XMPP exception.
      */
-    private void connect() throws XMPPException
+    private void connect(String xmppHost, int xmppPort) throws XMPPException
     {
         ConnectionConfiguration conf =
-            new ConnectionConfiguration(hostname, port);
+            new ConnectionConfiguration(xmppHost, xmppPort);
         connection = new XMPPConnection(conf);
         connection.connect();
     }
@@ -199,10 +193,10 @@ public class JireconSessionManagerImpl
             public void processPacket(Packet packet)
             {
                 System.out.println("<---: " + packet.toXML());
-                String conferenceId = getConferenceId(packet, true);
-                if (sessions.containsKey(conferenceId))
+                String conferenceJid = parseConferenceJid(packet.getFrom());
+                if (sessions.containsKey(conferenceJid))
                 {
-                    sessions.get(conferenceId).handleSessionPacket(packet);
+                    sessions.get(conferenceJid).handleSessionPacket(packet);
                 }
             }
         }, new PacketFilter()
@@ -235,49 +229,55 @@ public class JireconSessionManagerImpl
     /**
      * Open an new Jingle session with specified conference id.
      * 
-     * @param conferenceId The conference id which you want to join.
+     * @param conferenceJid The conference name which you want to join.
      * @return True if succeeded, false if failed.
      * @throws XMPPException
      */
     @Override
-    public void openJingleSession(String conferenceId) throws XMPPException
+    public void openJingleSession(String conferenceJid) throws XMPPException
     {
         if (null == sessions)
             sessions = new HashMap<String, JireconSession>();
-        if (sessions.containsKey(conferenceId))
-            return;
+        if (sessions.containsKey(conferenceJid))
+        {
+            String err =
+                "You have already join the conference " + conferenceJid
+                    + ".";
+            logger.fatal("JireconSessionManager: " + err);
+            throw new XMPPException(err);
+        }
 
         JireconSession js = factory.createSession(connection);
         ((JireconMessageSender) js).addReceiver(this);
         try
         {
-            js.startSession(conferenceId);
+            js.startSession(conferenceJid);
         }
         catch (XMPPException e)
         {
-            logger.fatal(e.getXMPPError()
-                + "\nOpen Jingle session failed, conference id: "
-                + conferenceId + ".");
+            logger.fatal("JireconSessionManager: Failed to join conference: "
+                + conferenceJid + ".");
+            e.printStackTrace();
             throw e;
         }
-        sessions.put(conferenceId, js);
+        sessions.put(conferenceJid, js);
     }
 
     /**
      * Close an existed Jingle session with specified conference id.
      * 
-     * @param conferenceId
+     * @param conferenceJid
      * @return True if succeeded, false if failed.
      */
     @Override
-    public void closeJingleSession(String conferenceId)
+    public void closeJingleSession(String conferenceJid)
     {
         // TODO
-        if (null == sessions || !sessions.containsKey(conferenceId))
+        if (null == sessions || !sessions.containsKey(conferenceJid))
             return;
 
-        JireconSession js = sessions.get(conferenceId);
-        sessions.remove(conferenceId);
+        JireconSession js = sessions.get(conferenceJid);
+        sessions.remove(conferenceJid);
         js.terminateSession();
     }
 
@@ -294,10 +294,10 @@ public class JireconSessionManagerImpl
     }
 
     @Override
-    public SessionInfo getSessionInfo(String conferenceId)
+    public SessionInfo getSessionInfo(String conferenceJid)
     {
         // TODO: null check
-        return sessions.get(conferenceId).getSessionInfo();
+        return sessions.get(conferenceJid).getSessionInfo();
     }
 
     @Override
@@ -311,11 +311,11 @@ public class JireconSessionManagerImpl
             switch (session.getSessionInfo().getSessionStatus())
             {
             case CONSTRUCTED:
-                sendMsg(session.getSessionInfo().getConferenceId());
+                sendMsg(session.getSessionInfo().getConferenceJid());
                 break;
             case ABORTED:
-                sendMsg(session.getSessionInfo().getConferenceId());
-                closeJingleSession(session.getSessionInfo().getConferenceId());
+                sendMsg(session.getSessionInfo().getConferenceJid());
+                closeJingleSession(session.getSessionInfo().getConferenceJid());
                 break;
             default:
                 break;
@@ -341,16 +341,10 @@ public class JireconSessionManagerImpl
             r.receiveMsg(this, msg);
         }
     }
-
-    private String getConferenceId(Packet packet, boolean isReceived)
+    
+    // TODO: If we plan to use full jid, then this method should be changed.
+    private String parseConferenceJid(String conferenceFullJid)
     {
-        if (isReceived)
-        {
-            return packet.getFrom().split("@")[0];
-        }
-        else
-        {
-            return packet.getTo().split("@")[0];
-        }
+        return conferenceFullJid.split("/")[0];
     }
 }

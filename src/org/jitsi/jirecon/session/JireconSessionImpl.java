@@ -81,11 +81,6 @@ public class JireconSessionImpl
     private Logger logger;
 
     /**
-     * The conference hostname.
-     */
-    private final String CONFERENCE_ADDR = "conference.example.com";
-
-    /**
      * This will be used when join a conference.
      */
     private final String NICKNAME = "Jirecon";
@@ -110,9 +105,9 @@ public class JireconSessionImpl
      * @throws XMPPException
      */
     @Override
-    public void startSession(String conferenceId) throws XMPPException
+    public void startSession(String conferenceJid) throws XMPPException
     {
-        info.setConferenceId(conferenceId);
+        info.setConferenceJid(conferenceJid);
         LibJitsi.start();
         initiateIceAgent();
         joinConference();
@@ -183,28 +178,13 @@ public class JireconSessionImpl
 
     private void handleJingleSessionPacket(JingleIQ jiq)
     {
-        if (IQ.Type.SET == jiq.getType())
+        if (IQ.Type.SET == jiq.getType() && JingleAction.SESSION_INITIATE == jiq.getAction())
         {
-            recordLocalNode(jiq);
-            recordRemoteNode(jiq);
-            recordSid(jiq);
+            info.setLocalNode(jiq.getTo());
+            info.setRemoteNode(jiq.getFrom());
+            info.setSid(jiq.getSID());
             handleSetPacket(jiq);
         }
-    }
-
-    private void recordLocalNode(JingleIQ jiq)
-    {
-        info.setLocalNode(jiq.getFrom());
-    }
-
-    private void recordRemoteNode(JingleIQ jiq)
-    {
-        info.setRemoteNode(jiq.getTo());
-    }
-
-    private void recordSid(JingleIQ jiq)
-    {
-        info.setSid(jiq.getSID());
     }
 
     private void updateStatus(JireconSessionStatus status, String msg)
@@ -231,8 +211,7 @@ public class JireconSessionImpl
     private void joinConference() throws XMPPException
     {
         conference =
-            new MultiUserChat(connection, info.getConferenceId() + "@"
-                + CONFERENCE_ADDR);
+            new MultiUserChat(connection, info.getConferenceJid());
         conference.join(NICKNAME);
         updateStatus(JireconSessionStatus.INITIATING, "Start session.");
     }

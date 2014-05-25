@@ -1,11 +1,11 @@
 /*
  * Jirecon, the Jitsi recorder container.
- *
- * Distributable under LGPL license.
- * See terms of license at gnu.org.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
  */
 package org.jitsi.jirecon.session;
 
+import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jivesoftware.smack.XMPPException;
 
 /**
@@ -23,7 +23,7 @@ public interface JireconSessionManager
      * @throws XMPPException Throws XMPPException if can't construct XMPP
      *             connection.
      */
-    public void init() throws XMPPException;
+    public void init(JireconConfiguration configuration) throws XMPPException;
 
     /**
      * Uninitialize JingleSessionManager, such as release some system resources.
@@ -36,18 +36,21 @@ public interface JireconSessionManager
     /**
      * Open an new Jingle session with specified conference id.
      * 
-     * @param conferenceId The conference id which you want to join.
+     * @param conferenceName The conference's name which you want to join. The
+     *            conference jid will be pattern
+     *            <conferenceName>@<conferenceNode>. ATTENTION, NOT FULL JID.
+     *            jid.
      * @throws XMPPException
      */
-    public void openJingleSession(String conferenceId) throws XMPPException;
+    public void openJingleSession(String conferenceName) throws XMPPException;
 
     /**
      * Close an existed Jingle session with specified conference id.
      * 
-     * @param conferenceId
+     * @param conferenceJid
      */
-    public void closeJingleSession(String conferenceId);
-    
-    public SessionInfo getSessionInfo(String conferenceId);
+    public void closeJingleSession(String conferenceJid);
+
+    public SessionInfo getSessionInfo(String conferenceJid);
 
 }

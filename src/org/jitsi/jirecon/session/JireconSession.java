@@ -11,7 +11,7 @@ import org.jivesoftware.smack.packet.Packet;
 
 public interface JireconSession
 {
-    public void startSession(String conferenceId) throws XMPPException;
+    public void startSession(String conferenceJid) throws XMPPException;
 
     public void terminateSession();
 

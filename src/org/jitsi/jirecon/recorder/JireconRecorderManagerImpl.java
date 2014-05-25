@@ -11,6 +11,7 @@ import java.util.Map;
 
 import org.jitsi.jirecon.session.SessionInfo;
 import org.jitsi.jirecon.session.JireconSessionManager;
+import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.jirecon.utils.JireconFactory;
 import org.jitsi.jirecon.utils.JireconFactoryImpl;
 import org.jitsi.jirecon.utils.JireconMessageReceiver;
@@ -41,36 +42,36 @@ public class JireconRecorderManagerImpl
     }
 
     @Override
-    public void startRecording(String conferenceId)
+    public void startRecording(String conferenceJid)
     {
         final JireconRecorder recorder = factory.createRecorder(mediaService);
-        recorders.put(conferenceId, recorder);
+        recorders.put(conferenceJid, recorder);
     }
 
     @Override
-    public void stopRecording(String conferenceId)
+    public void stopRecording(String conferenceJid)
     {
-        final JireconRecorder recorder = recorders.get(conferenceId);
+        final JireconRecorder recorder = recorders.get(conferenceJid);
         recorder.stop();
-        recorders.remove(conferenceId);
+        recorders.remove(conferenceJid);
     }
 
     @Override
-    public void receiveMsg(JireconMessageSender sender, String conferenceId)
+    public void receiveMsg(JireconMessageSender sender, String conferenceJid)
     {
         System.out.println("JireconRecorderManager receive a message");
         if (sender instanceof JireconSessionManager)
         {
             final SessionInfo info =
-                ((JireconSessionManager) sender).getSessionInfo(conferenceId);
+                ((JireconSessionManager) sender).getSessionInfo(conferenceJid);
             switch (info.getSessionStatus())
             {
             case CONSTRUCTED:
-                recorders.get(conferenceId).start(info);
+                recorders.get(conferenceJid).start(info);
                 break;
             case ABORTED:
-                recorders.get(conferenceId).stop();
-                recorders.remove(conferenceId);
+                recorders.get(conferenceJid).stop();
+                recorders.remove(conferenceJid);
             default:
                 break;
             }
@@ -83,7 +84,7 @@ public class JireconRecorderManagerImpl
     }
 
     @Override
-    public void init()
+    public void init(JireconConfiguration configuration)
     {
         LibJitsi.start();
         mediaService = LibJitsi.getMediaService();

@@ -256,11 +256,11 @@ public class JinglePacketParser
     {
         if (isReceived)
         {
-            return jiq.getFrom().split("@")[0];
+            return jiq.getFrom();
         }
         else
         {
-            return jiq.getTo().split("@")[0];
+            return jiq.getTo();
         }
     }
     
