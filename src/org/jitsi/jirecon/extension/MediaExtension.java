@@ -6,7 +6,9 @@
  */
 package org.jitsi.jirecon.extension;
 
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.jivesoftware.smack.packet.PacketExtension;
 
@@ -17,11 +19,14 @@ public class MediaExtension
 
     public static final String NAMESPACE = "http://estos.de/ns/mjs";
 
-    public ArrayList<Source> list;
+    //public ArrayList<Source> list;
+    
+    private Map<String, String> ssrcs = new HashMap<String, String>();
+    private Map<String, String> directions = new HashMap<String, String>();
 
     public MediaExtension()
     {
-        list = new ArrayList<Source>();
+        //list = new ArrayList<Source>();
     }
 
     @Override
@@ -43,39 +48,62 @@ public class MediaExtension
 
         builder.append("<").append(getElementName()).append(" xmlns='")
             .append(getNamespace()).append("'>");
-        for (Source s : list)
+        for (Entry<String, String> e : ssrcs.entrySet())
         {
-            builder.append("<source type='").append(s.type).append("' ssrc='")
-                .append(s.ssrc).append("' direction='").append(s.direction)
+            String type = e.getKey();
+            String ssrc = e.getValue();
+            String direction = directions.get(type);
+            builder.append("<source type='").append(type).append("' ssrc='")
+                .append(ssrc).append("' direction='").append(direction)
                 .append("' />");
         }
         builder.append("</").append(getElementName()).append(">");
 
         return builder.toString();
     }
-
-    public void addSource(String type, String ssrc, String direction)
+    
+    public void setSsrc(String type, String ssrc)
     {
-        list.add(new Source(type, ssrc, direction));
+        ssrcs.put(type, ssrc);
     }
+    
+    public String getSsrc(String type)
+    {
+        return ssrcs.get(type);
+    }
+    
+    public void setDirection(String type, String direction)
+    {
+        directions.put(type, direction);
+    }
+    
+    public String getDirection(String type)
+    {
+        return directions.get(type);
+    }
+
+//    public void addSource(String type, String ssrc, String direction)
+//    {
+//        list.add(new Source(type, ssrc, direction));
+//    }
 }
 
-class Source
-{
-    public String type;
-
-    public String ssrc;
-
-    public String direction;
-
-    public Source()
-    {
-    }
-
-    public Source(String type, String ssrc, String direction)
-    {
-        this.type = type;
-        this.ssrc = ssrc;
-        this.direction = direction;
-    }
-}
+//class Source
+//{
+//    public String type;
+//
+//    public String ssrc;
+//
+//    public String direction;
+//
+//    public Source()
+//    {
+//    }
+//
+//    public Source(String type, String ssrc, String direction)
+//    {
+//        this.type = type;
+//        this.ssrc = ssrc;
+//        this.direction = direction;
+//    }
+//}

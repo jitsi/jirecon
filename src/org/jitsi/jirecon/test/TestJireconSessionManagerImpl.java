@@ -6,6 +6,8 @@
 package org.jitsi.jirecon.test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.jitsi.jirecon.session.JireconSessionManager;
 import org.jitsi.jirecon.session.JireconSessionManagerImpl;
@@ -13,6 +15,7 @@ import org.jitsi.jirecon.session.JireconSessionStatus;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.jirecon.utils.JireconConfigurationImpl;
 import org.jitsi.service.libjitsi.LibJitsi;
+import org.jitsi.service.neomedia.MediaType;
 import org.jivesoftware.smack.XMPPException;
 
 import junit.framework.TestCase;
@@ -32,10 +35,9 @@ public class TestJireconSessionManagerImpl
         {
             configuration.loadConfiguration("jirecon.property");
         }
-        catch (IOException e1)
+        catch (IOException e)
         {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
+            e.printStackTrace();
         }
         try
         {
@@ -44,24 +46,25 @@ public class TestJireconSessionManagerImpl
         }
         catch (XMPPException e)
         {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
 
     public void testOpenAndCloseJingleSession()
     {
-        final String cf1 = "josyq89md1hjv2t9@conference.example.com";
-//        final String cf2 = "jvxmxznhy4jnstt9";
+        final List<String> cf = new ArrayList<String>();
+        cf.add("v1up1wzk1hh0k9@conference.example.com");
 
         try
         {
-            mgr.openJireconSession(cf1);
-//            mgr.openJingleSession(cf2);
+            for (String cfname : cf)
+            {
+                mgr.openJireconSession(cfname);
+            }
         }
-        catch (XMPPException e1)
+        catch (XMPPException e)
         {
-            e1.printStackTrace();
+            e.printStackTrace();
         }
 
         try
@@ -73,15 +76,18 @@ public class TestJireconSessionManagerImpl
             e.printStackTrace();
         }
 
-        System.out.println(mgr.getSessionInfo(cf1).getSessionStatus());
-//        System.out.println(mgr.getSessionInfo(cf2).getSessionStatus());
-        assertEquals(mgr.getSessionInfo(cf1).getSessionStatus(),
-            JireconSessionStatus.CONSTRUCTED);
-//        assertEquals(mgr.getSessionInfo(cf2).getSessionStatus(),
-//            JireconSessionStatus.CONSTRUCTED);
+        for (String cfname : cf)
+        {
+            System.out.println(mgr.getSessionInfo(cfname).getSessionStatus());
+            assertEquals(mgr.getSessionInfo(cfname).getSessionStatus(),
+                JireconSessionStatus.CONSTRUCTED);
+            assertEquals(mgr.getSessionInfo(cfname).getRemoteSsrcs(MediaType.VIDEO).size(), 1);
+        }
 
-        mgr.closeJireconSession(cf1);
-//        mgr.closeJingleSession(cf2);
+        for (String cfname : cf)
+        {
+            mgr.closeJireconSession(cfname);
+        }
     }
 
     @Override

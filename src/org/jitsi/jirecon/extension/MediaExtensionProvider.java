@@ -44,9 +44,14 @@ public class MediaExtensionProvider
 
                 if (count > 0)
                 {
-                    result.list.add(new Source(parser.getAttributeValue(0),
-                        parser.getAttributeValue(1), parser
-                            .getAttributeValue(2)));
+                    String type = parser.getAttributeValue(0);
+                    String ssrc = parser.getAttributeValue(1);
+                    String direction = parser.getAttributeValue(2);
+                    if (type.equalsIgnoreCase("audio") || type.equalsIgnoreCase("video"))
+                    {
+                        result.setSsrc(type, ssrc);
+                        result.setDirection(type, direction);
+                    }
                 }
                 break;
             }

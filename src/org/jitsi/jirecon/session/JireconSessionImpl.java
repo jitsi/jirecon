@@ -30,15 +30,20 @@ import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.jitsi.impl.neomedia.format.MediaFormatFactoryImpl;
 import org.jitsi.jirecon.JireconEventListener;
+import org.jitsi.jirecon.extension.MediaExtension;
 import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.service.libjitsi.LibJitsi;
+import org.jitsi.service.neomedia.MediaDirection;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.AudioMediaFormat;
 import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smack.packet.PacketExtension;
+import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smackx.muc.MultiUserChat;
+import org.jivesoftware.smackx.packet.MUCUser;
 
 /**
  * This class is responsible for managing a Jingle session and extract some
@@ -147,15 +152,40 @@ public class JireconSessionImpl
         {
             return;
         }
-
+        
         if (JingleIQ.class == packet.getClass())
         {
             handleJingleSessionPacket((JingleIQ) packet);
+        }
+        else if (Presence.class == packet.getClass())
+        {
+            handlePresencePacket((Presence) packet);
         }
         // TODO: This is ugly, but I can't find other way to resolve it.
         else if (packet.toXML().indexOf("type=\"result\"") >= 0)
         {
             handleAckPacket();
+        }
+    }
+    
+    private void handlePresencePacket(Presence p)
+    {
+        PacketExtension packetExt = p.getExtension(MediaExtension.NAMESPACE);
+        MUCUser userExt = (MUCUser) p.getExtension("x",
+            "http://jabber.org/protocol/muc#user");
+        String remoteJid = userExt.getItem().getJid();
+        if (null != remoteJid && null != packetExt)
+        {
+            MediaExtension mediaExt = (MediaExtension) packetExt;
+            for (MediaType media : MediaType.values())
+            {
+                MediaDirection direction = MediaDirection.parseString(mediaExt.getDirection(media.toString()));
+                String ssrc = mediaExt.getDirection(media.toString());
+                if (direction == MediaDirection.SENDONLY || direction == MediaDirection.SENDRECV)
+                {
+                    info.addRemoteSsrc(media, remoteJid, ssrc);
+                }
+            }
         }
     }
 
@@ -360,6 +390,21 @@ public class JireconSessionImpl
         {
             transport.addCandidate(c);
         }
+        // TODO: Since fingerprint is associated with media stream, so I will fix it later.
+//        String fingerprint = dtlsControl.getLocalFingerprint();
+//        String hash = dtlsControl.getLocalFingerprintHashFunction();
+//
+//        DtlsFingerprintPacketExtension fingerprintPE
+//            = localTransport.getFirstChildOfType(
+//                    DtlsFingerprintPacketExtension.class);
+//
+//        if (fingerprintPE == null)
+//        {
+//            fingerprintPE = new DtlsFingerprintPacketExtension();
+//            localTransport.addChildExtension(fingerprintPE);
+//        }
+//        fingerprintPE.setFingerprint(fingerprint);
+//        fingerprintPE.setHash(hash);
 
         List<PayloadTypePacketExtension> payloadTypes =
             new ArrayList<PayloadTypePacketExtension>();
@@ -452,10 +497,14 @@ public class JireconSessionImpl
                 }
             }
 
-            info.setRemoteSsrc(media, JinglePacketParser
-                .getDescriptionPacketExt(jiq, media).getSsrc());
+            // Collect the focus' SSRC
+//            info.addRemoteSsrc(media, jiq.getInitiator(), JinglePacketParser
+//                .getDescriptionPacketExt(jiq, media).getSsrc());
+            // Collect remote fingerprints
+            IceUdpTransportPacketExtension transport =
+                JinglePacketParser.getTransportPacketExt(jiq, media);
+            info.setRemoteFingerprint(media, transport.getText());
         }
-
         logger.info("harvestDynamicPayload finished");
     }
 

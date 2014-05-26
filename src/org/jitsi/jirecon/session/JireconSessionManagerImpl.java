@@ -195,7 +195,7 @@ public class JireconSessionManagerImpl
             @Override
             public void processPacket(Packet packet)
             {
-                System.out.println("<---: " + packet.toXML());
+                System.out.println(packet.getClass() + "<---: " + packet.toXML());
                 String conferenceJid = parseConferenceJid(packet.getFrom());
                 if (sessions.containsKey(conferenceJid))
                 {

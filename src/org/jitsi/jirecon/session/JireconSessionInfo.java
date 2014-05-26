@@ -7,7 +7,9 @@ package org.jitsi.jirecon.session;
 
 // TODO: Rewrite those import statements to package import statement.
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.ice4j.ice.CandidatePair;
 import org.jitsi.service.neomedia.MediaType;
@@ -63,9 +65,13 @@ public class JireconSessionInfo
      * @param media The media type, video or audio.
      * @param ssrc The remote SSRC which wll be added.
      */
-    public void setRemoteSsrc(MediaType media, String ssrc)
+    public void addRemoteSsrc(MediaType media, String remoteJid, String ssrc)
     {
-        infoBoxes.get(media).remoteSsrc = ssrc;
+        if (infoBoxes.get(media).remoteSsrcs.containsKey(remoteJid))
+        {
+            return;
+        }
+        infoBoxes.get(media).remoteSsrcs.put(remoteJid, ssrc);
     }
 
     /**
@@ -85,9 +91,9 @@ public class JireconSessionInfo
      * @param media The media type, video or audio.
      * @return
      */
-    public String getRemoteSsrc(MediaType media)
+    public Map<String, String> getRemoteSsrcs(MediaType media)
     {
-        return infoBoxes.get(media).remoteSsrc;
+        return infoBoxes.get(media).remoteSsrcs;
     }
 
     public void setRtpCandidatePair(MediaType media, CandidatePair candidatePair)
@@ -179,7 +185,7 @@ public class JireconSessionInfo
         public Map<MediaFormat, Byte> payloadTypes =
             new HashMap<MediaFormat, Byte>();
 
-        private String remoteSsrc;
+        private Map<String, String> remoteSsrcs = new HashMap<String, String>();
 
         private String remoteFingerprint;
 
