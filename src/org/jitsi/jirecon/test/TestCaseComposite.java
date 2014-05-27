@@ -16,7 +16,8 @@ public class TestCaseComposite
     {
         TestSuite suite = new TestSuite("TestSuite");
         
-        suite.addTestSuite(TestJireconSessionManagerImpl.class);
+        //suite.addTestSuite(TestJireconImpl.class);
+        suite.addTestSuite(TestJireconTaskImpl.class);
         
         return suite;
     }

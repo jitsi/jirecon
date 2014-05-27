@@ -1,19 +1,35 @@
 /*
  * Jirecon, the Jitsi recorder container.
- *
- * Distributable under LGPL license.
- * See terms of license at gnu.org.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
  */
 package org.jitsi.jirecon;
 
-import java.util.EventObject;
-
-public abstract class JireconEvent extends EventObject
+public class JireconEvent
 {
-
-    public JireconEvent(Object source)
+    private State state;
+    private Object source;
+    
+    public JireconEvent(Object source, State state)
     {
-        super(source);
+        this.source = source;
+        this.state = state;
+    }
+    
+    public State getState() 
+    {
+        return state;
+    }
+    
+    public Object getSource()
+    {
+        return source;
     }
 
+    public enum State
+    {
+        ABORTED,
+        SESSION_BUILDING,
+        SESSION_CONSTRUCTED
+    }
 }

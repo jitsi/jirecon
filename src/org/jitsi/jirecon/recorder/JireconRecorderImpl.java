@@ -5,11 +5,16 @@
  */
 package org.jitsi.jirecon.recorder;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.ice4j.ice.CandidatePair;
+import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.session.JireconSessionInfo;
+import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.service.neomedia.DefaultStreamConnector;
 import org.jitsi.service.neomedia.MediaDirection;
 import org.jitsi.service.neomedia.MediaService;
@@ -26,7 +31,10 @@ import org.jitsi.util.Logger;
 public class JireconRecorderImpl
     implements JireconRecorder
 {
-    private Map<MediaType, MediaStream> streams;
+    List<JireconEventListener> listeners =
+        new ArrayList<JireconEventListener>();
+    
+    private Map<MediaType, MediaStream> streams = new HashMap<MediaType, MediaStream>();
 
     private MediaService mediaService;
 
@@ -42,11 +50,23 @@ public class JireconRecorderImpl
      * 
      * @param mediaService
      */
-    public JireconRecorderImpl(MediaService mediaService)
+    public JireconRecorderImpl()
     {
-        this.mediaService = mediaService;
         info = new RecorderInfo();
         logger = Logger.getLogger(this.getClass());
+    }
+    
+    @Override
+    public void init(JireconConfiguration configuration, MediaService service)
+    {
+        this.mediaService = mediaService;
+    }
+
+    @Override
+    public void uninit()
+    {
+        // TODO Auto-generated method stub
+        
     }
 
     // This method may throw exceptions in the future.
@@ -177,4 +197,17 @@ public class JireconRecorderImpl
     {
         return mediaService.createRTPTranslator();
     }
+    
+    @Override
+    public void addEventListener(JireconEventListener listener)
+    {
+        listeners.add(listener);
+    }
+
+    @Override
+    public void removeEventListener(JireconEventListener listener)
+    {
+        listeners.remove(listener);
+    }
+
 }

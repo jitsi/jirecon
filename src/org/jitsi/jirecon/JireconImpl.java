@@ -5,146 +5,191 @@
  */
 package org.jitsi.jirecon;
 
-// TODO: Rewrite those import statements to package import statement.
 import java.io.IOException;
-import java.util.EventListener;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import org.jitsi.jirecon.recorder.JireconRecorderManager;
-import org.jitsi.jirecon.recorder.JireconRecorderManagerImpl;
-import org.jitsi.jirecon.session.JireconSessionEvent;
-import org.jitsi.jirecon.session.JireconSessionInfo;
-import org.jitsi.jirecon.session.JireconSessionManager;
-import org.jitsi.jirecon.session.JireconSessionManagerImpl;
-import org.jitsi.jirecon.session.JireconSessionStatus;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQProvider;
+
+import org.jitsi.jirecon.extension.MediaExtensionProvider;
 import org.jitsi.jirecon.utils.JireconConfigurationImpl;
 import org.jitsi.service.libjitsi.LibJitsi;
+import org.jitsi.service.neomedia.MediaService;
 import org.jitsi.util.Logger;
+import org.jivesoftware.smack.ConnectionConfiguration;
+import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.XMPPException;
+import org.jivesoftware.smack.provider.ProviderManager;
 
-/**
- * This is an implementation of Jirecon
- * 
- * @author lishunyang
- * 
- */
 public class JireconImpl
     implements Jirecon, JireconEventListener
 {
-    /**
-     * The session manager.
-     */
-    private JireconSessionManager sessionManager;
-
-    /**
-     * The recorder manager.
-     */
-    private JireconRecorderManager recorderManager;
-
+    private List<JireconEventListener> listeners =
+        new ArrayList<JireconEventListener>();
+    
     private JireconConfigurationImpl configuration;
 
-    /**
-     * The laborious logger.
-     */
+    private XMPPConnection connection;
+
+    private MediaService mediaService;
+
+    private Map<String, JireconTask> jirecons = new HashMap<String, JireconTask>();
+
     private Logger logger;
 
-    /**
-     * Constructor.
-     */
+    private final String XMPP_HOST_KEY = "XMPP_HOST";
+
+    private final String XMPP_PORT_KEY = "XMPP_PORT";
+
     public JireconImpl()
     {
-        logger = Logger.getLogger(JireconImpl.class);
+        logger = Logger.getLogger(this.getClass());
+        logger.setLevelDebug();
     }
 
-    /**
-     * Start providing service.
-     * 
-     * @throws IOException
-     * @throws XMPPException
-     */
     @Override
-    public void initiate(String configurationPath)
+    public void init(String configurationPath)
         throws IOException,
         XMPPException
     {
+        logger.debug(this.getClass() + "init");
+        
+        initiatePacketProviders();
+        
         LibJitsi.start();
         configuration = new JireconConfigurationImpl();
         configuration.loadConfiguration(configurationPath);
 
-        sessionManager = new JireconSessionManagerImpl();
-        recorderManager = new JireconRecorderManagerImpl();
-
-        sessionManager.init(configuration);
-        recorderManager.init(configuration);
-
-        // Binding message receiver and sender
-        // ((JireconMessageSender) sessionManager)
-        // .addReceiver((JireconMessageReceiver) recorderManager);
-    }
-
-    /**
-     * Stop providing sevice.
-     */
-    @Override
-    public void uninitiate()
-    {
-        sessionManager.uninit();
-        recorderManager.uninit();
-        LibJitsi.stop();
-    }
-
-    /**
-     * Start a conference recording
-     * 
-     * @param conferenceJid The conference to be recorded.
-     * @throws XMPPException
-     */
-    @Override
-    public void startRecording(String conferenceJid) throws XMPPException
-    {
+        final String xmppHost = configuration.getProperty(XMPP_HOST_KEY);
+        final int xmppPort =
+            Integer.valueOf(configuration.getProperty(XMPP_PORT_KEY));
         try
         {
-            // NOTE: Open session firstly, and then start recorder through session event.
-            sessionManager.openJireconSession(conferenceJid);
+            connect(xmppHost, xmppPort);
+            login();
         }
         catch (XMPPException e)
         {
-            logger.fatal("Jireson: Failed to start recording the conference "
-                + conferenceJid + ".");
+            logger.fatal(e.getXMPPError() + "\nDisconnect XMPP connection.");
+            uninit();
             throw e;
         }
+
+        mediaService = LibJitsi.getMediaService();
     }
 
-    /**
-     * Stop a conference recording.
-     * 
-     * @param conferenceJid The conference to be stopped recording.
-     */
     @Override
-    public void stopRecording(String conferenceJid)
+    public void uninit()
     {
-        // NOTE: Stop recorder firstly, and then close session through recorder event.
-        recorderManager.stopJireconRecorder(conferenceJid);
+        logger.debug(this.getClass() + "uninit");
+        LibJitsi.stop();
+        disconnect();
+    }
+
+    @Override
+    public void startJireconTask(String conferenceJid) throws XMPPException
+    {
+        logger.debug(this.getClass() + "startJireconTask: " + conferenceJid);
+        
+        if (jirecons.containsKey(conferenceJid))
+        {
+            logger.info("Failed to start Jirecon by conferenceJid: "
+                + conferenceJid + ". Duplicate conferenceJid.");
+            return;
+        }
+        JireconTask j = new JireconTaskImpl();
+        jirecons.put(conferenceJid, j);
+        j.addEventListener(this);
+        j.init(configuration, conferenceJid, connection, mediaService);
+        j.start();
+    }
+
+    @Override
+    public void stopJireconTask(String conferenceJid)
+    {
+        logger.debug(this.getClass() + "stopJireconTask: " + conferenceJid);
+        if (!jirecons.containsKey(conferenceJid))
+        {
+            logger.info("Failed to stop Jirecon by conferenceJid: "
+                + conferenceJid + ". Nonexisted Jid.");
+        }
+        JireconTask j = jirecons.remove(conferenceJid);
+        j.stop();
+        j.uninit();
+    }
+
+    private void connect(String xmppHost, int xmppPort) throws XMPPException
+    {
+        logger.debug(this.getClass() + "connect");
+        ConnectionConfiguration conf =
+            new ConnectionConfiguration(xmppHost, xmppPort);
+        connection = new XMPPConnection(conf);
+        connection.connect();
+    }
+
+    private void disconnect()
+    {
+        logger.debug(this.getClass() + "disconnect");
+        connection.disconnect();
+    }
+
+    private void login() throws XMPPException
+    {
+        logger.debug(this.getClass() + "login");
+        connection.loginAnonymously();
+    }
+
+    private void initiatePacketProviders()
+    {
+        logger.debug(this.getClass() + "initiatePacketProviders");
+        ProviderManager providerManager = ProviderManager.getInstance();
+
+        providerManager.addIQProvider(JingleIQ.ELEMENT_NAME,
+            JingleIQ.NAMESPACE, new JingleIQProvider());
+        providerManager.addExtensionProvider("media", "http://estos.de/ns/mjs",
+            new MediaExtensionProvider());
+    }
+
+    @Override
+    public void addEventListener(JireconEventListener listener)
+    {
+        logger.debug(this.getClass() + " addEventListener");
+        listeners.add(listener);
+    }
+
+    @Override
+    public void removeEventListener(JireconEventListener listener)
+    {
+        logger.debug(this.getClass() + " removeEventListener");
+        listeners.remove(listener);
+    }
+    
+    private void fireEvent(JireconEvent evt)
+    {
+        for (JireconEventListener l : listeners)
+        {
+            l.handleEvent(evt);
+        }
     }
 
     @Override
     public void handleEvent(JireconEvent evt)
     {
-        if (evt instanceof JireconSessionEvent)
+        switch (evt.getState())
         {
-            JireconSessionEvent jsEvt = (JireconSessionEvent) evt;
-            JireconSessionInfo info = jsEvt.getJireconSessionInfo();
-            switch (info.getSessionStatus())
+        case ABORTED:
+            if (evt.getSource() instanceof JireconTask)
             {
-            case CONSTRUCTED:
-                recorderManager.startJireconRecorder(info);
-                break;
-            case ABORTED:
-                sessionManager.closeJireconSession(info.getConferenceJid());
-                break;
-            default:
-                break;
+                String conferenceJid = ((JireconTask) evt.getSource()).getTaskInfo().getConferenceJid();
+                stopJireconTask(conferenceJid);
+                logger.fatal("Failed to start task of conferenceJid " + conferenceJid + ".");
             }
-        }
+            break;
+        default:
+            break;
+        }        
     }
-
 }

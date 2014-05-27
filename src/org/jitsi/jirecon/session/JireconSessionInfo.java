@@ -11,6 +11,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
+
 import org.ice4j.ice.CandidatePair;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.MediaFormat;
@@ -32,7 +34,9 @@ public class JireconSessionInfo
 
     private String conferenceJid;
 
-    private JireconSessionStatus status;
+    private JireconSessionState status;
+    
+    private JireconSessionState state;
     
     private Map<MediaType, InfoBox> infoBoxes = new HashMap<MediaType, InfoBox>();
 
@@ -41,7 +45,7 @@ public class JireconSessionInfo
      */
     public JireconSessionInfo()
     {
-        status = JireconSessionStatus.INITIATING;
+        status = JireconSessionState.INITIATING;
         for (MediaType media : MediaType.values())
         {
             infoBoxes.put(media, new InfoBox());
@@ -117,12 +121,12 @@ public class JireconSessionInfo
         return infoBoxes.get(media).rtcpCandidatePair;
     }
 
-    public void setSessionStatus(JireconSessionStatus status)
+    public void setSessionStatus(JireconSessionState status)
     {
         this.status = status;
     }
 
-    public JireconSessionStatus getSessionStatus()
+    public JireconSessionState getSessionStatus()
     {
         return status;
     }
@@ -175,6 +179,16 @@ public class JireconSessionInfo
     public String getRemoteFingerprint(MediaType media)
     {
         return infoBoxes.get(media).remoteFingerprint;
+    }
+    
+    public void setState(JireconSessionState state)
+    {
+        this.state = state;
+    }
+    
+    public JireconSessionState getState()
+    {
+        return state;
     }
 
     private class InfoBox

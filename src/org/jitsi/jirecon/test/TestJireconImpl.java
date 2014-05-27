@@ -24,7 +24,7 @@ public class TestJireconImpl extends TestCase
         
         try
         {
-            j.initiate("jirecon.property");
+            j.init("jirecon.property");
         }
         catch (IOException e1)
         {
@@ -48,6 +48,6 @@ public class TestJireconImpl extends TestCase
         
         assertTrue(result);
         
-        j.uninitiate();
+        j.uninit();
     }
 }
