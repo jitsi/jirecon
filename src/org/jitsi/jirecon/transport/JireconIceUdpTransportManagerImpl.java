@@ -112,6 +112,12 @@ public class JireconIceUdpTransportManagerImpl
         logger.info("harvestLocalCandidates begin");
         for (MediaType mediaType : MediaType.values())
         {
+            // Make sure that we only handle audio or video type.
+            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+            {
+                continue;
+            }
+            
             final IceMediaStream stream = getIceMediaStream(mediaType);
             iceAgent.createComponent(stream, Transport.UDP, MIN_STREAM_PORT,
                 MIN_STREAM_PORT, MAX_STREAM_PORT);
@@ -123,25 +129,31 @@ public class JireconIceUdpTransportManagerImpl
     public void harvestRemoteCandidates(JingleIQ jiq)
     {
         logger.info("harvestRemoteCandidates begin");
-        for (MediaType media : MediaType.values())
+        for (MediaType mediaType : MediaType.values())
         {
-            final IceMediaStream stream = getIceMediaStream(media);
+            // Make sure that we only handle audio or video type.
+            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+            {
+                continue;
+            }
+            
+            final IceMediaStream stream = getIceMediaStream(mediaType);
             final String ufrag =
-                JinglePacketParser.getTransportUfrag(jiq, media);
+                JinglePacketParser.getTransportUfrag(jiq, mediaType);
             if (null != ufrag)
             {
                 stream.setRemoteUfrag(ufrag);
             }
 
             final String password =
-                JinglePacketParser.getTransportPassword(jiq, media);
+                JinglePacketParser.getTransportPassword(jiq, mediaType);
             if (null != password)
             {
                 stream.setRemotePassword(password);
             }
 
             List<CandidatePacketExtension> candidates =
-                JinglePacketParser.getCandidatePacketExt(jiq, media);
+                JinglePacketParser.getCandidatePacketExt(jiq, mediaType);
             // Sort the remote candidates (host < reflexive < relayed) in order
             // to create first the host, then the reflexive, the relayed
             // candidates and thus be able to set the relative-candidate
@@ -220,6 +232,12 @@ public class JireconIceUdpTransportManagerImpl
 
         for (MediaType mediaType : MediaType.values())
         {
+            // Make sure that we only handle audio or video type.
+            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+            {
+                continue;
+            }
+            
             IceMediaStream stream = getIceMediaStream(mediaType);
             for (Component com : stream.getComponents())
             {

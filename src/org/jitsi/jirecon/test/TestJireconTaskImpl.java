@@ -88,7 +88,7 @@ public class TestJireconTaskImpl
             new MediaExtensionProvider());
 
         task = new JireconTaskImpl();
-        task.init(configuration, "it6h4jfosr6kcsor@conference.example.com",
+        task.init(configuration, "sd9ct5t8qnmcayvi@conference.example.com",
             connection, mediaService);
     }
 
@@ -97,7 +97,7 @@ public class TestJireconTaskImpl
         task.start();
         try
         {
-            Thread.sleep(100000);
+            Thread.sleep(20000);
         }
         catch (InterruptedException e)
         {

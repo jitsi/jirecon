@@ -149,16 +149,22 @@ public class JireconSessionImpl
         if (null != remoteJid && null != packetExt)
         {
             MediaExtension mediaExt = (MediaExtension) packetExt;
-            for (MediaType media : MediaType.values())
+            for (MediaType mediaType : MediaType.values())
             {
+                // Make sure that we only handle audio or video type.
+                if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+                {
+                    continue;
+                }
+                
                 MediaDirection direction =
-                    MediaDirection.parseString(mediaExt.getDirection(media
+                    MediaDirection.parseString(mediaExt.getDirection(mediaType
                         .toString()));
-                String ssrc = mediaExt.getDirection(media.toString());
+                String ssrc = mediaExt.getDirection(mediaType.toString());
                 if (direction == MediaDirection.SENDONLY
                     || direction == MediaDirection.SENDRECV)
                 {
-                    info.addRemoteSsrc(media, remoteJid, ssrc);
+                    info.addRemoteSsrc(mediaType, remoteJid, ssrc);
                 }
             }
         }
@@ -287,9 +293,15 @@ public class JireconSessionImpl
         logger.debug(this.getClass() + " createSessionAcceptPacket");
         final List<ContentPacketExtension> contents =
             new ArrayList<ContentPacketExtension>();
-        for (MediaType media : MediaType.values())
+        for (MediaType mediaType : MediaType.values())
         {
-            contents.add(createContentPacketExtension(media));
+            // Make sure that we only handle audio or video type.
+            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+            {
+                continue;
+            }
+            
+            contents.add(createContentPacketExtension(mediaType));
         }
 
         JingleIQ acceptJiq =
@@ -348,12 +360,18 @@ public class JireconSessionImpl
         logger.info("harvestDynamicPayload begin");
         final MediaFormatFactoryImpl fmtFactory = new MediaFormatFactoryImpl();
 
-        for (MediaType media : MediaType.values())
+        for (MediaType mediaType : MediaType.values())
         {
+            // Make sure that we only handle audio or video type.
+            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+            {
+                continue;
+            }
+            
             // TODO: Video format has some problem, RED payload
             // FIXME: We only choose the first payloadtype
             for (PayloadTypePacketExtension payloadTypePacketExt : JinglePacketParser
-                .getPayloadTypePacketExts(jiq, media))
+                .getPayloadTypePacketExts(jiq, mediaType))
             {
                 MediaFormat format =
                     fmtFactory.createMediaFormat(
@@ -362,7 +380,7 @@ public class JireconSessionImpl
                         payloadTypePacketExt.getChannels());
                 if (format != null)
                 {
-                    info.addPayloadType(media, format,
+                    info.addPayloadType(mediaType, format,
                         (byte) (payloadTypePacketExt.getID()));
                 }
             }
@@ -372,8 +390,8 @@ public class JireconSessionImpl
             // .getDescriptionPacketExt(jiq, media).getSsrc());
             // Collect remote fingerprints
             IceUdpTransportPacketExtension transport =
-                JinglePacketParser.getTransportPacketExt(jiq, media);
-            info.setRemoteFingerprint(media, transport.getText());
+                JinglePacketParser.getTransportPacketExt(jiq, mediaType);
+            info.setRemoteFingerprint(mediaType, transport.getText());
         }
         logger.info("harvestDynamicPayload finished");
     }

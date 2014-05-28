@@ -112,6 +112,7 @@ public class JireconRecorderImpl
         case RECEIVING:
             fireEvent(new JireconEvent(this,
                 JireconEvent.State.RECORDER_RECEIVING));
+            break;
         case ABORTED:
             fireEvent(new JireconEvent(this, JireconEvent.State.ABORTED));
             break;
@@ -150,10 +151,16 @@ public class JireconRecorderImpl
     {
         logger.info("Jirecon start receiving streams");
         int startCount = 0;
-        for (MediaType media : MediaType.values())
+        for (MediaType mediaType : MediaType.values())
         {
-            MediaStream stream = createMediaStream(info, media);
-            streams.put(media, stream);
+            // Make sure that we only handle audio or video type.
+            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+            {
+                continue;
+            }
+            
+            MediaStream stream = createMediaStream(info, mediaType);
+            streams.put(mediaType, stream);
             stream.start();
             if (stream.isStarted())
             {

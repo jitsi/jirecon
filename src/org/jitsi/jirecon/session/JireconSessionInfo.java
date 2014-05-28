@@ -46,9 +46,15 @@ public class JireconSessionInfo
     public JireconSessionInfo()
     {
         status = JireconSessionState.INITIATING;
-        for (MediaType media : MediaType.values())
+        for (MediaType mediaType : MediaType.values())
         {
-            infoBoxes.put(media, new InfoBox());
+            // Make sure that we only handle audio or video type.
+            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+            {
+                continue;
+            }
+            
+            infoBoxes.put(mediaType, new InfoBox());
         }
     }
 

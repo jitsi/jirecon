@@ -67,7 +67,7 @@ public class JireconTaskImpl
         session.addEventListener(this);
         recorder.addEventListener(this);
         logger = Logger.getLogger(JireconTaskImpl.class);
-        logger.setLevelDebug();
+        logger.setLevelAll();
     }
 
     @Override
@@ -117,6 +117,7 @@ public class JireconTaskImpl
     @Override
     public void stop()
     {
+        logger.info(this.getClass() + " stop.");
         recorder.stop();
         session.stop();
     }
