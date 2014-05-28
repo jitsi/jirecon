@@ -12,8 +12,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.ice4j.ice.CandidatePair;
+import org.jitsi.jirecon.JireconEvent;
 import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.session.JireconSessionInfo;
+import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.service.neomedia.DefaultStreamConnector;
 import org.jitsi.service.neomedia.MediaDirection;
@@ -36,7 +38,9 @@ public class JireconRecorderImpl
     
     private Map<MediaType, MediaStream> streams = new HashMap<MediaType, MediaStream>();
 
+    private JireconTransportManager transportManager;
     private MediaService mediaService;
+    private Map<MediaType, RTPTranslator> rtpTranslators = new HashMap<MediaType, RTPTranslator>();
 
     private RecorderInfo info;
 
@@ -57,9 +61,10 @@ public class JireconRecorderImpl
     }
     
     @Override
-    public void init(JireconConfiguration configuration, MediaService service)
+    public void init(JireconConfiguration configuration, MediaService service, JireconTransportManager transportManager)
     {
         this.mediaService = mediaService;
+        this.transportManager = transportManager;
     }
 
     @Override
@@ -74,7 +79,7 @@ public class JireconRecorderImpl
     public void start(JireconSessionInfo info)
     {
         logger.info("JireconRecorder start");
-        updateStatus(JireconRecorderStatus.INITIATING);
+        updateState(JireconRecorderState.INITIATING);
         startReceivingStreams(info);
         prepareRecorders();
         startRecording();
@@ -89,9 +94,17 @@ public class JireconRecorderImpl
         releaseMediaStreams();
     }
 
-    private void updateStatus(JireconRecorderStatus status)
+    private void updateState(JireconRecorderState state)
     {
-        info.setStatus(status);
+        info.setState(state);
+        switch (state)
+        {
+        case ABORTED:
+            fireEvent(new JireconEvent(this, JireconEvent.State.ABORTED));
+            break;
+        default:
+            break;
+        }
     }
 
     private void startRecording()
@@ -137,29 +150,30 @@ public class JireconRecorderImpl
 
         if (streams.size() == startCount)
         {
-            updateStatus(JireconRecorderStatus.RECVEIVING);
+            updateState(JireconRecorderState.RECVEIVING);
         }
         else
         {
-            updateStatus(JireconRecorderStatus.RECVEIVING_ERROR);
+            updateState(JireconRecorderState.ABORTED);
         }
 
         return true;
     }
 
     private MediaStream createMediaStream(JireconSessionInfo info,
-        MediaType media)
+        MediaType mediaType)
     {
-        MediaStream stream =
-            mediaService.createMediaStream(createConnector(info, media), media,
+        final StreamConnector connector = transportManager.getStreamConnector(mediaType);
+        final MediaStream stream =
+            mediaService.createMediaStream(connector, mediaType,
                 mediaService.createSrtpControl(SrtpControlType.DTLS_SRTP));
 
         // TODO: Translator thins is not clear
-        stream.setRTPTranslator(createTranslator());
+        stream.setRTPTranslator(getTranslator(mediaType));
 
-        stream.setName(media.toString());
+        stream.setName(mediaType.toString());
         stream.setDirection(MediaDirection.RECVONLY);
-        for (Entry<MediaFormat, Byte> e : info.getPayloadTypes(media)
+        for (Entry<MediaFormat, Byte> e : info.getPayloadTypes(mediaType)
             .entrySet())
         {
             stream.addDynamicRTPPayloadType(e.getValue(), e.getKey());
@@ -168,34 +182,24 @@ public class JireconRecorderImpl
                 stream.setFormat(e.getKey());
             }
         }
-        stream.setTarget(createStreamTarget(info, media));
+        
+        MediaStreamTarget target = transportManager.getStreamTarget(mediaType);
+        stream.setTarget(target);
 
         return stream;
     }
 
-    private StreamConnector createConnector(JireconSessionInfo info,
-        MediaType media)
+    private RTPTranslator getTranslator(MediaType mediaType)
     {
-        final CandidatePair rtpPair = info.getRtpCandidatePair(media);
-        final CandidatePair rtcpPair = info.getRtcpCandidatePair(media);
-        return new DefaultStreamConnector(rtpPair.getLocalCandidate()
-            .getDatagramSocket(), rtcpPair.getLocalCandidate()
-            .getDatagramSocket());
-    }
-
-    private MediaStreamTarget createStreamTarget(JireconSessionInfo info,
-        MediaType media)
-    {
-        final CandidatePair rtpPair = info.getRtpCandidatePair(media);
-        final CandidatePair rtcpPair = info.getRtcpCandidatePair(media);
-        return new MediaStreamTarget(rtpPair.getRemoteCandidate()
-            .getTransportAddress(), rtcpPair.getRemoteCandidate()
-            .getTransportAddress());
-    }
-
-    private RTPTranslator createTranslator()
-    {
-        return mediaService.createRTPTranslator();
+        if (rtpTranslators.containsKey(mediaType))
+        {
+            return rtpTranslators.get(mediaType);
+        }
+        
+        final RTPTranslator translator = mediaService.createRTPTranslator();
+        rtpTranslators.put(mediaType, translator);
+        
+        return translator;
     }
     
     @Override
@@ -208,6 +212,20 @@ public class JireconRecorderImpl
     public void removeEventListener(JireconEventListener listener)
     {
         listeners.remove(listener);
+    }
+
+    @Override
+    public JireconRecorderState getState()
+    {
+        return info.getState();
+    }
+    
+    private void fireEvent(JireconEvent evt)
+    {
+        for (JireconEventListener l : listeners)
+        {
+            l.handleEvent(evt);
+        }
     }
 
 }

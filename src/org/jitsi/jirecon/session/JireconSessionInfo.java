@@ -100,26 +100,26 @@ public class JireconSessionInfo
         return infoBoxes.get(media).remoteSsrcs;
     }
 
-    public void setRtpCandidatePair(MediaType media, CandidatePair candidatePair)
-    {
-        infoBoxes.get(media).rtpCandidatePair = candidatePair;
-    }
-
-    public void setRtcpCandidatePair(MediaType media,
-        CandidatePair candidatePair)
-    {
-        infoBoxes.get(media).rtcpCandidatePair = candidatePair;
-    }
-
-    public CandidatePair getRtpCandidatePair(MediaType media)
-    {
-        return infoBoxes.get(media).rtpCandidatePair;
-    }
-
-    public CandidatePair getRtcpCandidatePair(MediaType media)
-    {
-        return infoBoxes.get(media).rtcpCandidatePair;
-    }
+//    public void setRtpCandidatePair(MediaType media, CandidatePair candidatePair)
+//    {
+//        infoBoxes.get(media).rtpCandidatePair = candidatePair;
+//    }
+//
+//    public void setRtcpCandidatePair(MediaType media,
+//        CandidatePair candidatePair)
+//    {
+//        infoBoxes.get(media).rtcpCandidatePair = candidatePair;
+//    }
+//
+//    public CandidatePair getRtpCandidatePair(MediaType media)
+//    {
+//        return infoBoxes.get(media).rtpCandidatePair;
+//    }
+//
+//    public CandidatePair getRtcpCandidatePair(MediaType media)
+//    {
+//        return infoBoxes.get(media).rtcpCandidatePair;
+//    }
 
     public void setSessionStatus(JireconSessionState status)
     {
@@ -203,8 +203,8 @@ public class JireconSessionInfo
 
         private String remoteFingerprint;
 
-        private CandidatePair rtpCandidatePair;
+        //private CandidatePair rtpCandidatePair;
 
-        private CandidatePair rtcpCandidatePair;
+        //private CandidatePair rtcpCandidatePair;
     }
 }

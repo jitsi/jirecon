@@ -4,12 +4,11 @@
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.session;
+package org.jitsi.jirecon.recorder;
 
-public enum JireconSessionState
+public enum JireconRecorderState
 {
     INITIATING,
-    BUILDING,
     ABORTED,
-    CONSTRUCTED
+    RECVEIVING,
 }

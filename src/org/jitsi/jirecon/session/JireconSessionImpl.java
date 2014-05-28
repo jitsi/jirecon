@@ -98,7 +98,7 @@ public class JireconSessionImpl
     {
         try
         {
-            fireEvent(new JireconEvent(this, JireconEvent.State.SESSION_BUILDING));
+            updateState(JireconSessionState.BUILDING);
             joinConference();
         }
         catch (XMPPException e)
@@ -203,7 +203,7 @@ public class JireconSessionImpl
                         break;
                     case FAILED:
                         updateState(JireconSessionState.ABORTED);
-                        fireEvent(new JireconEvent(this, JireconEvent.State.ABORTED));
+                        
                         break;
                     default:
                         break;
@@ -453,6 +453,21 @@ public class JireconSessionImpl
     
     private void updateState(JireconSessionState state)
     {
+        switch (state)
+        {
+        case BUILDING:
+            fireEvent(new JireconEvent(this, JireconEvent.State.SESSION_BUILDING));
+            break;
+        case CONSTRUCTED:
+            fireEvent(new JireconEvent(this, JireconEvent.State.SESSION_CONSTRUCTED));
+            break;
+        case ABORTED:
+            fireEvent(new JireconEvent(this, JireconEvent.State.ABORTED));
+            break;
+        default:
+            break;
+        }
+        
         info.setState(state);
     }
 }

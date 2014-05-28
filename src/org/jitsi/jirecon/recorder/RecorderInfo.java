@@ -8,15 +8,15 @@ package org.jitsi.jirecon.recorder;
 
 public class RecorderInfo
 {
-    private JireconRecorderStatus status;
+    private JireconRecorderState state;
     
-    public void setStatus(JireconRecorderStatus status)
+    public void setState(JireconRecorderState state)
     {
-        this.status = status;
+        this.state = state;
     }
     
-    public JireconRecorderStatus getStatus()
+    public JireconRecorderState getState()
     {
-        return status;
+        return state;
     }
 }

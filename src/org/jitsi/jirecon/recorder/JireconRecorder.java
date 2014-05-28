@@ -7,18 +7,22 @@ package org.jitsi.jirecon.recorder;
 
 import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.session.JireconSessionInfo;
+import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.service.neomedia.MediaService;
 
 public interface JireconRecorder
 {
-    public void init(JireconConfiguration configuration, MediaService service);
+    public void init(JireconConfiguration configuration, MediaService service,
+        JireconTransportManager transportManager);
 
     public void uninit();
 
     public void start(JireconSessionInfo info);
 
     public void stop();
+
+    public JireconRecorderState getState();
 
     public void addEventListener(JireconEventListener listener);
 

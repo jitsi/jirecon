@@ -11,6 +11,10 @@ import java.net.BindException;
 
 import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.utils.JireconConfiguration;
+import org.jitsi.service.neomedia.MediaService;
+import org.jitsi.service.neomedia.MediaStreamTarget;
+import org.jitsi.service.neomedia.MediaType;
+import org.jitsi.service.neomedia.StreamConnector;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.IceUdpTransportPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
@@ -33,4 +37,7 @@ public interface JireconTransportManager
     public void startConnectivityEstablishment();
 
     public void addStateChangeListener(PropertyChangeListener listener);
+    
+    public MediaStreamTarget getStreamTarget(MediaType mediaType);
+    public StreamConnector getStreamConnector(MediaType mediaType);
 }

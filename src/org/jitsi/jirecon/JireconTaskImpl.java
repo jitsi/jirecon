@@ -75,9 +75,9 @@ public class JireconTaskImpl
         XMPPConnection connection, MediaService service)
     {
         logger.debug(this.getClass() + " init");
-        session.init(configuration, connection, conferenceJid, transport);
         transport.init(configuration);
-        recorder.init(configuration, service);
+        session.init(configuration, connection, conferenceJid, transport);
+        recorder.init(configuration, service, transport);
         updateState(JireconTaskState.INITIATING);
     }
 

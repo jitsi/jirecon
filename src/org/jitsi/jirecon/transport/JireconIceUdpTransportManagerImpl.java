@@ -9,9 +9,13 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.net.BindException;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidatePacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
@@ -31,13 +35,22 @@ import org.jitsi.jirecon.JireconEvent;
 import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.jirecon.utils.JireconConfiguration;
+import org.jitsi.service.neomedia.DefaultStreamConnector;
+import org.jitsi.service.neomedia.MediaStreamTarget;
 import org.jitsi.service.neomedia.MediaType;
+import org.jitsi.service.neomedia.StreamConnector;
 import org.jitsi.util.Logger;
 
 public class JireconIceUdpTransportManagerImpl
     implements JireconTransportManager
 {
     private Agent iceAgent;
+
+    private Map<MediaType, StreamConnector> streamConnectors =
+        new HashMap<MediaType, StreamConnector>();
+
+    private Map<MediaType, MediaStreamTarget> mediaStreamTargets =
+        new HashMap<MediaType, MediaStreamTarget>();
 
     private Logger logger;
 
@@ -86,7 +99,7 @@ public class JireconIceUdpTransportManagerImpl
 
     public void startConnectivityEstablishment()
     {
-        
+
         iceAgent.startConnectivityEstablishment();
     }
 
@@ -237,6 +250,93 @@ public class JireconIceUdpTransportManagerImpl
     public void addStateChangeListener(PropertyChangeListener listener)
     {
         iceAgent.addStateChangeListener(listener);
+    }
+
+    @Override
+    public MediaStreamTarget getStreamTarget(MediaType mediaType)
+    {
+        if (mediaStreamTargets.containsKey(mediaType))
+        {
+            return mediaStreamTargets.get(mediaType);
+        }
+        
+        IceMediaStream stream = iceAgent.getStream(mediaType.toString());
+        MediaStreamTarget streamTarget = null;
+        if (stream != null)
+        {
+            List<InetSocketAddress> streamTargetAddresses =
+                new ArrayList<InetSocketAddress>();
+
+            for (Component component : stream.getComponents())
+            {
+                if (component != null)
+                {
+                    CandidatePair selectedPair = component.getSelectedPair();
+
+                    if (selectedPair != null)
+                    {
+                        InetSocketAddress streamTargetAddress =
+                            selectedPair.getRemoteCandidate()
+                                .getTransportAddress();
+
+                        if (streamTargetAddress != null)
+                        {
+                            streamTargetAddresses.add(streamTargetAddress);
+                        }
+                    }
+                }
+            }
+            if (streamTargetAddresses.size() > 0)
+            {
+                streamTarget =
+                    new MediaStreamTarget(
+                        streamTargetAddresses.get(0) /* RTP */,
+                        streamTargetAddresses.get(1) /* RTCP */);
+                mediaStreamTargets.put(mediaType, streamTarget);
+            }
+        }
+        return streamTarget;
+    }
+
+    @Override
+    public StreamConnector getStreamConnector(MediaType mediaType)
+    {
+        if (streamConnectors.containsKey(mediaType))
+        {
+            return streamConnectors.get(mediaType);
+        }
+
+        StreamConnector streamConnector = null;
+        IceMediaStream stream = iceAgent.getStream(mediaType.toString());
+        if (stream != null)
+        {
+            List<DatagramSocket> datagramSockets =
+                new ArrayList<DatagramSocket>();
+
+            for (Component component : stream.getComponents())
+            {
+                if (component != null)
+                {
+                    CandidatePair selectedPair = component.getSelectedPair();
+
+                    if (selectedPair != null)
+                    {
+                        datagramSockets.add(selectedPair.getLocalCandidate()
+                            .getDatagramSocket());
+                    }
+                }
+            }
+            if (datagramSockets.size() > 0)
+            {
+                streamConnector =
+                    new DefaultStreamConnector(
+                        datagramSockets.get(0) /* RTP */,
+                        datagramSockets.get(1) /* RTCP */);
+                streamConnectors.put(mediaType, streamConnector);
+            }
+        }
+
+        return streamConnector;
     }
 
 }
