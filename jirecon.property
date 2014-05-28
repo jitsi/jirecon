@@ -1,3 +1,9 @@
+JIRECON_NICKNAME = jirecon
+
 XMPP_HOST = jitmeet.example.com
 
 XMPP_PORT = 5222
+
+MIN_STREAM_PORT = 8000
+
+MAX_STREAM_PORT = 10000
