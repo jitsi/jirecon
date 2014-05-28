@@ -25,6 +25,7 @@ import org.jitsi.service.neomedia.MediaStreamStats;
 import org.jitsi.service.neomedia.MediaStreamTarget;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.RTPTranslator;
+import org.jitsi.service.neomedia.SrtpControl;
 import org.jitsi.service.neomedia.SrtpControlType;
 import org.jitsi.service.neomedia.StreamConnector;
 import org.jitsi.service.neomedia.format.MediaFormat;
@@ -35,12 +36,16 @@ public class JireconRecorderImpl
 {
     List<JireconEventListener> listeners =
         new ArrayList<JireconEventListener>();
-    
-    private Map<MediaType, MediaStream> streams = new HashMap<MediaType, MediaStream>();
+
+    private Map<MediaType, MediaStream> streams =
+        new HashMap<MediaType, MediaStream>();
 
     private JireconTransportManager transportManager;
+
     private MediaService mediaService;
-    private Map<MediaType, RTPTranslator> rtpTranslators = new HashMap<MediaType, RTPTranslator>();
+
+    private Map<MediaType, RTPTranslator> rtpTranslators =
+        new HashMap<MediaType, RTPTranslator>();
 
     private RecorderInfo info;
 
@@ -59,9 +64,10 @@ public class JireconRecorderImpl
         info = new RecorderInfo();
         logger = Logger.getLogger(this.getClass());
     }
-    
+
     @Override
-    public void init(JireconConfiguration configuration, MediaService service, JireconTransportManager transportManager)
+    public void init(JireconConfiguration configuration, MediaService mediaService,
+        JireconTransportManager transportManager)
     {
         this.mediaService = mediaService;
         this.transportManager = transportManager;
@@ -71,7 +77,7 @@ public class JireconRecorderImpl
     public void uninit()
     {
         // TODO Auto-generated method stub
-        
+
     }
 
     // This method may throw exceptions in the future.
@@ -79,7 +85,7 @@ public class JireconRecorderImpl
     public void start(JireconSessionInfo info)
     {
         logger.info("JireconRecorder start");
-        updateState(JireconRecorderState.INITIATING);
+        updateState(JireconRecorderState.BUILDING);
         startReceivingStreams(info);
         prepareRecorders();
         startRecording();
@@ -99,6 +105,13 @@ public class JireconRecorderImpl
         info.setState(state);
         switch (state)
         {
+        case BUILDING:
+            fireEvent(new JireconEvent(this,
+                JireconEvent.State.RECORDER_BUILDING));
+            break;
+        case RECEIVING:
+            fireEvent(new JireconEvent(this,
+                JireconEvent.State.RECORDER_RECEIVING));
         case ABORTED:
             fireEvent(new JireconEvent(this, JireconEvent.State.ABORTED));
             break;
@@ -150,7 +163,7 @@ public class JireconRecorderImpl
 
         if (streams.size() == startCount)
         {
-            updateState(JireconRecorderState.RECVEIVING);
+            updateState(JireconRecorderState.RECEIVING);
         }
         else
         {
@@ -163,10 +176,12 @@ public class JireconRecorderImpl
     private MediaStream createMediaStream(JireconSessionInfo info,
         MediaType mediaType)
     {
-        final StreamConnector connector = transportManager.getStreamConnector(mediaType);
+        final StreamConnector connector =
+            transportManager.getStreamConnector(mediaType);
+        SrtpControl dtlsControl =
+            mediaService.createSrtpControl(SrtpControlType.DTLS_SRTP);
         final MediaStream stream =
-            mediaService.createMediaStream(connector, mediaType,
-                mediaService.createSrtpControl(SrtpControlType.DTLS_SRTP));
+            mediaService.createMediaStream(connector, mediaType, dtlsControl);
 
         // TODO: Translator thins is not clear
         stream.setRTPTranslator(getTranslator(mediaType));
@@ -182,7 +197,7 @@ public class JireconRecorderImpl
                 stream.setFormat(e.getKey());
             }
         }
-        
+
         MediaStreamTarget target = transportManager.getStreamTarget(mediaType);
         stream.setTarget(target);
 
@@ -195,13 +210,13 @@ public class JireconRecorderImpl
         {
             return rtpTranslators.get(mediaType);
         }
-        
+
         final RTPTranslator translator = mediaService.createRTPTranslator();
         rtpTranslators.put(mediaType, translator);
-        
+
         return translator;
     }
-    
+
     @Override
     public void addEventListener(JireconEventListener listener)
     {
@@ -219,7 +234,7 @@ public class JireconRecorderImpl
     {
         return info.getState();
     }
-    
+
     private void fireEvent(JireconEvent evt)
     {
         for (JireconEventListener l : listeners)

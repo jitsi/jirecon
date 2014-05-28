@@ -172,8 +172,7 @@ public class JireconIceUdpTransportManagerImpl
     public CandidatePair getCandidatePairs(MediaType mediaType, int componentId)
     {
         logger.info("harvestCandidatePairs, component " + componentId);
-        final IceMediaStream iceStream =
-            iceAgent.getStream(mediaType.toString());
+        final IceMediaStream iceStream = getIceMediaStream(mediaType);
         final Component component = iceStream.getComponent(componentId);
         return component.getSelectedPair();
     }
@@ -221,8 +220,8 @@ public class JireconIceUdpTransportManagerImpl
 
         for (MediaType mediaType : MediaType.values())
         {
-            for (Component com : iceAgent.getStream(mediaType.toString())
-                .getComponents())
+            IceMediaStream stream = getIceMediaStream(mediaType);
+            for (Component com : stream.getComponents())
             {
                 candidates.addAll(com.getLocalCandidates());
             }
@@ -259,8 +258,8 @@ public class JireconIceUdpTransportManagerImpl
         {
             return mediaStreamTargets.get(mediaType);
         }
-        
-        IceMediaStream stream = iceAgent.getStream(mediaType.toString());
+
+        IceMediaStream stream = getIceMediaStream(mediaType);
         MediaStreamTarget streamTarget = null;
         if (stream != null)
         {
@@ -307,7 +306,7 @@ public class JireconIceUdpTransportManagerImpl
         }
 
         StreamConnector streamConnector = null;
-        IceMediaStream stream = iceAgent.getStream(mediaType.toString());
+        IceMediaStream stream = getIceMediaStream(mediaType);
         if (stream != null)
         {
             List<DatagramSocket> datagramSockets =

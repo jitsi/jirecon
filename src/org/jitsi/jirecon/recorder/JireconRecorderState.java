@@ -9,6 +9,7 @@ package org.jitsi.jirecon.recorder;
 public enum JireconRecorderState
 {
     INITIATING,
+    BUILDING,
     ABORTED,
-    RECVEIVING,
+    RECEIVING,
 }

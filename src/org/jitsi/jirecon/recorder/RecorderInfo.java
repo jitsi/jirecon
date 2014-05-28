@@ -8,7 +8,7 @@ package org.jitsi.jirecon.recorder;
 
 public class RecorderInfo
 {
-    private JireconRecorderState state;
+    private JireconRecorderState state = JireconRecorderState.INITIATING;
     
     public void setState(JireconRecorderState state)
     {

@@ -127,14 +127,26 @@ public class JireconTaskImpl
         switch (evt.getState())
         {
         case ABORTED:
+            System.out.println(this.getClass() + " ABORTED");
             fireEvent(new JireconEvent(this, JireconEvent.State.ABORTED));
             break;
         case SESSION_BUILDING:
+            System.out.println(this.getClass() + " SESSION_BUILDING");
             updateState(JireconTaskState.SESSION_INITIATING);
-        case SESSION_CONSTRUCTED:
-            updateState(JireconTaskState.SESSION_CONSTRUCTED);
-            // TODO: Start recording
             break;
+        case SESSION_CONSTRUCTED:
+            System.out.println(this.getClass() + " SESSION_CONSTRUCTED");
+            updateState(JireconTaskState.SESSION_CONSTRUCTED);
+            // Start recorder!
+            recorder.start(session.getSessionInfo());
+            break;
+        case RECORDER_BUILDING:
+            System.out.println(this.getClass() + " RECORDER_BUILDING");
+            updateState(JireconTaskState.RECORDER_INITIATING);
+            break;
+        case RECORDER_RECEIVING:
+            System.out.println(this.getClass() + " RECORDER_RECEIVING");
+            updateState(JireconTaskState.RECORDER_RECEIVING);
         default:
             break;
         }

@@ -30,6 +30,8 @@ public class JireconEvent
     {
         ABORTED,
         SESSION_BUILDING,
-        SESSION_CONSTRUCTED
+        SESSION_CONSTRUCTED,
+        RECORDER_BUILDING,
+        RECORDER_RECEIVING
     }
 }
