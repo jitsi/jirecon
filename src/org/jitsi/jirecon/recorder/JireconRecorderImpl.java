@@ -190,7 +190,7 @@ public class JireconRecorderImpl
         final MediaStream stream =
             mediaService.createMediaStream(connector, mediaType, dtlsControl);
 
-        // TODO: Translator thins is not clear
+        // TODO: Translator things is not clear
         stream.setRTPTranslator(getTranslator(mediaType));
 
         stream.setName(mediaType.toString());
@@ -198,6 +198,7 @@ public class JireconRecorderImpl
         for (Entry<MediaFormat, Byte> e : info.getPayloadTypes(mediaType)
             .entrySet())
         {
+            System.out.println(mediaType + " stream add " + e.getKey().getEncoding() + ", " + e.getValue());
             stream.addDynamicRTPPayloadType(e.getValue(), e.getKey());
             if (null == stream.getFormat())
             {
