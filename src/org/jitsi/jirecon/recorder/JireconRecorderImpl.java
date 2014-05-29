@@ -66,8 +66,8 @@ public class JireconRecorderImpl
     }
 
     @Override
-    public void init(JireconConfiguration configuration, MediaService mediaService,
-        JireconTransportManager transportManager)
+    public void init(JireconConfiguration configuration,
+        MediaService mediaService, JireconTransportManager transportManager)
     {
         this.mediaService = mediaService;
         this.transportManager = transportManager;
@@ -158,7 +158,7 @@ public class JireconRecorderImpl
             {
                 continue;
             }
-            
+
             MediaStream stream = createMediaStream(info, mediaType);
             streams.put(mediaType, stream);
             stream.start();
