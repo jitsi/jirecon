@@ -37,7 +37,8 @@ public interface JireconTransportManager
     public void startConnectivityEstablishment();
 
     public void addStateChangeListener(PropertyChangeListener listener);
-    
+
     public MediaStreamTarget getStreamTarget(MediaType mediaType);
+
     public StreamConnector getStreamConnector(MediaType mediaType);
 }

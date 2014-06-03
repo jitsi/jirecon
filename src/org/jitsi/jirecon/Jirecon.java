@@ -20,7 +20,7 @@ public interface Jirecon
     public void startJireconTask(String conferenceJid) throws XMPPException;
 
     public void stopJireconTask(String conferenceJid);
-    
+
     public void addEventListener(JireconEventListener listener);
 
     public void removeEventListener(JireconEventListener listener);

@@ -33,15 +33,14 @@ public class TestJireconTaskImpl
     private final static String XMPP_HOST_KEY = "XMPP_HOST";
 
     private final static String XMPP_PORT_KEY = "XMPP_PORT";
-    
+
     private static XMPPConnection connection;
 
     @Override
     protected void setUp()
     {
         LibJitsi.start();
-        JireconConfiguration configuration =
-            new JireconConfigurationImpl();
+        JireconConfiguration configuration = new JireconConfigurationImpl();
         try
         {
             configuration.loadConfiguration("jirecon.property");
@@ -79,7 +78,7 @@ public class TestJireconTaskImpl
 
         MediaService mediaService = LibJitsi.getMediaService();
         assertTrue(null != mediaService);
-        
+
         ProviderManager providerManager = ProviderManager.getInstance();
 
         providerManager.addIQProvider(JingleIQ.ELEMENT_NAME,
@@ -88,7 +87,7 @@ public class TestJireconTaskImpl
             new MediaExtensionProvider());
 
         task = new JireconTaskImpl();
-        task.init(configuration, "z5bc1hv4mvnxko6r@conference.example.com",
+        task.init(configuration, "nyt6u3lctheka9k9@conference.example.com",
             connection, mediaService);
     }
 
@@ -97,14 +96,18 @@ public class TestJireconTaskImpl
         task.start();
         try
         {
-            Thread.sleep(20000);
+            Thread.sleep(300000);
         }
         catch (InterruptedException e)
         {
             e.printStackTrace();
         }
-        //assertTrue(JireconTaskState.SESSION_CONSTRUCTED == task.getTaskInfo().getState());
-        assertTrue(JireconTaskState.RECORDER_RECEIVING == task.getTaskInfo().getState());
+        // assertTrue(JireconTaskState.SESSION_CONSTRUCTED ==
+        // task.getTaskInfo().getState());
+        // assertTrue(JireconTaskState.RECORDER_RECEIVING ==
+        // task.getTaskInfo().getState());
+        assertTrue(JireconTaskState.RECORDER_RECORDING == task.getTaskInfo()
+            .getState());
         task.stop();
     }
 

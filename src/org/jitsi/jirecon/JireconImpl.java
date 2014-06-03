@@ -17,7 +17,9 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
 import org.jitsi.jirecon.utils.JireconConfigurationImpl;
 import org.jitsi.service.libjitsi.LibJitsi;
+import org.jitsi.service.neomedia.DtlsControl;
 import org.jitsi.service.neomedia.MediaService;
+import org.jitsi.service.neomedia.SrtpControlType;
 import org.jitsi.util.Logger;
 import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.XMPPConnection;
@@ -29,14 +31,15 @@ public class JireconImpl
 {
     private List<JireconEventListener> listeners =
         new ArrayList<JireconEventListener>();
-    
+
     private JireconConfigurationImpl configuration;
 
     private XMPPConnection connection;
 
     private MediaService mediaService;
 
-    private Map<String, JireconTask> jirecons = new HashMap<String, JireconTask>();
+    private Map<String, JireconTask> jirecons =
+        new HashMap<String, JireconTask>();
 
     private Logger logger;
 
@@ -56,9 +59,9 @@ public class JireconImpl
         XMPPException
     {
         logger.debug(this.getClass() + "init");
-        
+
         initiatePacketProviders();
-        
+
         LibJitsi.start();
         configuration = new JireconConfigurationImpl();
         configuration.loadConfiguration(configurationPath);
@@ -93,7 +96,7 @@ public class JireconImpl
     public void startJireconTask(String conferenceJid) throws XMPPException
     {
         logger.debug(this.getClass() + "startJireconTask: " + conferenceJid);
-        
+
         if (jirecons.containsKey(conferenceJid))
         {
             logger.info("Failed to start Jirecon by conferenceJid: "
@@ -166,7 +169,7 @@ public class JireconImpl
         logger.debug(this.getClass() + " removeEventListener");
         listeners.remove(listener);
     }
-    
+
     private void fireEvent(JireconEvent evt)
     {
         for (JireconEventListener l : listeners)
@@ -183,13 +186,16 @@ public class JireconImpl
         case ABORTED:
             if (evt.getSource() instanceof JireconTask)
             {
-                String conferenceJid = ((JireconTask) evt.getSource()).getTaskInfo().getConferenceJid();
+                String conferenceJid =
+                    ((JireconTask) evt.getSource()).getTaskInfo()
+                        .getConferenceJid();
                 stopJireconTask(conferenceJid);
-                logger.fatal("Failed to start task of conferenceJid " + conferenceJid + ".");
+                logger.fatal("Failed to start task of conferenceJid "
+                    + conferenceJid + ".");
             }
             break;
         default:
             break;
-        }        
+        }
     }
 }

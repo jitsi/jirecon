@@ -1,8 +1,7 @@
 /*
  * Jirecon, the Jitsi recorder container.
- *
- * Distributable under LGPL license.
- * See terms of license at gnu.org.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
  */
 package org.jitsi.jirecon.test;
 
@@ -14,14 +13,15 @@ import org.jivesoftware.smack.XMPPException;
 
 import junit.framework.TestCase;
 
-public class TestJireconImpl extends TestCase
+public class TestJireconImpl
+    extends TestCase
 {
     public void testAll()
     {
         Jirecon j = new JireconImpl();
-        
+
         boolean result = true;
-        
+
         try
         {
             j.init("jirecon.property");
@@ -36,7 +36,7 @@ public class TestJireconImpl extends TestCase
             e1.printStackTrace();
             result = false;
         }
-        
+
         try
         {
             Thread.sleep(10000);
@@ -45,9 +45,9 @@ public class TestJireconImpl extends TestCase
         {
             e.printStackTrace();
         }
-        
+
         assertTrue(result);
-        
+
         j.uninit();
     }
 }

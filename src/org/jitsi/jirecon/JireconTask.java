@@ -7,6 +7,7 @@ package org.jitsi.jirecon;
 
 import org.jitsi.jirecon.session.JireconSessionInfo;
 import org.jitsi.jirecon.utils.JireconConfiguration;
+import org.jitsi.service.neomedia.DtlsControl;
 import org.jitsi.service.neomedia.MediaService;
 import org.jivesoftware.smack.XMPPConnection;
 
@@ -26,9 +27,9 @@ public interface JireconTask
     public void start();
 
     public void stop();
-    
+
     public JireconTaskInfo getTaskInfo();
-    
+
     public void addEventListener(JireconEventListener listener);
 
     public void removeEventListener(JireconEventListener listener);

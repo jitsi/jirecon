@@ -6,15 +6,18 @@
 package org.jitsi.jirecon.recorder;
 
 import org.jitsi.jirecon.JireconEventListener;
+import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.session.JireconSessionInfo;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JireconConfiguration;
+import org.jitsi.service.neomedia.DtlsControl;
 import org.jitsi.service.neomedia.MediaService;
 
 public interface JireconRecorder
 {
     public void init(JireconConfiguration configuration, MediaService service,
-        JireconTransportManager transportManager);
+        JireconTransportManager transportManager,
+        JireconSrtpControlManager srtpControlManager);
 
     public void uninit();
 

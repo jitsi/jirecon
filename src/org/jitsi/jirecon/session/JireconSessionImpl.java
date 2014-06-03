@@ -9,22 +9,26 @@ package org.jitsi.jirecon.session;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.CreatorEnum;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.SendersEnum;
+import net.java.sip.communicator.service.protocol.media.SrtpControls;
 import net.java.sip.communicator.util.Logger;
 
 import org.ice4j.ice.*;
 import org.jitsi.impl.neomedia.format.MediaFormatFactoryImpl;
 import org.jitsi.jirecon.JireconEvent;
 import org.jitsi.jirecon.JireconEventListener;
+import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.extension.MediaExtension;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.jirecon.utils.JireconConfiguration;
+import org.jitsi.service.neomedia.DtlsControl;
 import org.jitsi.service.neomedia.MediaDirection;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.AudioMediaFormat;
@@ -53,6 +57,8 @@ public class JireconSessionImpl
 
     private JireconTransportManager transportManager;
 
+    private JireconSrtpControlManager srtpControlManager;
+
     private XMPPConnection connection;
 
     private MultiUserChat conference;
@@ -64,7 +70,7 @@ public class JireconSessionImpl
     private final String NICK_KEY = "JIRECON_NICKNAME";
 
     private String nick = "default";
-    
+
     public JireconSessionImpl()
     {
         logger = Logger.getLogger(JireconSessionImpl.class);
@@ -73,12 +79,14 @@ public class JireconSessionImpl
     @Override
     public void init(JireconConfiguration configuration,
         XMPPConnection connection, String conferenceJid,
-        JireconTransportManager transportManager)
+        JireconTransportManager transportManager,
+        JireconSrtpControlManager srtpControlManager)
     {
         this.nick = configuration.getProperty(NICK_KEY);
         this.connection = connection;
         this.info.setConferenceJid(conferenceJid);
         this.transportManager = transportManager;
+        this.srtpControlManager = srtpControlManager;
         updateState(JireconSessionState.INITIATING);
 
         // TODO: Add init check
@@ -152,11 +160,12 @@ public class JireconSessionImpl
             for (MediaType mediaType : MediaType.values())
             {
                 // Make sure that we only handle audio or video type.
-                if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+                if (MediaType.AUDIO != mediaType
+                    && MediaType.VIDEO != mediaType)
                 {
                     continue;
                 }
-                
+
                 MediaDirection direction =
                     MediaDirection.parseString(mediaExt.getDirection(mediaType
                         .toString()));
@@ -183,69 +192,81 @@ public class JireconSessionImpl
 
     private void handleSetPacket(JingleIQ jiq)
     {
-        System.out.println("receive session init");
+        // System.out.println("receive session init");
         sendAck(jiq);
 
         if (JingleAction.SESSION_INITIATE == jiq.getAction())
         {
             harvestDynamicPayload(jiq);
+            harvestFingerprints(jiq);
             sendAccept(createSessionAcceptPacket());
             transportManager.harvestRemoteCandidates(jiq);
         }
     }
 
+    private void harvestFingerprints(JingleIQ jiq)
+    {
+        for (MediaType mediaType : MediaType.values())
+        {
+            if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
+                continue;
+            srtpControlManager.addRemoteFingerprint(mediaType, "sha-1",
+                JinglePacketParser.getTransportPacketExt(jiq, mediaType)
+                    .getText());
+        }
+    }
+
     private void handleAckPacket()
     {
-        PropertyChangeListener listener =
-            new PropertyChangeListener()
+        PropertyChangeListener listener = new PropertyChangeListener()
+        {
+            public void propertyChange(PropertyChangeEvent evt)
             {
-                public void propertyChange(PropertyChangeEvent evt)
+                IceProcessingState iceState =
+                    (IceProcessingState) evt.getNewValue();
+                switch (iceState)
                 {
-                    IceProcessingState iceState = (IceProcessingState) evt.getNewValue();
-                    switch (iceState)
-                    {
-                    case TERMINATED:
-                        updateState(JireconSessionState.CONSTRUCTED);
-                        break;
-                    case FAILED:
-                        updateState(JireconSessionState.ABORTED);
-                        
-                        break;
-                    default:
-                        break;
-                    }
+                case TERMINATED:
+                    updateState(JireconSessionState.CONSTRUCTED);
+                    break;
+                case FAILED:
+                    updateState(JireconSessionState.ABORTED);
+
+                    break;
+                default:
+                    break;
                 }
-            };
+            }
+        };
         transportManager.addStateChangeListener(listener);
         transportManager.startConnectivityEstablishment();
     }
 
-    private ContentPacketExtension createContentPacketExtension(MediaType media)
+    private ContentPacketExtension createContentPacketExtension(
+        MediaType mediaType)
     {
         logger.debug(this.getClass() + " createContentPacketExtension");
         IceUdpTransportPacketExtension transportPE =
             transportManager.getTransportPacketExt();
 
-        // TODO: Since fingerprint is associated with media stream, so I will
-        // fix it later.
-        // String fingerprint = dtlsControl.getLocalFingerprint();
-        // String hash = dtlsControl.getLocalFingerprintHashFunction();
-        //
-        // DtlsFingerprintPacketExtension fingerprintPE
-        // = localTransport.getFirstChildOfType(
-        // DtlsFingerprintPacketExtension.class);
-        //
-        // if (fingerprintPE == null)
-        // {
-        // fingerprintPE = new DtlsFingerprintPacketExtension();
-        // localTransport.addChildExtension(fingerprintPE);
-        // }
-        // fingerprintPE.setFingerprint(fingerprint);
-        // fingerprintPE.setHash(hash);
+        // DTLS stuff, fingerprint packet extension
+        String fingerprint = srtpControlManager.getLocalFingerprint(mediaType);
+        String hash =
+            srtpControlManager.getLocalFingerprintHashFunction(mediaType);
+        DtlsFingerprintPacketExtension fingerprintPE =
+            transportPE
+                .getFirstChildOfType(DtlsFingerprintPacketExtension.class);
+        if (fingerprintPE == null)
+        {
+            fingerprintPE = new DtlsFingerprintPacketExtension();
+            transportPE.addChildExtension(fingerprintPE);
+        }
+        fingerprintPE.setFingerprint(fingerprint);
+        fingerprintPE.setHash(hash);
 
         List<PayloadTypePacketExtension> payloadTypes =
             new ArrayList<PayloadTypePacketExtension>();
-        for (Map.Entry<MediaFormat, Byte> e : info.getPayloadTypes(media)
+        for (Map.Entry<MediaFormat, Byte> e : info.getPayloadTypes(mediaType)
             .entrySet())
         {
             PayloadTypePacketExtension payloadType =
@@ -272,7 +293,7 @@ public class JireconSessionImpl
 
         RtpDescriptionPacketExtension description =
             new RtpDescriptionPacketExtension();
-        description.setMedia(media.toString());
+        description.setMedia(mediaType.toString());
         for (PayloadTypePacketExtension p : payloadTypes)
         {
             description.addPayloadType(p);
@@ -300,7 +321,7 @@ public class JireconSessionImpl
             {
                 continue;
             }
-            
+
             contents.add(createContentPacketExtension(mediaType));
         }
 
@@ -367,7 +388,7 @@ public class JireconSessionImpl
             {
                 continue;
             }
-            
+
             // TODO: Video format has some problem, RED payload
             // FIXME: We only choose the first payloadtype
             for (PayloadTypePacketExtension payloadTypePacketExt : JinglePacketParser
@@ -454,7 +475,7 @@ public class JireconSessionImpl
                 if (null != info.getLocalJid()
                     && !packet.getTo().equals(info.getLocalJid()))
                 {
-                    System.out.println("packet failed: to " + packet.getTo()
+                    logger.fatal("packet failed: to " + packet.getTo()
                         + ", but we are " + info.getLocalJid());
                     return false;
                 }
@@ -468,16 +489,18 @@ public class JireconSessionImpl
     {
         return info;
     }
-    
+
     private void updateState(JireconSessionState state)
     {
         switch (state)
         {
         case BUILDING:
-            fireEvent(new JireconEvent(this, JireconEvent.State.SESSION_BUILDING));
+            fireEvent(new JireconEvent(this,
+                JireconEvent.State.SESSION_BUILDING));
             break;
         case CONSTRUCTED:
-            fireEvent(new JireconEvent(this, JireconEvent.State.SESSION_CONSTRUCTED));
+            fireEvent(new JireconEvent(this,
+                JireconEvent.State.SESSION_CONSTRUCTED));
             break;
         case ABORTED:
             fireEvent(new JireconEvent(this, JireconEvent.State.ABORTED));
@@ -485,7 +508,7 @@ public class JireconSessionImpl
         default:
             break;
         }
-        
+
         info.setState(state);
     }
 }

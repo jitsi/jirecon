@@ -22,6 +22,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.RtpDescr
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.CreatorEnum;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.SendersEnum;
 
+import org.jitsi.jirecon.dtlscontrol.JireconDtlsControlManagerImpl;
+import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.recorder.JireconRecorder;
 import org.jitsi.jirecon.recorder.JireconRecorderImpl;
 import org.jitsi.jirecon.session.JireconSession;
@@ -30,8 +32,10 @@ import org.jitsi.jirecon.session.JireconSessionInfo;
 import org.jitsi.jirecon.transport.JireconIceUdpTransportManagerImpl;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JireconConfiguration;
+import org.jitsi.service.neomedia.DtlsControl;
 import org.jitsi.service.neomedia.MediaService;
 import org.jitsi.service.neomedia.MediaType;
+import org.jitsi.service.neomedia.SrtpControlType;
 import org.jitsi.service.neomedia.format.AudioMediaFormat;
 import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jitsi.util.Logger;
@@ -53,6 +57,8 @@ public class JireconTaskImpl
 
     private JireconTransportManager transport;
 
+    private JireconSrtpControlManager srtpControl;
+
     private JireconRecorder recorder;
 
     private JireconTaskInfo info = new JireconTaskInfo();
@@ -63,6 +69,7 @@ public class JireconTaskImpl
     {
         session = new JireconSessionImpl();
         transport = new JireconIceUdpTransportManagerImpl();
+        srtpControl = new JireconDtlsControlManagerImpl();
         recorder = new JireconRecorderImpl();
         session.addEventListener(this);
         recorder.addEventListener(this);
@@ -72,21 +79,25 @@ public class JireconTaskImpl
 
     @Override
     public void init(JireconConfiguration configuration, String conferenceJid,
-        XMPPConnection connection, MediaService service)
+        XMPPConnection connection, MediaService mediaService)
     {
         logger.debug(this.getClass() + " init");
+
         transport.init(configuration);
-        session.init(configuration, connection, conferenceJid, transport);
-        recorder.init(configuration, service, transport);
+        srtpControl.init(mediaService);
+        session.init(configuration, connection, conferenceJid, transport,
+            srtpControl);
+        recorder.init(configuration, mediaService, transport, srtpControl);
         updateState(JireconTaskState.INITIATING);
     }
 
     @Override
     public void uninit()
     {
+        recorder.uninit();
         session.uninit();
         transport.uninit();
-        recorder.uninit();
+        srtpControl.uinit();
     }
 
     @Override
@@ -129,6 +140,7 @@ public class JireconTaskImpl
         {
         case ABORTED:
             System.out.println(this.getClass() + " ABORTED");
+            updateState(JireconTaskState.ABORTED);
             fireEvent(new JireconEvent(this, JireconEvent.State.ABORTED));
             break;
         case SESSION_BUILDING:
@@ -148,6 +160,11 @@ public class JireconTaskImpl
         case RECORDER_RECEIVING:
             System.out.println(this.getClass() + " RECORDER_RECEIVING");
             updateState(JireconTaskState.RECORDER_RECEIVING);
+            break;
+        case RECORDER_RECORDING:
+            System.out.println(this.getClass() + " RECORDER_RECORDING");
+            updateState(JireconTaskState.RECORDER_RECORDING);
+            break;
         default:
             break;
         }

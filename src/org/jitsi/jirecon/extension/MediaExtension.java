@@ -1,8 +1,7 @@
 /*
  * Jirecon, the Jitsi recorder container.
- *
- * Distributable under LGPL license.
- * See terms of license at gnu.org.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
  */
 package org.jitsi.jirecon.extension;
 
@@ -19,14 +18,15 @@ public class MediaExtension
 
     public static final String NAMESPACE = "http://estos.de/ns/mjs";
 
-    //public ArrayList<Source> list;
-    
+    // public ArrayList<Source> list;
+
     private Map<String, String> ssrcs = new HashMap<String, String>();
+
     private Map<String, String> directions = new HashMap<String, String>();
 
     public MediaExtension()
     {
-        //list = new ArrayList<Source>();
+        // list = new ArrayList<Source>();
     }
 
     @Override
@@ -61,49 +61,49 @@ public class MediaExtension
 
         return builder.toString();
     }
-    
+
     public void setSsrc(String type, String ssrc)
     {
         ssrcs.put(type, ssrc);
     }
-    
+
     public String getSsrc(String type)
     {
         return ssrcs.get(type);
     }
-    
+
     public void setDirection(String type, String direction)
     {
         directions.put(type, direction);
     }
-    
+
     public String getDirection(String type)
     {
         return directions.get(type);
     }
 
-//    public void addSource(String type, String ssrc, String direction)
-//    {
-//        list.add(new Source(type, ssrc, direction));
-//    }
+    // public void addSource(String type, String ssrc, String direction)
+    // {
+    // list.add(new Source(type, ssrc, direction));
+    // }
 }
 
-//class Source
-//{
-//    public String type;
+// class Source
+// {
+// public String type;
 //
-//    public String ssrc;
+// public String ssrc;
 //
-//    public String direction;
+// public String direction;
 //
-//    public Source()
-//    {
-//    }
+// public Source()
+// {
+// }
 //
-//    public Source(String type, String ssrc, String direction)
-//    {
-//        this.type = type;
-//        this.ssrc = ssrc;
-//        this.direction = direction;
-//    }
-//}
+// public Source(String type, String ssrc, String direction)
+// {
+// this.type = type;
+// this.ssrc = ssrc;
+// this.direction = direction;
+// }
+// }

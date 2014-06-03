@@ -1,8 +1,7 @@
 /*
  * Jirecon, the Jitsi recorder container.
- *
- * Distributable under LGPL license.
- * See terms of license at gnu.org.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
  */
 package org.jitsi.jirecon.utils;
 
@@ -263,7 +262,7 @@ public class JinglePacketParser
             return jiq.getTo();
         }
     }
-    
+
     public static String getSid(JingleIQ jiq)
     {
         return jiq.getSID();

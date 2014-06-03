@@ -14,7 +14,8 @@ import java.util.Properties;
 
 import org.jitsi.util.Logger;
 
-public class JireconConfigurationImpl implements JireconConfiguration
+public class JireconConfigurationImpl
+    implements JireconConfiguration
 {
     private Properties props;
 

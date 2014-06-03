@@ -117,7 +117,7 @@ public class JireconIceUdpTransportManagerImpl
             {
                 continue;
             }
-            
+
             final IceMediaStream stream = getIceMediaStream(mediaType);
             iceAgent.createComponent(stream, Transport.UDP, MIN_STREAM_PORT,
                 MIN_STREAM_PORT, MAX_STREAM_PORT);
@@ -136,7 +136,7 @@ public class JireconIceUdpTransportManagerImpl
             {
                 continue;
             }
-            
+
             final IceMediaStream stream = getIceMediaStream(mediaType);
             final String ufrag =
                 JinglePacketParser.getTransportUfrag(jiq, mediaType);
@@ -237,7 +237,7 @@ public class JireconIceUdpTransportManagerImpl
             {
                 continue;
             }
-            
+
             IceMediaStream stream = getIceMediaStream(mediaType);
             for (Component com : stream.getComponents())
             {

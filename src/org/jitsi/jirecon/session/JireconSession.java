@@ -11,8 +11,10 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.jirecon.JireconEventListener;
+import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JireconConfiguration;
+import org.jitsi.service.neomedia.DtlsControl;
 import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.Packet;
@@ -21,7 +23,8 @@ public interface JireconSession
 {
     public void init(JireconConfiguration configuration,
         XMPPConnection connection, String conferenceJid,
-        JireconTransportManager transportManager);
+        JireconTransportManager transportManager,
+        JireconSrtpControlManager srtpControlManager);
 
     public void uninit();
 
