@@ -21,7 +21,7 @@ public interface JireconRecorder
 
     public void uninit();
 
-    public void start(JireconSessionInfo info);
+    public void start();
 
     public void stop();
 
@@ -30,4 +30,8 @@ public interface JireconRecorder
     public void addEventListener(JireconEventListener listener);
 
     public void removeEventListener(JireconEventListener listener);
+    
+    public void prepareMediaStreams(JireconSessionInfo info);
+    
+    public JireconRecorderInfo getRecorderInfo();
 }

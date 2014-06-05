@@ -87,7 +87,7 @@ public class TestJireconTaskImpl
             new MediaExtensionProvider());
 
         task = new JireconTaskImpl();
-        task.init(configuration, "nyt6u3lctheka9k9@conference.example.com",
+        task.init(configuration, "5z4w636xp7e6d2t9@conference.example.com",
             connection, mediaService);
     }
 

@@ -136,22 +136,31 @@ public class JireconTaskImpl
     @Override
     public void handleEvent(JireconEvent evt)
     {
-        switch (evt.getState())
+        switch (evt.getEventId())
         {
-        case ABORTED:
-            System.out.println(this.getClass() + " ABORTED");
+        case SESSION_ABORTED:
+            System.out.println(this.getClass() + " SESSION_ABORTED");
             updateState(JireconTaskState.ABORTED);
-            fireEvent(new JireconEvent(this, JireconEvent.State.ABORTED));
+            fireEvent(new JireconEvent(this, JireconEventId.TASK_ABORTED));
             break;
         case SESSION_BUILDING:
             System.out.println(this.getClass() + " SESSION_BUILDING");
             updateState(JireconTaskState.SESSION_INITIATING);
             break;
+        case SESSION_RECEIVE_INIT:
+            System.out.println(this.getClass() + " SESSION_RECEIVE_INIT");
+            session.sendAcceptPacket(recorder.getRecorderInfo());
+            break;
         case SESSION_CONSTRUCTED:
             System.out.println(this.getClass() + " SESSION_CONSTRUCTED");
             updateState(JireconTaskState.SESSION_CONSTRUCTED);
-            // Start recorder!
-            recorder.start(session.getSessionInfo());
+            recorder.prepareMediaStreams(session.getSessionInfo());
+            recorder.start();
+            break;
+        case RECORDER_ABORTED:
+            System.out.println(this.getClass() + " RECORDER_ABORTED");
+            updateState(JireconTaskState.ABORTED);
+            fireEvent(new JireconEvent(this, JireconEventId.TASK_ABORTED));
             break;
         case RECORDER_BUILDING:
             System.out.println(this.getClass() + " RECORDER_BUILDING");

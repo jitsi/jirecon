@@ -13,6 +13,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.java.sip.communicator.impl.protocol.jabber.IceUdpTransportManager;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.SourcePacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.CreatorEnum;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.SendersEnum;
@@ -22,12 +24,15 @@ import net.java.sip.communicator.util.Logger;
 import org.ice4j.ice.*;
 import org.jitsi.impl.neomedia.format.MediaFormatFactoryImpl;
 import org.jitsi.jirecon.JireconEvent;
+import org.jitsi.jirecon.JireconEventId;
 import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.extension.MediaExtension;
+import org.jitsi.jirecon.recorder.JireconRecorderInfo;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.jirecon.utils.JireconConfiguration;
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.DtlsControl;
 import org.jitsi.service.neomedia.MediaDirection;
 import org.jitsi.service.neomedia.MediaType;
@@ -106,7 +111,7 @@ public class JireconSessionImpl
     {
         try
         {
-            updateState(JireconSessionState.BUILDING);
+
             joinConference();
         }
         catch (XMPPException e)
@@ -123,11 +128,6 @@ public class JireconSessionImpl
     {
         closeSession();
         leaveConference();
-    }
-
-    private void sendAccept(JingleIQ jiq)
-    {
-        connection.sendPacket(jiq);
     }
 
     public void handlePacket(Packet packet)
@@ -199,9 +199,52 @@ public class JireconSessionImpl
         {
             harvestDynamicPayload(jiq);
             harvestFingerprints(jiq);
-            sendAccept(createSessionAcceptPacket());
             transportManager.harvestRemoteCandidates(jiq);
+            fireEvent(new JireconEvent(this,
+                JireconEventId.SESSION_RECEIVE_INIT));
         }
+    }
+
+    private void startConnectivityEstablishment()
+    {
+        PropertyChangeListener stateChangeListener =
+            new PropertyChangeListener()
+            {
+                public void propertyChange(PropertyChangeEvent evt)
+                {
+                    Object newValue = evt.getNewValue();
+
+                    if (IceProcessingState.COMPLETED.equals(newValue)
+                        || IceProcessingState.FAILED.equals(newValue)
+                        || IceProcessingState.TERMINATED.equals(newValue))
+                    {
+                        if (logger.isTraceEnabled())
+                            logger.trace("ICE " + newValue);
+
+                        transportManager.removeStateChangeListener(this);
+
+                        if (IceProcessingState.FAILED.equals(newValue))
+                        {
+                            fireEvent(new JireconEvent(this,
+                                JireconEventId.SESSION_ABORTED));
+                        }
+                        else if (IceProcessingState.COMPLETED.equals(newValue)
+                            || IceProcessingState.TERMINATED.equals(newValue))
+                        {
+                            fireEvent(new JireconEvent(this,
+                                JireconEventId.SESSION_CONSTRUCTED));
+                        }
+                    }
+                    
+                    if (IceProcessingState.WAITING.equals(newValue))
+                    {
+                        System.out.println("Ice check waiting.");
+                    }
+                }
+            };
+
+        transportManager.addStateChangeListener(stateChangeListener);
+        transportManager.startConnectivityEstablishment();
     }
 
     private void harvestFingerprints(JingleIQ jiq)
@@ -218,32 +261,12 @@ public class JireconSessionImpl
 
     private void handleAckPacket()
     {
-        PropertyChangeListener listener = new PropertyChangeListener()
-        {
-            public void propertyChange(PropertyChangeEvent evt)
-            {
-                IceProcessingState iceState =
-                    (IceProcessingState) evt.getNewValue();
-                switch (iceState)
-                {
-                case TERMINATED:
-                    updateState(JireconSessionState.CONSTRUCTED);
-                    break;
-                case FAILED:
-                    updateState(JireconSessionState.ABORTED);
-
-                    break;
-                default:
-                    break;
-                }
-            }
-        };
-        transportManager.addStateChangeListener(listener);
-        transportManager.startConnectivityEstablishment();
+        startConnectivityEstablishment();
     }
 
     private ContentPacketExtension createContentPacketExtension(
-        MediaType mediaType)
+        MediaType mediaType, JireconSessionInfo sessionInfo,
+        JireconRecorderInfo recorderInfo)
     {
         logger.debug(this.getClass() + " createContentPacketExtension");
         IceUdpTransportPacketExtension transportPE =
@@ -266,8 +289,8 @@ public class JireconSessionImpl
 
         List<PayloadTypePacketExtension> payloadTypes =
             new ArrayList<PayloadTypePacketExtension>();
-        for (Map.Entry<MediaFormat, Byte> e : info.getPayloadTypes(mediaType)
-            .entrySet())
+        for (Map.Entry<MediaFormat, Byte> e : sessionInfo.getPayloadTypes(
+            mediaType).entrySet())
         {
             PayloadTypePacketExtension payloadType =
                 new PayloadTypePacketExtension();
@@ -298,6 +321,20 @@ public class JireconSessionImpl
         {
             description.addPayloadType(p);
         }
+        SourcePacketExtension sourcePacketExtension =
+            new SourcePacketExtension();
+        description.setSsrc(recorderInfo.getLocalSsrc(mediaType).toString());
+
+        sourcePacketExtension.setSSRC(recorderInfo.getLocalSsrc(mediaType));
+        // sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
+        // "cname", LibJitsi.getMediaService().getRtpCname()));
+        sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
+            "msid", recorderInfo.getMsid(mediaType)));
+        sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
+            "mslabel", recorderInfo.getMsLabel()));
+        sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
+            "label", recorderInfo.getLabel(mediaType)));
+        description.addChildExtension(sourcePacketExtension);
 
         ContentPacketExtension content = new ContentPacketExtension();
         content.setCreator(CreatorEnum.responder);
@@ -309,7 +346,8 @@ public class JireconSessionImpl
         return content;
     }
 
-    private JingleIQ createSessionAcceptPacket()
+    private JingleIQ createSessionAcceptPacket(JireconSessionInfo sessionInfo,
+        JireconRecorderInfo recorderInfo)
     {
         logger.debug(this.getClass() + " createSessionAcceptPacket");
         final List<ContentPacketExtension> contents =
@@ -322,12 +360,13 @@ public class JireconSessionImpl
                 continue;
             }
 
-            contents.add(createContentPacketExtension(mediaType));
+            contents.add(createContentPacketExtension(mediaType, sessionInfo,
+                recorderInfo));
         }
 
         JingleIQ acceptJiq =
-            JinglePacketFactory.createSessionAccept(info.getLocalJid(),
-                info.getRemoteJid(), info.getSid(), contents);
+            JinglePacketFactory.createSessionAccept(sessionInfo.getLocalJid(),
+                sessionInfo.getRemoteJid(), sessionInfo.getSid(), contents);
 
         return acceptJiq;
     }
@@ -336,6 +375,7 @@ public class JireconSessionImpl
     {
         conference = new MultiUserChat(connection, info.getConferenceJid());
         conference.join(nick);
+        updateState(JireconSessionState.JOIN_CONFERENCE);
     }
 
     private void leaveConference()
@@ -494,21 +534,25 @@ public class JireconSessionImpl
     {
         switch (state)
         {
-        case BUILDING:
-            fireEvent(new JireconEvent(this,
-                JireconEvent.State.SESSION_BUILDING));
+        case JOIN_CONFERENCE:
+            fireEvent(new JireconEvent(this, JireconEventId.SESSION_BUILDING));
             break;
         case CONSTRUCTED:
-            fireEvent(new JireconEvent(this,
-                JireconEvent.State.SESSION_CONSTRUCTED));
+            fireEvent(new JireconEvent(this, JireconEventId.SESSION_CONSTRUCTED));
             break;
         case ABORTED:
-            fireEvent(new JireconEvent(this, JireconEvent.State.ABORTED));
+            fireEvent(new JireconEvent(this, JireconEventId.SESSION_ABORTED));
             break;
         default:
             break;
         }
 
         info.setState(state);
+    }
+
+    @Override
+    public void sendAcceptPacket(JireconRecorderInfo recorderInfo)
+    {
+        connection.sendPacket((createSessionAcceptPacket(info, recorderInfo)));
     }
 }

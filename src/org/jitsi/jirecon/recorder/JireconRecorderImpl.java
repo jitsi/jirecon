@@ -14,8 +14,10 @@ import java.util.Map.Entry;
 
 import org.ice4j.ice.CandidatePair;
 import org.jitsi.impl.neomedia.recording.RecorderEventHandlerJSONImpl;
+import org.jitsi.impl.neomedia.recording.RecorderImpl;
 import org.jitsi.impl.neomedia.recording.VideoRecorderImpl;
 import org.jitsi.jirecon.JireconEvent;
+import org.jitsi.jirecon.JireconEventId;
 import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.session.JireconSessionInfo;
@@ -57,9 +59,12 @@ public class JireconRecorderImpl
     private Map<MediaType, RTPTranslator> rtpTranslators =
         new HashMap<MediaType, RTPTranslator>();
 
-    private Recorder videoRecorder;
+    // private Recorder videoRecorder;
 
-    private RecorderInfo info;
+    private Map<MediaType, Recorder> recorders =
+        new HashMap<MediaType, Recorder>();
+
+    private JireconRecorderInfo info;
 
     // TODO:
     // private Map<MediaType, Recorder> recorders;
@@ -73,7 +78,7 @@ public class JireconRecorderImpl
      */
     public JireconRecorderImpl()
     {
-        info = new RecorderInfo();
+        info = new JireconRecorderInfo();
         logger = Logger.getLogger(this.getClass());
     }
 
@@ -85,6 +90,7 @@ public class JireconRecorderImpl
         this.mediaService = mediaService;
         this.transportManager = transportManager;
         this.srtpControlManager = srtpControlManager;
+        createMediaStreams();
     }
 
     @Override
@@ -96,11 +102,11 @@ public class JireconRecorderImpl
 
     // This method may throw exceptions in the future.
     @Override
-    public void start(JireconSessionInfo info)
+    public void start()
     {
         logger.info("JireconRecorder start");
         updateState(JireconRecorderState.BUILDING);
-        startReceivingStreams(info);
+        startReceivingStreams();
         prepareRecorders();
         try
         {
@@ -136,19 +142,16 @@ public class JireconRecorderImpl
         switch (state)
         {
         case BUILDING:
-            fireEvent(new JireconEvent(this,
-                JireconEvent.State.RECORDER_BUILDING));
+            fireEvent(new JireconEvent(this, JireconEventId.RECORDER_BUILDING));
             break;
         case RECEIVING:
-            fireEvent(new JireconEvent(this,
-                JireconEvent.State.RECORDER_RECEIVING));
+            fireEvent(new JireconEvent(this, JireconEventId.RECORDER_RECEIVING));
             break;
         case RECORDING:
-            fireEvent(new JireconEvent(this,
-                JireconEvent.State.RECORDER_RECORDING));
+            fireEvent(new JireconEvent(this, JireconEventId.RECORDER_RECORDING));
             break;
         case ABORTED:
-            fireEvent(new JireconEvent(this, JireconEvent.State.ABORTED));
+            fireEvent(new JireconEvent(this, JireconEventId.RECORDER_ABORTED));
             break;
         default:
             break;
@@ -159,22 +162,29 @@ public class JireconRecorderImpl
     {
         logger.info("JireconRecorder start recording");
         prepareRecorders();
-        videoRecorder.start("useless", ".");
-        // for (String format : videoRecorder.getSupportedFormats())
-        // System.out.println("videoRecorder support " + format);
-        videoRecorder
-            .setEventHandler(new RecorderEventHandlerJSONImpl("./meta"));
+        for (Entry<MediaType, Recorder> e : recorders.entrySet())
+        {
+            e.getValue().start("useless", ".");
+            e.getValue().setEventHandler(
+                new RecorderEventHandlerJSONImpl("./" + e.getKey() + "_meta"));
+        }
     }
 
     private void prepareRecorders()
     {
-        videoRecorder =
-            new VideoRecorderImpl(rtpTranslators.get(MediaType.VIDEO));
+        for (Entry<MediaType, RTPTranslator> e : rtpTranslators.entrySet())
+        {
+            Recorder recorder = new VideoRecorderImpl(e.getValue());
+            recorders.put(e.getKey(), recorder);
+        }
     }
 
     private void stopRecording()
     {
-        videoRecorder.stop();
+        for (Entry<MediaType, Recorder> e : recorders.entrySet())
+        {
+            e.getValue().stop();
+        }
     }
 
     private void releaseRecorders()
@@ -190,7 +200,7 @@ public class JireconRecorderImpl
         }
     }
 
-    private boolean startReceivingStreams(JireconSessionInfo info)
+    private boolean startReceivingStreams()
     {
         logger.info("Jirecon start receiving streams");
         int startCount = 0;
@@ -202,8 +212,10 @@ public class JireconRecorderImpl
                 continue;
             }
 
-            MediaStream stream = createMediaStream(info, mediaType);
-            streams.put(mediaType, stream);
+            MediaStream stream = streams.get(mediaType);
+            MediaStreamTarget target =
+                transportManager.getStreamTarget(mediaType);
+            stream.setTarget(target);
             stream.start();
             if (stream.isStarted())
             {
@@ -223,36 +235,27 @@ public class JireconRecorderImpl
         return true;
     }
 
-    private MediaStream createMediaStream(JireconSessionInfo info,
-        MediaType mediaType)
+    private void createMediaStreams()
     {
-        final StreamConnector connector =
-            transportManager.getStreamConnector(mediaType);
-        SrtpControl dtlsControl = srtpControlManager.getSrtpControl(mediaType);
-        mediaService.createSrtpControl(SrtpControlType.DTLS_SRTP);
-        final MediaStream stream =
-            mediaService.createMediaStream(connector, mediaType, dtlsControl);
-
-        stream.setRTPTranslator(getTranslator(mediaType));
-
-        stream.setName(mediaType.toString());
-        stream.setDirection(MediaDirection.RECVONLY);
-        for (Entry<MediaFormat, Byte> e : info.getPayloadTypes(mediaType)
-            .entrySet())
+        for (MediaType mediaType : MediaType.values())
         {
-            // System.out.println(mediaType + " stream add "
-            // + e.getKey().getEncoding() + ", " + e.getValue());
-            stream.addDynamicRTPPayloadType(e.getValue(), e.getKey());
-            if (null == stream.getFormat())
+            if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
             {
-                stream.setFormat(e.getKey());
+                continue;
             }
+            final MediaStream stream =
+                mediaService.createMediaStream(mediaType);
+            streams.put(mediaType, stream);
+
+            stream.setName(mediaType.toString());
+            stream.setDirection(MediaDirection.RECVONLY);
+            info.addLocalSsrc(mediaType,
+                stream.getLocalSourceID() & 0xFFFFFFFFL);
+            System.out.println("JireconRecorderImpl prepareMediaStream "
+                + mediaType + ", " + (stream.getLocalSourceID() & 0xFFFFFFFFL));
+            // fireEvent(new JireconEvent(this,
+            // JireconEventId.RECORDER_INIT_OK));
         }
-
-        MediaStreamTarget target = transportManager.getStreamTarget(mediaType);
-        stream.setTarget(target);
-
-        return stream;
     }
 
     private RTPTranslator getTranslator(MediaType mediaType)
@@ -292,6 +295,50 @@ public class JireconRecorderImpl
         {
             l.handleEvent(evt);
         }
+    }
+
+    @Override
+    public void prepareMediaStreams(JireconSessionInfo sessionInfo)
+    {
+        logger.info("Jirecon prepare media streams");
+        for (MediaType mediaType : MediaType.values())
+        {
+            // Make sure that we only handle audio or video type.
+            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+            {
+                continue;
+            }
+
+            MediaStream stream = streams.get(mediaType);
+            StreamConnector connector =
+                transportManager.getStreamConnector(mediaType);
+            stream.setConnector(connector);
+
+            for (Entry<MediaFormat, Byte> e : sessionInfo.getPayloadTypes(
+                mediaType).entrySet())
+            {
+                // System.out.println(mediaType + " stream add "
+                // + e.getKey().getEncoding() + ", " + e.getValue());
+                stream.addDynamicRTPPayloadType(e.getValue(), e.getKey());
+                if (null == stream.getFormat())
+                {
+                    stream.setFormat(e.getKey());
+                }
+            }
+
+            mediaService.createSrtpControl(SrtpControlType.DTLS_SRTP);
+            SrtpControl dtlsControl =
+                srtpControlManager.getSrtpControl(mediaType);
+            // dtlsControl.setConnector(stream.getSrtpControl());
+            stream.setRTPTranslator(getTranslator(mediaType));
+
+        }
+    }
+
+    @Override
+    public JireconRecorderInfo getRecorderInfo()
+    {
+        return info;
     }
 
 }

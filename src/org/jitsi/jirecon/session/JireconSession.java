@@ -12,6 +12,7 @@ import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
+import org.jitsi.jirecon.recorder.JireconRecorderInfo;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.service.neomedia.DtlsControl;
@@ -37,4 +38,6 @@ public interface JireconSession
     public void addEventListener(JireconEventListener listener);
 
     public void removeEventListener(JireconEventListener listener);
+    
+    public void sendAcceptPacket(JireconRecorderInfo info);
 }

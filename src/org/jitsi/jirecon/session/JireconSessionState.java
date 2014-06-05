@@ -7,5 +7,9 @@ package org.jitsi.jirecon.session;
 
 public enum JireconSessionState
 {
-    INITIATING, BUILDING, ABORTED, CONSTRUCTED
+    INITIATING,
+    JOIN_CONFERENCE,
+    ICE_CHECK_FINISHED,
+    ABORTED,
+    CONSTRUCTED
 }

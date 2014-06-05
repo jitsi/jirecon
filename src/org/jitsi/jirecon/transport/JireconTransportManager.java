@@ -9,6 +9,7 @@ import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.net.BindException;
 
+import org.ice4j.ice.IceProcessingState;
 import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.service.neomedia.MediaService;
@@ -38,6 +39,8 @@ public interface JireconTransportManager
 
     public void addStateChangeListener(PropertyChangeListener listener);
 
+    public void removeStateChangeListener(PropertyChangeListener listener);
+    
     public MediaStreamTarget getStreamTarget(MediaType mediaType);
 
     public StreamConnector getStreamConnector(MediaType mediaType);

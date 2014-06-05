@@ -181,9 +181,9 @@ public class JireconImpl
     @Override
     public void handleEvent(JireconEvent evt)
     {
-        switch (evt.getState())
+        switch (evt.getEventId())
         {
-        case ABORTED:
+        case TASK_ABORTED:
             if (evt.getSource() instanceof JireconTask)
             {
                 String conferenceJid =

@@ -7,33 +7,23 @@ package org.jitsi.jirecon;
 
 public class JireconEvent
 {
-    private State state;
+    private JireconEventId evtId;
 
     private Object source;
 
-    public JireconEvent(Object source, State state)
+    public JireconEvent(Object source, JireconEventId evtId)
     {
         this.source = source;
-        this.state = state;
+        this.evtId = evtId;
     }
 
-    public State getState()
+    public JireconEventId getEventId()
     {
-        return state;
+        return evtId;
     }
 
     public Object getSource()
     {
         return source;
-    }
-
-    public enum State
-    {
-        ABORTED,
-        SESSION_BUILDING,
-        SESSION_CONSTRUCTED,
-        RECORDER_BUILDING,
-        RECORDER_RECEIVING,
-        RECORDER_RECORDING
     }
 }

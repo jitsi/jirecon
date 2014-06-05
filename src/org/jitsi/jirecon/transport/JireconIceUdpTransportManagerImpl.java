@@ -268,6 +268,12 @@ public class JireconIceUdpTransportManagerImpl
     {
         iceAgent.addStateChangeListener(listener);
     }
+    
+    @Override
+    public void removeStateChangeListener(PropertyChangeListener listener)
+    {
+        iceAgent.removeStateChangeListener(listener);
+    }
 
     @Override
     public MediaStreamTarget getStreamTarget(MediaType mediaType)
