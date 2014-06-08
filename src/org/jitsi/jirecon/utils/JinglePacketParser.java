@@ -6,9 +6,13 @@
 package org.jitsi.jirecon.utils;
 
 // TODO: Rewrite those import statements to package import statement.
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.jitsi.impl.neomedia.format.MediaFormatFactoryImpl;
 import org.jitsi.service.neomedia.MediaType;
+import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jivesoftware.smack.packet.IQ;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidatePacketExtension;
@@ -169,6 +173,23 @@ public class JinglePacketParser
         return null;
     }
 
+    public static Map<MediaType, IceUdpTransportPacketExtension> getTransportPacketExts(
+        JingleIQ jiq)
+    {
+        Map<MediaType, IceUdpTransportPacketExtension> transportPEs =
+            new HashMap<MediaType, IceUdpTransportPacketExtension>();
+
+        for (MediaType mediaType : MediaType.values())
+        {
+            if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
+                continue;
+
+            transportPEs.put(mediaType, getTransportPacketExt(jiq, mediaType));
+        }
+
+        return transportPEs;
+    }
+
     /**
      * Get ufrag from an Jingle packet with specified type of media.
      * 
@@ -266,5 +287,63 @@ public class JinglePacketParser
     public static String getSid(JingleIQ jiq)
     {
         return jiq.getSID();
+    }
+
+    public static Map<MediaFormat, Byte> getFormatAndDynamicPTs(JingleIQ jiq)
+    {
+        Map<MediaFormat, Byte> formatAndDynamicPTs =
+            new HashMap<MediaFormat, Byte>();
+        final MediaFormatFactoryImpl fmtFactory = new MediaFormatFactoryImpl();
+
+        for (MediaType mediaType : MediaType.values())
+        {
+            // Make sure that we only handle audio or video type.
+            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+            {
+                continue;
+            }
+
+            // TODO: Video format has some problem, RED only
+            // FIXME: There, it only choose the first payloadtype
+            for (PayloadTypePacketExtension payloadTypePacketExt : getPayloadTypePacketExts(
+                jiq, mediaType))
+            {
+                MediaFormat format =
+                    fmtFactory.createMediaFormat(
+                        payloadTypePacketExt.getName(),
+                        payloadTypePacketExt.getClockrate(),
+                        payloadTypePacketExt.getChannels());
+                if (format != null)
+                {
+                    formatAndDynamicPTs.put(format,
+                        (byte) (payloadTypePacketExt.getID()));
+                }
+            }
+
+            // TODO Fingerprint stuff, where should it be?
+            // IceUdpTransportPacketExtension transport =
+            // JinglePacketParser.getTransportPacketExt(jiq, mediaType);
+            // info.setRemoteFingerprint(mediaType, transport.getText());
+        }
+
+        return formatAndDynamicPTs;
+    }
+
+    public static Map<MediaType, String> getFingerprint(JingleIQ jiq)
+    {
+        Map<MediaType, String> fingerprints = new HashMap<MediaType, String>();
+        for (MediaType mediaType : MediaType.values())
+        {
+            // Make sure that we only handle audio or video type.
+            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+            {
+                continue;
+            }
+            IceUdpTransportPacketExtension transport =
+                JinglePacketParser.getTransportPacketExt(jiq, mediaType);
+            fingerprints.put(mediaType, transport.getText());
+        }
+
+        return fingerprints;
     }
 }

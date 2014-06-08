@@ -7,7 +7,7 @@ package org.jitsi.jirecon;
 
 public enum JireconTaskState
 {
-    INITIATING,
+    INITIATED,
     SESSION_INITIATING,
     SESSION_CONSTRUCTED,
     RECORDER_INITIATING,

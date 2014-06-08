@@ -18,6 +18,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.SourceP
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.CreatorEnum;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.SendersEnum;
+import net.java.sip.communicator.service.protocol.OperationFailedException;
 import net.java.sip.communicator.service.protocol.media.SrtpControls;
 import net.java.sip.communicator.util.Logger;
 
@@ -57,8 +58,8 @@ import org.jivesoftware.smackx.packet.MUCUser;
 public class JireconSessionImpl
     implements JireconSession
 {
-    List<JireconEventListener> listeners =
-        new ArrayList<JireconEventListener>();
+    // List<JireconEventListener> listeners =
+    // new ArrayList<JireconEventListener>();
 
     private JireconTransportManager transportManager;
 
@@ -76,6 +77,9 @@ public class JireconSessionImpl
 
     private String nick = "default";
 
+    private List<JireconSessionPacketListener> packetListeners =
+        new ArrayList<JireconSessionPacketListener>();
+
     public JireconSessionImpl()
     {
         logger = Logger.getLogger(JireconSessionImpl.class);
@@ -87,63 +91,45 @@ public class JireconSessionImpl
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager)
     {
+        logger.info("init");
         this.nick = configuration.getProperty(NICK_KEY);
         this.connection = connection;
         this.info.setConferenceJid(conferenceJid);
         this.transportManager = transportManager;
         this.srtpControlManager = srtpControlManager;
-        updateState(JireconSessionState.INITIATING);
-
-        // TODO: Add init check
+        // updateState(JireconSessionState.INITIATING);
 
         addPacketSendingListener();
         addPacketReceivingListener();
+
+        JireconSessionPacketListener packetListener =
+            new JireconSessionPacketListener()
+            {
+                @Override
+                public void handlePacket(Packet packet)
+                {
+                    if (Presence.class == packet.getClass())
+                    {
+                        handlePresencePacket((Presence) packet);
+                    }
+                }
+            };
+
+        addPacketListener(packetListener);
     }
 
     @Override
     public void uninit()
     {
-        // TODO Auto-generated method stub
+        logger.info("uninit");
+        packetListeners.clear();
     }
 
-    @Override
-    public void start()
+    private void handlePacket(Packet packet)
     {
-        try
+        for (JireconSessionPacketListener l : packetListeners)
         {
-
-            joinConference();
-        }
-        catch (XMPPException e)
-        {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Leave this JitsiMeet conference
-     */
-    @Override
-    public void stop()
-    {
-        closeSession();
-        leaveConference();
-    }
-
-    public void handlePacket(Packet packet)
-    {
-        if (JingleIQ.class == packet.getClass())
-        {
-            handleJinglePacket((JingleIQ) packet);
-        }
-        else if (Presence.class == packet.getClass())
-        {
-            handlePresencePacket((Presence) packet);
-        }
-        // TODO: This is ugly, but I can't find other way to resolve it.
-        else if (packet.toXML().indexOf("type=\"result\"") >= 0)
-        {
-            handleAckPacket();
+            l.handlePacket(packet);
         }
     }
 
@@ -178,91 +164,100 @@ public class JireconSessionImpl
             }
         }
     }
-
-    private void handleJinglePacket(JingleIQ jiq)
+    
+    @Override
+    public void recordSessionInfo(JingleIQ jiq)
     {
-        if (IQ.Type.SET == jiq.getType())
-        {
-            info.setLocalJid(jiq.getTo());
-            info.setRemoteJid(jiq.getFrom());
-            info.setSid(jiq.getSID());
-            handleSetPacket(jiq);
-        }
+        info.setLocalJid(jiq.getTo());
+        info.setRemoteJid(jiq.getFrom());
+        info.setSid(jiq.getSID());
     }
 
-    private void handleSetPacket(JingleIQ jiq)
-    {
-        // System.out.println("receive session init");
-        sendAck(jiq);
+    // private void handleJinglePacket(JingleIQ jiq)
+    // {
+    // if (IQ.Type.SET == jiq.getType())
+    // {
+    // info.setLocalJid(jiq.getTo());
+    // info.setRemoteJid(jiq.getFrom());
+    // info.setSid(jiq.getSID());
+    // handleSetPacket(jiq);
+    // }
+    // }
 
-        if (JingleAction.SESSION_INITIATE == jiq.getAction())
-        {
-            harvestDynamicPayload(jiq);
-            harvestFingerprints(jiq);
-            transportManager.harvestRemoteCandidates(jiq);
-            fireEvent(new JireconEvent(this,
-                JireconEventId.SESSION_RECEIVE_INIT));
-        }
-    }
+    // private void handleSetPacket(JingleIQ jiq)
+    // {
+    // // System.out.println("receive session init");
+    // sendAck(jiq);
+    //
+    // if (JingleAction.SESSION_INITIATE == jiq.getAction())
+    // {
+    // harvestDynamicPayload(jiq);
+    // harvestFingerprints(jiq);
+    // transportManager.harvestRemoteCandidates(JinglePacketParser
+    // .getTransportPacketExts(jiq));
+    // fireEvent(new JireconEvent(this,
+    // JireconEventId.SESSION_RECEIVE_INIT));
+    // }
+    // }
 
-    private void startConnectivityEstablishment()
-    {
-        PropertyChangeListener stateChangeListener =
-            new PropertyChangeListener()
-            {
-                public void propertyChange(PropertyChangeEvent evt)
-                {
-                    Object newValue = evt.getNewValue();
+    // private void startConnectivityEstablishment()
+    // {
+    // PropertyChangeListener stateChangeListener =
+    // new PropertyChangeListener()
+    // {
+    // public void propertyChange(PropertyChangeEvent evt)
+    // {
+    // Object newValue = evt.getNewValue();
+    //
+    // if (IceProcessingState.COMPLETED.equals(newValue)
+    // || IceProcessingState.FAILED.equals(newValue)
+    // || IceProcessingState.TERMINATED.equals(newValue))
+    // {
+    // if (logger.isTraceEnabled())
+    // logger.trace("ICE " + newValue);
+    //
+    // transportManager.removeStateChangeListener(this);
+    //
+    // if (IceProcessingState.FAILED.equals(newValue))
+    // {
+    // fireEvent(new JireconEvent(this,
+    // JireconEventId.SESSION_ABORTED));
+    // }
+    // else if (IceProcessingState.COMPLETED.equals(newValue)
+    // || IceProcessingState.TERMINATED.equals(newValue))
+    // {
+    // fireEvent(new JireconEvent(this,
+    // JireconEventId.SESSION_CONSTRUCTED));
+    // }
+    // }
+    //
+    // if (IceProcessingState.WAITING.equals(newValue))
+    // {
+    // System.out.println("Ice check waiting.");
+    // }
+    // }
+    // };
+    //
+    // transportManager.addStateChangeListener(stateChangeListener);
+    // transportManager.startConnectivityEstablishment();
+    // }
 
-                    if (IceProcessingState.COMPLETED.equals(newValue)
-                        || IceProcessingState.FAILED.equals(newValue)
-                        || IceProcessingState.TERMINATED.equals(newValue))
-                    {
-                        if (logger.isTraceEnabled())
-                            logger.trace("ICE " + newValue);
+    // private void harvestFingerprints(JingleIQ jiq)
+    // {
+    // for (MediaType mediaType : MediaType.values())
+    // {
+    // if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
+    // continue;
+    // srtpControlManager.addRemoteFingerprint(mediaType, "sha-1",
+    // JinglePacketParser.getTransportPacketExt(jiq, mediaType)
+    // .getText());
+    // }
+    // }
 
-                        transportManager.removeStateChangeListener(this);
-
-                        if (IceProcessingState.FAILED.equals(newValue))
-                        {
-                            fireEvent(new JireconEvent(this,
-                                JireconEventId.SESSION_ABORTED));
-                        }
-                        else if (IceProcessingState.COMPLETED.equals(newValue)
-                            || IceProcessingState.TERMINATED.equals(newValue))
-                        {
-                            fireEvent(new JireconEvent(this,
-                                JireconEventId.SESSION_CONSTRUCTED));
-                        }
-                    }
-                    
-                    if (IceProcessingState.WAITING.equals(newValue))
-                    {
-                        System.out.println("Ice check waiting.");
-                    }
-                }
-            };
-
-        transportManager.addStateChangeListener(stateChangeListener);
-        transportManager.startConnectivityEstablishment();
-    }
-
-    private void harvestFingerprints(JingleIQ jiq)
-    {
-        for (MediaType mediaType : MediaType.values())
-        {
-            if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
-                continue;
-            srtpControlManager.addRemoteFingerprint(mediaType, "sha-1",
-                JinglePacketParser.getTransportPacketExt(jiq, mediaType)
-                    .getText());
-        }
-    }
-
-    private void handleAckPacket()
-    {
-        startConnectivityEstablishment();
-    }
+    // private void handleAckPacket()
+    // {
+    // startConnectivityEstablishment();
+    // }
 
     private ContentPacketExtension createContentPacketExtension(
         MediaType mediaType, JireconSessionInfo sessionInfo,
@@ -346,10 +341,11 @@ public class JireconSessionImpl
         return content;
     }
 
-    private JingleIQ createSessionAcceptPacket(JireconSessionInfo sessionInfo,
+    @Override
+    public JingleIQ createAcceptPacket(JireconSessionInfo sessionInfo,
         JireconRecorderInfo recorderInfo)
     {
-        logger.debug(this.getClass() + " createSessionAcceptPacket");
+        logger.info("createSessionAcceptPacket");
         final List<ContentPacketExtension> contents =
             new ArrayList<ContentPacketExtension>();
         for (MediaType mediaType : MediaType.values())
@@ -371,41 +367,36 @@ public class JireconSessionImpl
         return acceptJiq;
     }
 
-    private void joinConference() throws XMPPException
+    @Override
+    public void joinConference() throws XMPPException
     {
+        logger.info("joinConference");
         conference = new MultiUserChat(connection, info.getConferenceJid());
         conference.join(nick);
-        updateState(JireconSessionState.JOIN_CONFERENCE);
+        // updateState(JireconSessionState.JOIN_CONFERENCE);
     }
 
-    private void leaveConference()
+    @Override
+    public void leaveConference()
     {
+        logger.info("leaveConference");
         if (null != conference)
         {
             conference.leave();
         }
     }
 
-    private void closeSession()
+    @Override
+    public void sendAck(JingleIQ jiq)
     {
-        if (JireconSessionState.CONSTRUCTED == info.getState())
-        {
-            sendTerminate(Reason.SUCCESS, "OK, gotta go!");
-        }
-    }
-
-    /**
-     * Send a ack packet according to an Jingle packet
-     * 
-     * @param jiq The Jingle packet that will be sent a ack to.
-     */
-    private void sendAck(JingleIQ jiq)
-    {
+        logger.info("sendAck");
         connection.sendPacket(IQ.createResultIQ(jiq));
     }
 
-    public void sendTerminate(Reason reason, String reasonText)
+    @Override
+    public void sendByePacket(Reason reason, String reasonText)
     {
+        logger.info("sendByePacket");
         connection.sendPacket(JinglePacketFactory.createSessionTerminate(
             info.getLocalJid(), info.getRemoteJid(), info.getSid(), reason,
             reasonText));
@@ -416,58 +407,58 @@ public class JireconSessionImpl
      * 
      * @param jiq The Jingle session-init packet
      */
-    private void harvestDynamicPayload(JingleIQ jiq)
-    {
-        logger.info("harvestDynamicPayload begin");
-        final MediaFormatFactoryImpl fmtFactory = new MediaFormatFactoryImpl();
+    // private void harvestDynamicPayload(JingleIQ jiq)
+    // {
+    // logger.info("harvestDynamicPayload begin");
+    // final MediaFormatFactoryImpl fmtFactory = new MediaFormatFactoryImpl();
+    //
+    // for (MediaType mediaType : MediaType.values())
+    // {
+    // // Make sure that we only handle audio or video type.
+    // if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+    // {
+    // continue;
+    // }
+    //
+    // // TODO: Video format has some problem, RED payload
+    // // FIXME: We only choose the first payloadtype
+    // for (PayloadTypePacketExtension payloadTypePacketExt : JinglePacketParser
+    // .getPayloadTypePacketExts(jiq, mediaType))
+    // {
+    // MediaFormat format =
+    // fmtFactory.createMediaFormat(
+    // payloadTypePacketExt.getName(),
+    // payloadTypePacketExt.getClockrate(),
+    // payloadTypePacketExt.getChannels());
+    // if (format != null)
+    // {
+    // info.addPayloadType(mediaType, format,
+    // (byte) (payloadTypePacketExt.getID()));
+    // }
+    // }
+    //
+    // // Collect the focus' SSRC
+    // // info.addRemoteSsrc(media, jiq.getInitiator(), JinglePacketParser
+    // // .getDescriptionPacketExt(jiq, media).getSsrc());
+    // // Collect remote fingerprints
+    // IceUdpTransportPacketExtension transport =
+    // JinglePacketParser.getTransportPacketExt(jiq, mediaType);
+    // info.setRemoteFingerprint(mediaType, transport.getText());
+    // }
+    // logger.info("harvestDynamicPayload finished");
+    // }
 
-        for (MediaType mediaType : MediaType.values())
-        {
-            // Make sure that we only handle audio or video type.
-            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
-            {
-                continue;
-            }
-
-            // TODO: Video format has some problem, RED payload
-            // FIXME: We only choose the first payloadtype
-            for (PayloadTypePacketExtension payloadTypePacketExt : JinglePacketParser
-                .getPayloadTypePacketExts(jiq, mediaType))
-            {
-                MediaFormat format =
-                    fmtFactory.createMediaFormat(
-                        payloadTypePacketExt.getName(),
-                        payloadTypePacketExt.getClockrate(),
-                        payloadTypePacketExt.getChannels());
-                if (format != null)
-                {
-                    info.addPayloadType(mediaType, format,
-                        (byte) (payloadTypePacketExt.getID()));
-                }
-            }
-
-            // Collect the focus' SSRC
-            // info.addRemoteSsrc(media, jiq.getInitiator(), JinglePacketParser
-            // .getDescriptionPacketExt(jiq, media).getSsrc());
-            // Collect remote fingerprints
-            IceUdpTransportPacketExtension transport =
-                JinglePacketParser.getTransportPacketExt(jiq, mediaType);
-            info.setRemoteFingerprint(mediaType, transport.getText());
-        }
-        logger.info("harvestDynamicPayload finished");
-    }
-
-    @Override
-    public void addEventListener(JireconEventListener listener)
-    {
-        listeners.add(listener);
-    }
-
-    @Override
-    public void removeEventListener(JireconEventListener listener)
-    {
-        listeners.remove(listener);
-    }
+    // @Override
+    // public void addEventListener(JireconEventListener listener)
+    // {
+    // listeners.add(listener);
+    // }
+    //
+    // @Override
+    // public void removeEventListener(JireconEventListener listener)
+    // {
+    // listeners.remove(listener);
+    // }
 
     private void addPacketSendingListener()
     {
@@ -488,13 +479,13 @@ public class JireconSessionImpl
         });
     }
 
-    private void fireEvent(JireconEvent evt)
-    {
-        for (JireconEventListener l : listeners)
-        {
-            l.handleEvent(evt);
-        }
-    }
+    // private void fireEvent(JireconEvent evt)
+    // {
+    // for (JireconEventListener l : listeners)
+    // {
+    // l.handleEvent(evt);
+    // }
+    // }
 
     private void addPacketReceivingListener()
     {
@@ -530,29 +521,164 @@ public class JireconSessionImpl
         return info;
     }
 
-    private void updateState(JireconSessionState state)
-    {
-        switch (state)
-        {
-        case JOIN_CONFERENCE:
-            fireEvent(new JireconEvent(this, JireconEventId.SESSION_BUILDING));
-            break;
-        case CONSTRUCTED:
-            fireEvent(new JireconEvent(this, JireconEventId.SESSION_CONSTRUCTED));
-            break;
-        case ABORTED:
-            fireEvent(new JireconEvent(this, JireconEventId.SESSION_ABORTED));
-            break;
-        default:
-            break;
-        }
+    //
+    // private void updateState(JireconSessionState state)
+    // {
+    // switch (state)
+    // {
+    // case JOIN_CONFERENCE:
+    // fireEvent(new JireconEvent(this, JireconEventId.SESSION_BUILDING));
+    // break;
+    // case CONSTRUCTED:
+    // fireEvent(new JireconEvent(this, JireconEventId.SESSION_CONSTRUCTED));
+    // break;
+    // case ABORTED:
+    // fireEvent(new JireconEvent(this, JireconEventId.SESSION_ABORTED));
+    // break;
+    // default:
+    // break;
+    // }
+    //
+    // info.setState(state);
+    // }
 
-        info.setState(state);
+    // @Override
+    // public void sendAcceptPacket(JireconRecorderInfo recorderInfo)
+    // {
+    // connection.sendPacket((createAcceptPacket(info, recorderInfo)));
+    // }
+
+    @Override
+    public void sendAccpetPacket(JingleIQ jiq)
+    {
+        logger.info("sendAcceptPacket");
+        connection.sendPacket(jiq);
     }
 
     @Override
-    public void sendAcceptPacket(JireconRecorderInfo recorderInfo)
+    public JingleIQ waitForInitPacket() throws OperationFailedException
     {
-        connection.sendPacket((createSessionAcceptPacket(info, recorderInfo)));
+        logger.info("waitForInitPacket");
+        final List<JingleIQ> resultList = new ArrayList<JingleIQ>();
+        final Object waitForInitPacketSyncRoot = new Object();
+        JireconSessionPacketListener packetListener =
+            new JireconSessionPacketListener()
+            {
+                @Override
+                public void handlePacket(Packet packet)
+                {
+                    if (packet instanceof JingleIQ)
+                    {
+                        final JingleIQ jiq = (JingleIQ) packet;
+                        if (JingleAction.SESSION_INITIATE.equals(jiq
+                            .getAction()))
+                        {
+                            resultList.add(jiq);
+                            JireconSessionImpl.this.removePacketListener(this);
+
+                            synchronized (waitForInitPacketSyncRoot)
+                            {
+                                waitForInitPacketSyncRoot.notify();
+                            }
+                        }
+                    }
+                }
+            };
+
+        addPacketListener(packetListener);
+        boolean interrupted = false;
+
+        synchronized (waitForInitPacketSyncRoot)
+        {
+            while (resultList.isEmpty())
+            {
+                try
+                {
+                    waitForInitPacketSyncRoot.wait();
+                }
+                catch (InterruptedException ie)
+                {
+                    interrupted = true;
+                }
+            }
+        }
+        if (interrupted)
+            Thread.currentThread().interrupt();
+
+        removePacketListener(packetListener);
+        if (resultList.isEmpty())
+        {
+            throw new OperationFailedException(
+                "Could not get session-init packet",
+                OperationFailedException.GENERAL_ERROR);
+        }
+
+        return resultList.get(0);
+    }
+
+    @Override
+    public void waitForAckPacket() throws OperationFailedException
+    {
+        logger.info("waitForAckPacket");
+        final List<Packet> resultList = new ArrayList<Packet>();
+        final Object waitForAckPacketSyncRoot = new Object();
+        JireconSessionPacketListener packetListener =
+            new JireconSessionPacketListener()
+            {
+                @Override
+                public void handlePacket(Packet packet)
+                {
+                    if (packet.toXML().indexOf("type=\"result\"") >= 0)
+                    {
+                        resultList.add(packet);
+                        synchronized (waitForAckPacketSyncRoot)
+                        {
+                            waitForAckPacketSyncRoot.notify();
+                        }
+                    }
+                }
+            };
+
+        addPacketListener(packetListener);
+        boolean interrupted = false;
+
+        synchronized (waitForAckPacketSyncRoot)
+        {
+            while (resultList.isEmpty())
+            {
+                try
+                {
+                    waitForAckPacketSyncRoot.wait();
+                }
+                catch (InterruptedException ie)
+                {
+                    interrupted = true;
+                }
+            }
+        }
+        if (interrupted)
+            Thread.currentThread().interrupt();
+
+        removePacketListener(packetListener);
+        if (resultList.isEmpty())
+        {
+            throw new OperationFailedException("Could not get ack packet",
+                OperationFailedException.GENERAL_ERROR);
+        }
+    }
+
+    private void addPacketListener(JireconSessionPacketListener listener)
+    {
+        packetListeners.add(listener);
+    }
+
+    private void removePacketListener(JireconSessionPacketListener listener)
+    {
+        packetListeners.remove(listener);
+    }
+
+    private interface JireconSessionPacketListener
+    {
+        public void handlePacket(Packet packet);
     }
 }

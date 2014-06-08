@@ -8,6 +8,7 @@ package org.jitsi.jirecon.transport;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.net.BindException;
+import java.util.Map;
 
 import org.ice4j.ice.IceProcessingState;
 import org.jitsi.jirecon.JireconEventListener;
@@ -19,6 +20,7 @@ import org.jitsi.service.neomedia.StreamConnector;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.IceUdpTransportPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
+import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 public interface JireconTransportManager
 {
@@ -31,17 +33,17 @@ public interface JireconTransportManager
         IllegalArgumentException,
         IOException;
 
-    public void harvestRemoteCandidates(JingleIQ jiq);
+    public void harvestRemoteCandidates(Map<MediaType, IceUdpTransportPacketExtension> transportPEs);
 
     public IceUdpTransportPacketExtension getTransportPacketExt();
 
-    public void startConnectivityEstablishment();
+//    public void addStateChangeListener(PropertyChangeListener listener);
 
-    public void addStateChangeListener(PropertyChangeListener listener);
-
-    public void removeStateChangeListener(PropertyChangeListener listener);
+//    public void removeStateChangeListener(PropertyChangeListener listener);
     
     public MediaStreamTarget getStreamTarget(MediaType mediaType);
 
     public StreamConnector getStreamConnector(MediaType mediaType);
+    
+    public void startConnectivityCheck() throws OperationFailedException;
 }

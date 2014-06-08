@@ -8,6 +8,7 @@ package org.jitsi.jirecon.session;
 import java.beans.PropertyChangeListener;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.Reason;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.jirecon.JireconEventListener;
@@ -29,15 +30,30 @@ public interface JireconSession
 
     public void uninit();
 
-    public void start();
-
-    public void stop();
-
     public JireconSessionInfo getSessionInfo();
 
-    public void addEventListener(JireconEventListener listener);
+    // public void addEventListener(JireconEventListener listener);
 
-    public void removeEventListener(JireconEventListener listener);
-    
-    public void sendAcceptPacket(JireconRecorderInfo info);
+    // public void removeEventListener(JireconEventListener listener);
+
+    // public void sendAcceptPacket(JireconRecorderInfo info);
+
+    public void joinConference() throws XMPPException;
+
+    public JingleIQ waitForInitPacket() throws OperationFailedException;
+
+    public void sendAck(JingleIQ jiq);
+
+    public void sendAccpetPacket(JingleIQ jiq);
+
+    public void waitForAckPacket() throws OperationFailedException;
+
+    public void sendByePacket(Reason reason, String reasonText);
+
+    public void leaveConference();
+
+    public JingleIQ createAcceptPacket(JireconSessionInfo sessionInfo,
+        JireconRecorderInfo recorderInfo);
+
+    public void recordSessionInfo(JingleIQ jiq);
 }

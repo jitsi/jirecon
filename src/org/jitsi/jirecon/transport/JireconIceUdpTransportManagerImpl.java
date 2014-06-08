@@ -11,7 +11,9 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.security.KeyStore.Entry;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -19,8 +21,10 @@ import java.util.Map;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidatePacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.IceUdpTransportPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
+import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.ice4j.Transport;
 import org.ice4j.TransportAddress;
@@ -70,6 +74,7 @@ public class JireconIceUdpTransportManagerImpl
     @Override
     public void init(JireconConfiguration configuration)
     {
+        logger.info("init");
         iceAgent = new Agent();
         MIN_STREAM_PORT =
             Integer.valueOf(configuration.getProperty(MIN_STREAM_PORT_KEY));
@@ -80,12 +85,14 @@ public class JireconIceUdpTransportManagerImpl
     @Override
     public void uninit()
     {
+        logger.info("uninit");
         iceAgent.free();
     }
 
     @Override
     public IceUdpTransportPacketExtension getTransportPacketExt()
     {
+        logger.info("getTransportPacketExt");
         IceUdpTransportPacketExtension transportPE =
             new IceUdpTransportPacketExtension();
         transportPE.setPassword(iceAgent.getLocalPassword());
@@ -97,10 +104,81 @@ public class JireconIceUdpTransportManagerImpl
         return transportPE;
     }
 
-    public void startConnectivityEstablishment()
+    private void startConnectivityEstablishment()
     {
-
+        logger.info("startConnectivityEstablishment");
         iceAgent.startConnectivityEstablishment();
+    }
+
+    @Override
+    public void startConnectivityCheck() throws OperationFailedException
+    {
+        logger.info("waitForCheckFinished");
+        
+        final Object iceProcessingStateSyncRoot = new Object();
+        PropertyChangeListener stateChangeListener =
+            new PropertyChangeListener()
+            {
+                public void propertyChange(PropertyChangeEvent evt)
+                {
+                    Object newValue = evt.getNewValue();
+
+                    if (IceProcessingState.COMPLETED.equals(newValue)
+                        || IceProcessingState.FAILED.equals(newValue)
+                        || IceProcessingState.TERMINATED.equals(newValue))
+                    {
+                        if (logger.isTraceEnabled())
+                            logger.trace("ICE " + newValue);
+
+                        Agent iceAgent = (Agent) evt.getSource();
+
+                        iceAgent.removeStateChangeListener(this);
+
+                        synchronized (iceProcessingStateSyncRoot)
+                        {
+                            iceProcessingStateSyncRoot.notify();
+                        }
+                    }
+                }
+            };
+
+        iceAgent.addStateChangeListener(stateChangeListener);
+
+        startConnectivityEstablishment();
+        
+        // Wait for the connectivity checks to finish if they have been started.
+        boolean interrupted = false;
+
+        synchronized (iceProcessingStateSyncRoot)
+        {
+            while (IceProcessingState.RUNNING.equals(iceAgent.getState()))
+            {
+                try
+                {
+                    iceProcessingStateSyncRoot.wait();
+                }
+                catch (InterruptedException ie)
+                {
+                    interrupted = true;
+                }
+            }
+        }
+        if (interrupted)
+            Thread.currentThread().interrupt();
+
+        /*
+         * Make sure stateChangeListener is removed from iceAgent in case its
+         * #propertyChange(PropertyChangeEvent) has never been executed.
+         */
+        iceAgent.removeStateChangeListener(stateChangeListener);
+
+        /* check the state of ICE processing and throw exception if failed */
+        if (IceProcessingState.FAILED.equals(iceAgent.getState()))
+        {
+            throw new OperationFailedException(
+                "Could not establish connection (ICE failed)",
+                OperationFailedException.GENERAL_ERROR);
+        }
     }
 
     @Override
@@ -109,7 +187,7 @@ public class JireconIceUdpTransportManagerImpl
         IllegalArgumentException,
         IOException
     {
-        logger.info("harvestLocalCandidates begin");
+        logger.info("harvestLocalCandidates");
         for (MediaType mediaType : MediaType.values())
         {
             // Make sure that we only handle audio or video type.
@@ -126,34 +204,89 @@ public class JireconIceUdpTransportManagerImpl
         }
     }
 
-    public void harvestRemoteCandidates(JingleIQ jiq)
+    // public void harvestRemoteCandidates(JingleIQ jiq)
+    // {
+    // logger.info("harvestRemoteCandidates begin");
+    // for (MediaType mediaType : MediaType.values())
+    // {
+    // // Make sure that we only handle audio or video type.
+    // if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+    // {
+    // continue;
+    // }
+    //
+    // final IceMediaStream stream = getIceMediaStream(mediaType);
+    // final String ufrag =
+    // JinglePacketParser.getTransportUfrag(jiq, mediaType);
+    // if (null != ufrag)
+    // {
+    // stream.setRemoteUfrag(ufrag);
+    // }
+    //
+    // final String password =
+    // JinglePacketParser.getTransportPassword(jiq, mediaType);
+    // if (null != password)
+    // {
+    // stream.setRemotePassword(password);
+    // }
+    //
+    // List<CandidatePacketExtension> candidates =
+    // JinglePacketParser.getCandidatePacketExt(jiq, mediaType);
+    // // Sort the remote candidates (host < reflexive < relayed) in order
+    // // to create first the host, then the reflexive, the relayed
+    // // candidates and thus be able to set the relative-candidate
+    // // matching the rel-addr/rel-port attribute.
+    // Collections.sort(candidates);
+    // for (CandidatePacketExtension c : candidates)
+    // {
+    // if (c.getGeneration() != iceAgent.getGeneration())
+    // continue;
+    // final Component component =
+    // stream.getComponent(c.getComponent());
+    //
+    // // FIXME: Add support for not-host address
+    // final RemoteCandidate remoteCandidate =
+    // new RemoteCandidate(new TransportAddress(c.getIP(),
+    // c.getPort(), Transport.parse(c.getProtocol())),
+    // component, org.ice4j.ice.CandidateType.parse(c
+    // .getType().toString()), c.getFoundation(),
+    // c.getPriority(), getRelatedCandidate(c, component));
+    //
+    // component.addRemoteCandidate(remoteCandidate);
+    // }
+    // }
+    //
+    // logger.info("harvestRemoteCandidates finished");
+    // }
+    //
+    @Override
+    public void harvestRemoteCandidates(
+        Map<MediaType, IceUdpTransportPacketExtension> transportPEs)
     {
-        logger.info("harvestRemoteCandidates begin");
-        for (MediaType mediaType : MediaType.values())
+        logger.info("harvestRemoteCandidates");
+        for (java.util.Map.Entry<MediaType, IceUdpTransportPacketExtension> e : transportPEs
+            .entrySet())
         {
-            // Make sure that we only handle audio or video type.
-            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
-            {
-                continue;
-            }
-
+            final MediaType mediaType = e.getKey();
+            final IceUdpTransportPacketExtension transportPE = e.getValue();
             final IceMediaStream stream = getIceMediaStream(mediaType);
+
             final String ufrag =
-                JinglePacketParser.getTransportUfrag(jiq, mediaType);
+                JinglePacketParser.getTransportUfrag(transportPE);
             if (null != ufrag)
             {
                 stream.setRemoteUfrag(ufrag);
             }
 
             final String password =
-                JinglePacketParser.getTransportPassword(jiq, mediaType);
+                JinglePacketParser.getTransportPassword(transportPE);
             if (null != password)
             {
                 stream.setRemotePassword(password);
             }
 
             List<CandidatePacketExtension> candidates =
-                JinglePacketParser.getCandidatePacketExt(jiq, mediaType);
+                JinglePacketParser.getCandidatePacketExt(transportPE);
             // Sort the remote candidates (host < reflexive < relayed) in order
             // to create first the host, then the reflexive, the relayed
             // candidates and thus be able to set the relative-candidate
@@ -177,8 +310,6 @@ public class JireconIceUdpTransportManagerImpl
                 component.addRemoteCandidate(remoteCandidate);
             }
         }
-
-        logger.info("harvestRemoteCandidates finished");
     }
 
     public CandidatePair getCandidatePairs(MediaType mediaType, int componentId)
@@ -263,25 +394,27 @@ public class JireconIceUdpTransportManagerImpl
         return null;
     }
 
-    @Override
-    public void addStateChangeListener(PropertyChangeListener listener)
-    {
-        iceAgent.addStateChangeListener(listener);
-    }
-    
-    @Override
-    public void removeStateChangeListener(PropertyChangeListener listener)
-    {
-        iceAgent.removeStateChangeListener(listener);
-    }
+//    @Override
+//    public void addStateChangeListener(PropertyChangeListener listener)
+//    {
+//        iceAgent.addStateChangeListener(listener);
+//    }
+//
+//    @Override
+//    public void removeStateChangeListener(PropertyChangeListener listener)
+//    {
+//        iceAgent.removeStateChangeListener(listener);
+//    }
 
     @Override
     public MediaStreamTarget getStreamTarget(MediaType mediaType)
     {
+        logger.info("getStreamTarget");
         if (mediaStreamTargets.containsKey(mediaType))
-        {
             return mediaStreamTargets.get(mediaType);
-        }
+
+        if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
+            return null;
 
         IceMediaStream stream = getIceMediaStream(mediaType);
         MediaStreamTarget streamTarget = null;
@@ -324,10 +457,11 @@ public class JireconIceUdpTransportManagerImpl
     @Override
     public StreamConnector getStreamConnector(MediaType mediaType)
     {
+        logger.info("getStreamConnector");
         if (streamConnectors.containsKey(mediaType))
-        {
             return streamConnectors.get(mediaType);
-        }
+        if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
+            return null;
 
         StreamConnector streamConnector = null;
         IceMediaStream stream = getIceMediaStream(mediaType);
