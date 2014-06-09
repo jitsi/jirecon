@@ -6,21 +6,14 @@
 
 package org.jitsi.jirecon.dtlscontrol;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
-import org.jitsi.jirecon.utils.JireconConfiguration;
-import org.jitsi.service.neomedia.DtlsControl;
-import org.jitsi.service.neomedia.MediaService;
-import org.jitsi.service.neomedia.MediaType;
-import org.jitsi.service.neomedia.SrtpControl;
-import org.jitsi.service.neomedia.SrtpControlType;
+import org.jitsi.jirecon.utils.*;
+import org.jitsi.service.neomedia.*;
 
 public class JireconDtlsControlManagerImpl
     implements JireconSrtpControlManager
 {
-    private MediaService mediaService;
-
     private Map<MediaType, DtlsControl> dtlsControls =
         new HashMap<MediaType, DtlsControl>();
 
@@ -33,19 +26,9 @@ public class JireconDtlsControlManagerImpl
     }
 
     @Override
-    public void addRemoteFingerprint(MediaType mediaType, String fingerprint)
-    {
-        final DtlsControl dtlsControl = dtlsControls.get(mediaType);
-        final Map<String, String> fingerprints = new HashMap<String, String>();
-        fingerprints.put(hashFunction, fingerprint);
-        dtlsControl.setRemoteFingerprints(fingerprints);
-    }
-
-    @Override
     public void init(MediaService mediaService,
         JireconConfiguration configuration)
     {
-        this.mediaService = mediaService;
         hashFunction = configuration.getProperty(HASH_FUNCTION_KEY);
 
         for (MediaType mediaType : MediaType.values())
@@ -63,7 +46,17 @@ public class JireconDtlsControlManagerImpl
     @Override
     public void uinit()
     {
-        // TODO Auto-generated method stub
+        hashFunction = null;
+        dtlsControls.clear();
+    }
+    
+    @Override
+    public void addRemoteFingerprint(MediaType mediaType, String fingerprint)
+    {
+        final DtlsControl dtlsControl = dtlsControls.get(mediaType);
+        final Map<String, String> fingerprints = new HashMap<String, String>();
+        fingerprints.put(hashFunction, fingerprint);
+        dtlsControl.setRemoteFingerprints(fingerprints);
     }
 
     @Override

@@ -6,14 +6,8 @@
 package org.jitsi.jirecon.session;
 
 // TODO: Rewrite those import statements to package import statement.
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
-
-import org.ice4j.ice.CandidatePair;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.MediaFormat;
 
@@ -27,7 +21,6 @@ public class JireconSessionInfo
 {
     private String localJid;
 
-    // This is actually the conference jid
     private String remoteJid;
 
     private String sid;
@@ -108,28 +101,6 @@ public class JireconSessionInfo
         return infoBoxes.get(media).remoteSsrcs;
     }
 
-    // public void setRtpCandidatePair(MediaType media, CandidatePair
-    // candidatePair)
-    // {
-    // infoBoxes.get(media).rtpCandidatePair = candidatePair;
-    // }
-    //
-    // public void setRtcpCandidatePair(MediaType media,
-    // CandidatePair candidatePair)
-    // {
-    // infoBoxes.get(media).rtcpCandidatePair = candidatePair;
-    // }
-    //
-    // public CandidatePair getRtpCandidatePair(MediaType media)
-    // {
-    // return infoBoxes.get(media).rtpCandidatePair;
-    // }
-    //
-    // public CandidatePair getRtcpCandidatePair(MediaType media)
-    // {
-    // return infoBoxes.get(media).rtcpCandidatePair;
-    // }
-
     public void setSessionStatus(JireconSessionState status)
     {
         this.status = status;
@@ -202,18 +173,12 @@ public class JireconSessionInfo
 
     private class InfoBox
     {
-        /**
-         * <format, payloadTypeId>
-         */
+        // <format, payloadTypeId>
         public Map<MediaFormat, Byte> payloadTypes =
             new HashMap<MediaFormat, Byte>();
 
         private Map<String, String> remoteSsrcs = new HashMap<String, String>();
 
         private String remoteFingerprint;
-
-        // private CandidatePair rtpCandidatePair;
-
-        // private CandidatePair rtcpCandidatePair;
     }
 }

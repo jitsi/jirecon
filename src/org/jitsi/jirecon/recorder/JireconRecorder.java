@@ -10,18 +10,10 @@ import java.util.Map;
 
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
-import org.jitsi.jirecon.JireconEventListener;
-import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
-import org.jitsi.jirecon.session.JireconSessionInfo;
-import org.jitsi.jirecon.transport.JireconTransportManager;
-import org.jitsi.jirecon.utils.JireconConfiguration;
-import org.jitsi.service.neomedia.DtlsControl;
-import org.jitsi.service.neomedia.MediaException;
-import org.jitsi.service.neomedia.MediaService;
-import org.jitsi.service.neomedia.MediaStreamTarget;
-import org.jitsi.service.neomedia.MediaType;
-import org.jitsi.service.neomedia.StreamConnector;
-import org.jitsi.service.neomedia.format.MediaFormat;
+import org.jitsi.jirecon.dtlscontrol.*;
+import org.jitsi.jirecon.utils.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.format.*;
 
 public interface JireconRecorder
 {
@@ -30,18 +22,6 @@ public interface JireconRecorder
 
     public void uninit();
 
-    public void stopReceiving();
-
-    public void stopRecording();
-
-    // public JireconRecorderState getState();
-
-//    public void addEventListener(JireconEventListener listener);
-
-//    public void removeEventListener(JireconEventListener listener);
-
-    public void prepareRecorders();
-
     public void prepareMediaStreams();
 
     public void completeMediaStreams(
@@ -49,9 +29,21 @@ public interface JireconRecorder
         Map<MediaType, StreamConnector> connectors,
         Map<MediaType, MediaStreamTarget> targets);
 
-    public JireconRecorderInfo getRecorderInfo();
-
     public void startReceiving() throws OperationFailedException;
 
+    public void stopReceiving();
+
+    public void prepareRecorders();
+
     public void startRecording() throws IOException, MediaException;
+
+    public void stopRecording();
+
+    public JireconRecorderInfo getRecorderInfo();
+
+    // public JireconRecorderState getState();
+
+    // public void addEventListener(JireconEventListener listener);
+
+    // public void removeEventListener(JireconEventListener listener);
 }

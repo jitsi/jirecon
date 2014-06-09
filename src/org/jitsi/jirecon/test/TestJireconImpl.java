@@ -7,8 +7,7 @@ package org.jitsi.jirecon.test;
 
 import java.io.IOException;
 
-import org.jitsi.jirecon.Jirecon;
-import org.jitsi.jirecon.JireconImpl;
+import org.jitsi.jirecon.*;
 import org.jivesoftware.smack.XMPPException;
 
 import junit.framework.TestCase;

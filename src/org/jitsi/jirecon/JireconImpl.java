@@ -6,24 +6,16 @@
 package org.jitsi.jirecon;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQProvider;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
 import org.jitsi.jirecon.utils.JireconConfigurationImpl;
 import org.jitsi.service.libjitsi.LibJitsi;
-import org.jitsi.service.neomedia.DtlsControl;
 import org.jitsi.service.neomedia.MediaService;
-import org.jitsi.service.neomedia.SrtpControlType;
 import org.jitsi.util.Logger;
-import org.jivesoftware.smack.ConnectionConfiguration;
-import org.jivesoftware.smack.XMPPConnection;
-import org.jivesoftware.smack.XMPPException;
+import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.provider.ProviderManager;
 
 public class JireconImpl
@@ -90,6 +82,8 @@ public class JireconImpl
         logger.debug(this.getClass() + "uninit");
         LibJitsi.stop();
         disconnect();
+        configuration = null;
+        mediaService = null;
     }
 
     @Override
@@ -170,14 +164,6 @@ public class JireconImpl
         listeners.remove(listener);
     }
 
-    private void fireEvent(JireconEvent evt)
-    {
-        for (JireconEventListener l : listeners)
-        {
-            l.handleEvent(evt);
-        }
-    }
-
     @Override
     public void handleEvent(JireconEvent evt)
     {
@@ -196,6 +182,14 @@ public class JireconImpl
             break;
         default:
             break;
+        }
+    }
+
+    private void fireEvent(JireconEvent evt)
+    {
+        for (JireconEventListener l : listeners)
+        {
+            l.handleEvent(evt);
         }
     }
 }

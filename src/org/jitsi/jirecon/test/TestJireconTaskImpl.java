@@ -7,21 +7,15 @@ package org.jitsi.jirecon.test;
 
 import java.io.IOException;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQProvider;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
-import org.jitsi.jirecon.JireconTask;
-import org.jitsi.jirecon.JireconTaskImpl;
-import org.jitsi.jirecon.JireconTaskState;
-import org.jitsi.jirecon.extension.MediaExtensionProvider;
-import org.jitsi.jirecon.utils.JireconConfiguration;
-import org.jitsi.jirecon.utils.JireconConfigurationImpl;
-import org.jitsi.service.libjitsi.LibJitsi;
-import org.jitsi.service.neomedia.MediaService;
-import org.jivesoftware.smack.ConnectionConfiguration;
-import org.jivesoftware.smack.XMPPConnection;
-import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.provider.ProviderManager;
+import org.jitsi.jirecon.*;
+import org.jitsi.jirecon.extension.*;
+import org.jitsi.jirecon.utils.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.service.libjitsi.*;
+import org.jivesoftware.smack.*;
+import org.jivesoftware.smack.provider.*;
 
 import junit.framework.TestCase;
 
@@ -87,7 +81,7 @@ public class TestJireconTaskImpl
             new MediaExtensionProvider());
 
         task = new JireconTaskImpl();
-        task.init(configuration, "ebzgcjkovo0f6r@conference.example.com",
+        task.init(configuration, "d3gtdrx13hc40a4i@conference.example.com",
             connection, mediaService);
     }
 
@@ -102,12 +96,6 @@ public class TestJireconTaskImpl
         {
             e.printStackTrace();
         }
-        // assertTrue(JireconTaskState.SESSION_CONSTRUCTED ==
-        // task.getTaskInfo().getState());
-        // assertTrue(JireconTaskState.RECORDER_RECEIVING ==
-        // task.getTaskInfo().getState());
-        assertTrue(JireconTaskState.RECORDER_RECORDING == task.getTaskInfo()
-            .getState());
         task.stop();
     }
 

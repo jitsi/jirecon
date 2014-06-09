@@ -5,51 +5,23 @@
  */
 package org.jitsi.jirecon;
 
-// TODO: Rewrite those import statements to package import statement.
 import java.io.IOException;
 import java.net.BindException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.IceUdpTransportPacketExtension;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JinglePacketFactory;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ParameterPacketExtension;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.PayloadTypePacketExtension;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.Reason;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.RtpDescriptionPacketExtension;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.CreatorEnum;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.SendersEnum;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
-import org.jitsi.jirecon.dtlscontrol.JireconDtlsControlManagerImpl;
-import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
-import org.jitsi.jirecon.recorder.JireconRecorder;
-import org.jitsi.jirecon.recorder.JireconRecorderImpl;
-import org.jitsi.jirecon.recorder.JireconRecorderInfo;
-import org.jitsi.jirecon.session.JireconSession;
-import org.jitsi.jirecon.session.JireconSessionImpl;
-import org.jitsi.jirecon.session.JireconSessionInfo;
-import org.jitsi.jirecon.transport.JireconIceUdpTransportManagerImpl;
-import org.jitsi.jirecon.transport.JireconTransportManager;
-import org.jitsi.jirecon.utils.JinglePacketParser;
-import org.jitsi.jirecon.utils.JireconConfiguration;
-import org.jitsi.service.neomedia.DtlsControl;
-import org.jitsi.service.neomedia.MediaException;
-import org.jitsi.service.neomedia.MediaService;
-import org.jitsi.service.neomedia.MediaStreamTarget;
-import org.jitsi.service.neomedia.MediaType;
-import org.jitsi.service.neomedia.SrtpControlType;
-import org.jitsi.service.neomedia.StreamConnector;
-import org.jitsi.service.neomedia.format.AudioMediaFormat;
+import org.jitsi.jirecon.dtlscontrol.*;
+import org.jitsi.jirecon.recorder.*;
+import org.jitsi.jirecon.session.*;
+import org.jitsi.jirecon.transport.*;
+import org.jitsi.jirecon.utils.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jitsi.util.Logger;
-import org.jivesoftware.smack.XMPPConnection;
-import org.jivesoftware.smack.XMPPException;
+import org.jivesoftware.smack.*;
 
 /**
  * This is an implementation of Jirecon
@@ -91,12 +63,9 @@ public class JireconTaskImpl
         logger.setLevelAll();
         logger.debug(this.getClass() + " init");
 
-        // session.addEventListener(this);
-        // recorder.addEventListener(this);
         transport.init(configuration);
         srtpControl.init(mediaService, configuration);
-        session.init(configuration, connection, conferenceJid, transport,
-            srtpControl);
+        session.init(configuration, connection, conferenceJid);
         recorder.init(configuration, mediaService, srtpControl);
         updateState(JireconTaskState.INITIATED);
     }
@@ -142,9 +111,8 @@ public class JireconTaskImpl
 
             JireconSessionInfo sessionInfo = session.getSessionInfo();
             JireconRecorderInfo recorderInfo = recorder.getRecorderInfo();
-            JingleIQ acceptPacket =
-                session.createAcceptPacket(sessionInfo, recorderInfo);
-            session.sendAccpetPacket(acceptPacket);
+            session.sendAccpetPacket(sessionInfo, recorderInfo, transport,
+                srtpControl);
 
             session.waitForAckPacket();
 
@@ -168,8 +136,6 @@ public class JireconTaskImpl
                     transport.getStreamTarget(mediaType);
                 mediaStreamTargets.put(mediaType, mediaStreamTarget);
             }
-            System.out.println(streamConnectors.size() + " "
-                + mediaStreamTargets.size());
             Map<MediaFormat, Byte> formatAndDynamicPTs =
                 JinglePacketParser.getFormatAndDynamicPTs(initPacket);
             recorder.completeMediaStreams(formatAndDynamicPTs,
@@ -223,19 +189,6 @@ public class JireconTaskImpl
         session.leaveConference();
     }
 
-    public void fireEvent(JireconEvent evt)
-    {
-        for (JireconEventListener l : listeners)
-        {
-            l.handleEvent(evt);
-        }
-    }
-
-    private void updateState(JireconTaskState state)
-    {
-        info.setState(state);
-    }
-
     @Override
     public void addEventListener(JireconEventListener listener)
     {
@@ -258,7 +211,19 @@ public class JireconTaskImpl
     public void handleEvent(JireconEvent evt)
     {
         // TODO Auto-generated method stub
+    }
 
+    private void fireEvent(JireconEvent evt)
+    {
+        for (JireconEventListener l : listeners)
+        {
+            l.handleEvent(evt);
+        }
+    }
+
+    private void updateState(JireconTaskState state)
+    {
+        info.setState(state);
     }
 
 }

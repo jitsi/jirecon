@@ -1,13 +1,12 @@
 /*
  * Jirecon, the Jitsi recorder container.
- *
- * Distributable under LGPL license.
- * See terms of license at gnu.org.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
  */
 package org.jitsi.jirecon.extension;
 
-import org.jivesoftware.smack.packet.PacketExtension;
-import org.jivesoftware.smack.provider.PacketExtensionProvider;
+import org.jivesoftware.smack.packet.*;
+import org.jivesoftware.smack.provider.*;
 import org.xmlpull.v1.XmlPullParser;
 
 public class MediaExtensionProvider
@@ -28,7 +27,6 @@ public class MediaExtensionProvider
             case XmlPullParser.END_TAG:
             {
                 String name = parser.getName();
-//                int count = parser.getAttributeCount();
 
                 if (MediaExtension.ELEMENT_NAME.equals(name))
                 {
@@ -39,7 +37,6 @@ public class MediaExtensionProvider
 
             case XmlPullParser.START_TAG:
             {
-//                String name = parser.getName();
                 int count = parser.getAttributeCount();
 
                 if (count > 0)
@@ -47,7 +44,8 @@ public class MediaExtensionProvider
                     String type = parser.getAttributeValue(0);
                     String ssrc = parser.getAttributeValue(1);
                     String direction = parser.getAttributeValue(2);
-                    if (type.equalsIgnoreCase("audio") || type.equalsIgnoreCase("video"))
+                    if (type.equalsIgnoreCase("audio")
+                        || type.equalsIgnoreCase("video"))
                     {
                         result.setSsrc(type, ssrc);
                         result.setDirection(type, direction);
@@ -58,8 +56,6 @@ public class MediaExtensionProvider
 
             case XmlPullParser.TEXT:
             {
-//                String name = parser.getName();
-//                int count = parser.getAttributeCount();
                 break;
             }
             }

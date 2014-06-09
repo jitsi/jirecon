@@ -5,9 +5,8 @@
  */
 package org.jitsi.jirecon.extension;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.*;
+import java.util.Map.*;
 
 import org.jivesoftware.smack.packet.PacketExtension;
 
@@ -18,15 +17,12 @@ public class MediaExtension
 
     public static final String NAMESPACE = "http://estos.de/ns/mjs";
 
-    // public ArrayList<Source> list;
-
     private Map<String, String> ssrcs = new HashMap<String, String>();
 
     private Map<String, String> directions = new HashMap<String, String>();
 
     public MediaExtension()
     {
-        // list = new ArrayList<Source>();
     }
 
     @Override
@@ -81,29 +77,4 @@ public class MediaExtension
     {
         return directions.get(type);
     }
-
-    // public void addSource(String type, String ssrc, String direction)
-    // {
-    // list.add(new Source(type, ssrc, direction));
-    // }
 }
-
-// class Source
-// {
-// public String type;
-//
-// public String ssrc;
-//
-// public String direction;
-//
-// public Source()
-// {
-// }
-//
-// public Source(String type, String ssrc, String direction)
-// {
-// this.type = type;
-// this.ssrc = ssrc;
-// this.direction = direction;
-// }
-// }

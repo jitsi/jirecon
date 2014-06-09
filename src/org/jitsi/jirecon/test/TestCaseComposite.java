@@ -5,8 +5,7 @@
  */
 package org.jitsi.jirecon.test;
 
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import junit.framework.*;
 
 public class TestCaseComposite
 {

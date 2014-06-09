@@ -5,30 +5,40 @@
  */
 package org.jitsi.jirecon.session;
 
-import java.beans.PropertyChangeListener;
-
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.Reason;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
-import org.jitsi.jirecon.JireconEventListener;
-import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
-import org.jitsi.jirecon.recorder.JireconRecorderInfo;
-import org.jitsi.jirecon.transport.JireconTransportManager;
-import org.jitsi.jirecon.utils.JireconConfiguration;
-import org.jitsi.service.neomedia.DtlsControl;
-import org.jivesoftware.smack.XMPPConnection;
-import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.packet.Packet;
+import org.jitsi.jirecon.dtlscontrol.*;
+import org.jitsi.jirecon.recorder.*;
+import org.jitsi.jirecon.transport.*;
+import org.jitsi.jirecon.utils.*;
+import org.jivesoftware.smack.*;
 
 public interface JireconSession
 {
     public void init(JireconConfiguration configuration,
-        XMPPConnection connection, String conferenceJid,
+        XMPPConnection connection, String conferenceJid);
+
+    public void uninit();
+
+    public void joinConference() throws XMPPException;
+
+    public void leaveConference();
+
+    public void sendAck(JingleIQ jiq);
+
+    public void sendAccpetPacket(JireconSessionInfo sessionInfo,
+        JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager);
 
-    public void uninit();
+    public void sendByePacket(Reason reason, String reasonText);
+
+    public JingleIQ waitForInitPacket() throws OperationFailedException;
+
+    public void waitForAckPacket() throws OperationFailedException;
+
+    public void recordSessionInfo(JingleIQ jiq);
 
     public JireconSessionInfo getSessionInfo();
 
@@ -37,23 +47,4 @@ public interface JireconSession
     // public void removeEventListener(JireconEventListener listener);
 
     // public void sendAcceptPacket(JireconRecorderInfo info);
-
-    public void joinConference() throws XMPPException;
-
-    public JingleIQ waitForInitPacket() throws OperationFailedException;
-
-    public void sendAck(JingleIQ jiq);
-
-    public void sendAccpetPacket(JingleIQ jiq);
-
-    public void waitForAckPacket() throws OperationFailedException;
-
-    public void sendByePacket(Reason reason, String reasonText);
-
-    public void leaveConference();
-
-    public JingleIQ createAcceptPacket(JireconSessionInfo sessionInfo,
-        JireconRecorderInfo recorderInfo);
-
-    public void recordSessionInfo(JingleIQ jiq);
 }

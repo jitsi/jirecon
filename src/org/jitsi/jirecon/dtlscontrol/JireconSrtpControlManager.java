@@ -6,10 +6,8 @@
 
 package org.jitsi.jirecon.dtlscontrol;
 
-import org.jitsi.jirecon.utils.JireconConfiguration;
-import org.jitsi.service.neomedia.MediaService;
-import org.jitsi.service.neomedia.MediaType;
-import org.jitsi.service.neomedia.SrtpControl;
+import org.jitsi.jirecon.utils.*;
+import org.jitsi.service.neomedia.*;
 
 public interface JireconSrtpControlManager
 {

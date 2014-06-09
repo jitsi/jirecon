@@ -6,22 +6,14 @@
 package org.jitsi.jirecon.utils;
 
 // TODO: Rewrite those import statements to package import statement.
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.jitsi.impl.neomedia.format.MediaFormatFactoryImpl;
-import org.jitsi.service.neomedia.MediaType;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jivesoftware.smack.packet.IQ;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidatePacketExtension;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.IceUdpTransportPacketExtension;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleAction;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.JingleIQ;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.PayloadTypePacketExtension;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.RtpDescriptionPacketExtension;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 /**
  * This class only has static method. It is used for extract information from

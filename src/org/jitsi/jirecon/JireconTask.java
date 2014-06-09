@@ -5,9 +5,7 @@
  */
 package org.jitsi.jirecon;
 
-import org.jitsi.jirecon.session.JireconSessionInfo;
 import org.jitsi.jirecon.utils.JireconConfiguration;
-import org.jitsi.service.neomedia.DtlsControl;
 import org.jitsi.service.neomedia.MediaService;
 import org.jivesoftware.smack.XMPPConnection;
 

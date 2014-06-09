@@ -5,11 +5,7 @@
  */
 package org.jitsi.jirecon.utils;
 
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.Properties;
 
 import org.jitsi.util.Logger;
