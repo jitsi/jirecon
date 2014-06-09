@@ -45,7 +45,7 @@ public class JireconTaskImpl
 
     private JireconTaskInfo info = new JireconTaskInfo();
 
-    private Logger logger;
+    private static final Logger logger = Logger.getLogger(JireconTaskImpl.class);
 
     public JireconTaskImpl()
     {
@@ -53,7 +53,6 @@ public class JireconTaskImpl
         transport = new JireconIceUdpTransportManagerImpl();
         srtpControl = new JireconDtlsControlManagerImpl();
         recorder = new JireconRecorderImpl();
-        logger = Logger.getLogger(JireconTaskImpl.class);
     }
 
     @Override

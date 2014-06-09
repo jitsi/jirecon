@@ -35,12 +35,11 @@ public class JireconRecorderImpl
 
     private JireconRecorderInfo info;
 
-    private Logger logger;
+    private static final Logger logger = Logger.getLogger(JireconRecorderImpl.class);
 
     public JireconRecorderImpl()
     {
         info = new JireconRecorderInfo();
-        logger = Logger.getLogger(this.getClass());
     }
 
     @Override

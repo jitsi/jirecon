@@ -15,11 +15,10 @@ public class JireconConfigurationImpl
 {
     private Properties props;
 
-    private Logger logger;
+    private static final Logger logger = Logger.getLogger(JireconConfigurationImpl.class);
 
     public JireconConfigurationImpl()
     {
-        logger = Logger.getLogger(this.getClass());
     }
 
     public void loadConfiguration(String path) throws IOException

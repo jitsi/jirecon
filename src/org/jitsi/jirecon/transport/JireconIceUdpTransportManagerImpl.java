@@ -31,7 +31,7 @@ public class JireconIceUdpTransportManagerImpl
     private Map<MediaType, MediaStreamTarget> mediaStreamTargets =
         new HashMap<MediaType, MediaStreamTarget>();
 
-    private Logger logger;
+    private static final Logger logger = Logger.getLogger(JireconIceUdpTransportManagerImpl.class);
 
     private String MIN_STREAM_PORT_KEY = "MIN_STREAM_PORT";
 
@@ -43,7 +43,6 @@ public class JireconIceUdpTransportManagerImpl
 
     public JireconIceUdpTransportManagerImpl()
     {
-        logger = Logger.getLogger(this.getClass());
     }
 
     @Override

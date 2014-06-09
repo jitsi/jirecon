@@ -33,15 +33,14 @@ public class JireconImpl
     private Map<String, JireconTask> jirecons =
         new HashMap<String, JireconTask>();
 
-    private Logger logger;
+    private static final Logger logger = Logger.getLogger(JireconImpl.class);
 
-    private final String XMPP_HOST_KEY = "XMPP_HOST";
+    private static final String XMPP_HOST_KEY = "XMPP_HOST";
 
-    private final String XMPP_PORT_KEY = "XMPP_PORT";
+    private static final String XMPP_PORT_KEY = "XMPP_PORT";
 
     public JireconImpl()
     {
-        logger = Logger.getLogger(this.getClass());
         logger.setLevelDebug();
     }
 

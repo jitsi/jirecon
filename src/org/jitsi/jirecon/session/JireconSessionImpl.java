@@ -42,7 +42,7 @@ public class JireconSessionImpl
 
     private JireconSessionInfo info = new JireconSessionInfo();
 
-    private Logger logger;
+    private static final Logger logger = Logger.getLogger(JireconSessionImpl.class);
 
     private final String NICK_KEY = "JIRECON_NICKNAME";
 
@@ -53,7 +53,6 @@ public class JireconSessionImpl
 
     public JireconSessionImpl()
     {
-        logger = Logger.getLogger(JireconSessionImpl.class);
         logger.setLevelDebug();
     }
 
