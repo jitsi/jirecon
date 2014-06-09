@@ -16,6 +16,7 @@ import net.java.sip.communicator.util.Logger;
 import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.extension.MediaExtension;
 import org.jitsi.jirecon.recorder.JireconRecorderInfo;
+import org.jitsi.jirecon.session.JireconSessionInfo.JireconSessionState;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.service.neomedia.*;
@@ -40,7 +41,7 @@ public class JireconSessionImpl
 
     private MultiUserChat conference;
 
-    private JireconSessionInfo info = new JireconSessionInfo();
+    private JireconSessionInfo sessionInfo = new JireconSessionInfo();
 
     private static final Logger logger = Logger
         .getLogger(JireconSessionImpl.class);
@@ -58,7 +59,7 @@ public class JireconSessionImpl
         logger.setLevelDebug();
         this.NICK = configuration.getProperty(NICK_KEY);
         this.connection = connection;
-        this.info.setConferenceJid(conferenceJid);
+        this.sessionInfo.setConferenceJid(conferenceJid);
 
         addPacketSendingListener();
         addPacketReceivingListener();
@@ -93,6 +94,7 @@ public class JireconSessionImpl
             srtpControlManager);
         waitForAckPacket();
 
+        updateState(JireconSessionState.CONNECTED);
         return initPacket;
     }
 
@@ -101,19 +103,21 @@ public class JireconSessionImpl
     {
         sendByePacket(reason, reasonText);
         leaveConference();
+        updateState(JireconSessionState.DISCONNECTED);
     }
 
     @Override
     public JireconSessionInfo getSessionInfo()
     {
-        return info;
+        return sessionInfo;
     }
 
     private void joinConference() throws XMPPException
     {
         logger.info("joinConference");
-        conference = new MultiUserChat(connection, info.getConferenceJid());
+        conference = new MultiUserChat(connection, sessionInfo.getConferenceJid());
         conference.join(NICK);
+        updateState(JireconSessionState.JOIN_CONFERENCE);
     }
 
     private void leaveConference()
@@ -123,6 +127,7 @@ public class JireconSessionImpl
         {
             conference.leave();
         }
+        updateState(JireconSessionState.LEAVE_CONFERENCE);
     }
 
     private void sendAccpetPacket(JireconSessionInfo sessionInfo,
@@ -135,27 +140,30 @@ public class JireconSessionImpl
             createAcceptPacket(sessionInfo, recorderInfo, transportManager,
                 srtpControlManager);
         connection.sendPacket(acceptPacket);
+        updateState(JireconSessionState.SEND_SESSION_ACCEPT);
     }
 
     private void sendAck(JingleIQ jiq)
     {
         logger.info("sendAck");
         connection.sendPacket(IQ.createResultIQ(jiq));
+        updateState(JireconSessionState.SEND_SESSION_ACK);
     }
 
     private void sendByePacket(Reason reason, String reasonText)
     {
         logger.info("sendByePacket");
         connection.sendPacket(JinglePacketFactory.createSessionTerminate(
-            info.getLocalJid(), info.getRemoteJid(), info.getSid(), reason,
+            sessionInfo.getLocalJid(), sessionInfo.getRemoteJid(), sessionInfo.getSid(), reason,
             reasonText));
+        updateState(JireconSessionState.SEND_SESSION_TERMINATE);
     }
 
     private void recordSessionInfo(JingleIQ jiq)
     {
-        info.setLocalJid(jiq.getTo());
-        info.setRemoteJid(jiq.getFrom());
-        info.setSid(jiq.getSID());
+        sessionInfo.setLocalJid(jiq.getTo());
+        sessionInfo.setRemoteJid(jiq.getFrom());
+        sessionInfo.setSid(jiq.getSID());
     }
 
     private JingleIQ waitForInitPacket() throws OperationFailedException
@@ -294,7 +302,7 @@ public class JireconSessionImpl
                 if (direction == MediaDirection.SENDONLY
                     || direction == MediaDirection.SENDRECV)
                 {
-                    info.addRemoteSsrc(mediaType, remoteJid, ssrc);
+                    sessionInfo.addRemoteSsrc(mediaType, remoteJid, ssrc);
                 }
             }
         }
@@ -418,6 +426,11 @@ public class JireconSessionImpl
             l.handlePacket(packet);
         }
     }
+    
+    private void updateState(JireconSessionState state)
+    {
+        sessionInfo.setState(state);
+    }
 
     private void addPacketSendingListener()
     {
@@ -456,11 +469,11 @@ public class JireconSessionImpl
             @Override
             public boolean accept(Packet packet)
             {
-                if (null != info.getLocalJid()
-                    && !packet.getTo().equals(info.getLocalJid()))
+                if (null != sessionInfo.getLocalJid()
+                    && !packet.getTo().equals(sessionInfo.getLocalJid()))
                 {
                     logger.fatal("packet failed: to " + packet.getTo()
-                        + ", but we are " + info.getLocalJid());
+                        + ", but we are " + sessionInfo.getLocalJid());
                     return false;
                 }
                 return true;

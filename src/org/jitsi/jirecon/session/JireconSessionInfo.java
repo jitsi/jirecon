@@ -39,7 +39,7 @@ public class JireconSessionInfo
      */
     public JireconSessionInfo()
     {
-        status = JireconSessionState.INITIATING;
+        status = JireconSessionState.INIT;
         for (MediaType mediaType : MediaType.values())
         {
             // Make sure that we only handle audio or video type.
@@ -180,5 +180,17 @@ public class JireconSessionInfo
         private Map<String, String> remoteSsrcs = new HashMap<String, String>();
 
         private String remoteFingerprint;
+    }
+
+    public enum JireconSessionState
+    {
+        INIT,
+        CONNECTED,
+        DISCONNECTED,
+        JOIN_CONFERENCE,
+        LEAVE_CONFERENCE,
+        SEND_SESSION_ACCEPT,
+        SEND_SESSION_ACK,
+        SEND_SESSION_TERMINATE,
     }
 }
