@@ -10,32 +10,17 @@ import java.util.Map;
 
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
-import org.jitsi.jirecon.dtlscontrol.*;
-import org.jitsi.jirecon.utils.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 
 public interface JireconRecorder
 {
-    public void init(JireconConfiguration configuration, MediaService service,
-        JireconSrtpControlManager srtpControlManager);
-
-    public void uninit();
-
-    public void prepareMediaStreams();
-
-    public void completeMediaStreams(
-        Map<MediaFormat, Byte> formatAndDynamicPTs,
+    public void startRecording(Map<MediaFormat, Byte> formatAndDynamicPTs,
         Map<MediaType, StreamConnector> connectors,
-        Map<MediaType, MediaStreamTarget> targets);
-
-    public void startReceiving() throws OperationFailedException;
-
-    public void stopReceiving();
-
-    public void prepareRecorders();
-
-    public void startRecording() throws IOException, MediaException;
+        Map<MediaType, MediaStreamTarget> targets)
+        throws OperationFailedException,
+        IOException,
+        MediaException;
 
     public void stopRecording();
 

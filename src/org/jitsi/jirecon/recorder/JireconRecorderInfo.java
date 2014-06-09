@@ -10,7 +10,7 @@ import org.jitsi.service.neomedia.MediaType;
 
 public class JireconRecorderInfo
 {
-    private JireconRecorderState state = JireconRecorderState.INITIATING;
+    private JireconRecorderState state = JireconRecorderState.UNINITIATED;
 
     private Map<MediaType, Long> localSsrcs = new HashMap<MediaType, Long>();
 
@@ -49,5 +49,18 @@ public class JireconRecorderInfo
     public String getMsid(MediaType mediaType)
     {
         return msLabel + " " + getLabel(mediaType);
+    }
+    
+    public enum JireconRecorderState
+    {
+        UNINITIATED,
+        INITIATED,
+        STREAM_READY,
+        RECEIVING_STREAM,
+        STOP_RECEIVING_STREAM,
+        RECORDER_READY,
+        RECORDING_STREAM,
+        STOP_RECORDING_STREAM,
+        ABORTED,
     }
 }

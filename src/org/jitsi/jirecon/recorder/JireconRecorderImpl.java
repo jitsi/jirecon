@@ -12,7 +12,7 @@ import java.util.Map.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
-import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
+import org.jitsi.jirecon.recorder.JireconRecorderInfo.JireconRecorderState;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -33,58 +33,46 @@ public class JireconRecorderImpl
     private Map<MediaType, Recorder> recorders =
         new HashMap<MediaType, Recorder>();
 
-    private JireconRecorderInfo info;
+    private JireconRecorderInfo recorderInfo = new JireconRecorderInfo();
 
-    private static final Logger logger = Logger.getLogger(JireconRecorderImpl.class);
+    private static final Logger logger = Logger
+        .getLogger(JireconRecorderImpl.class);
 
-    public JireconRecorderImpl()
+    public JireconRecorderImpl(JireconConfiguration configuration,
+        MediaService mediaService)
     {
-        info = new JireconRecorderInfo();
-    }
-
-    @Override
-    public void init(JireconConfiguration configuration,
-        MediaService mediaService, JireconSrtpControlManager srtpControlManager)
-    {
-        logger.info("init");
         this.mediaService = mediaService;
-        prepareMediaStreams();
+        createMediaStreams();
     }
 
     @Override
-    public void uninit()
+    public void startRecording(Map<MediaFormat, Byte> formatAndDynamicPTs,
+        Map<MediaType, StreamConnector> connectors,
+        Map<MediaType, MediaStreamTarget> targets)
+        throws OperationFailedException,
+        IOException,
+        MediaException
     {
-        logger.info("uinit");
-        mediaService = null;
-        streams.clear();
-        recorders.clear();
-        rtpTranslators.clear();
-        info = new JireconRecorderInfo();
+        prepareMediaStreams(formatAndDynamicPTs, connectors, targets);
+        prepareRecorders();
+        startReceivingStreams();
+        startRecordingStreams();
     }
 
     @Override
-    public void prepareMediaStreams()
+    public void stopRecording()
     {
-        logger.info("prepareMediaStreams");
-        for (MediaType mediaType : MediaType.values())
-        {
-            if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
-            {
-                continue;
-            }
-            final MediaStream stream =
-                mediaService.createMediaStream(mediaType);
-            streams.put(mediaType, stream);
-
-            stream.setName(mediaType.toString());
-            stream.setDirection(MediaDirection.RECVONLY);
-            info.addLocalSsrc(mediaType,
-                stream.getLocalSourceID() & 0xFFFFFFFFL);
-        }
+        stopRecordingStreams();
+        stopReceivingStreams();
     }
 
     @Override
-    public void completeMediaStreams(
+    public JireconRecorderInfo getRecorderInfo()
+    {
+        return recorderInfo;
+    }
+
+    private void prepareMediaStreams(
         Map<MediaFormat, Byte> formatAndDynamicPTs,
         Map<MediaType, StreamConnector> connectors,
         Map<MediaType, MediaStreamTarget> targets)
@@ -112,10 +100,21 @@ public class JireconRecorderImpl
             // FIXME: How to deal with DTLS control?
             stream.setRTPTranslator(getTranslator(mediaType));
         }
+        updateState(JireconRecorderState.STREAM_READY);
+    }
+    
+    private void prepareRecorders()
+    {
+        logger.info("prepareRecorders");
+        for (Entry<MediaType, RTPTranslator> e : rtpTranslators.entrySet())
+        {
+            Recorder recorder = new VideoRecorderImpl(e.getValue());
+            recorders.put(e.getKey(), recorder);
+        }
+        updateState(JireconRecorderState.RECORDER_READY);
     }
 
-    @Override
-    public void startReceiving() throws OperationFailedException
+    private void startReceivingStreams() throws OperationFailedException
     {
         logger.info("startReceiving");
         int startCount = 0;
@@ -135,32 +134,11 @@ public class JireconRecorderImpl
                 "Could not start receiving streams",
                 OperationFailedException.GENERAL_ERROR);
         }
-    }
 
-    @Override
-    public void stopReceiving()
-    {
-        logger.info("stopRecording");
-        for (Map.Entry<MediaType, MediaStream> e : streams.entrySet())
-        {
-            e.getValue().stop();
-            e.getValue().close();
-        }
+        updateState(JireconRecorderState.RECEIVING_STREAM);
     }
-
-    @Override
-    public void prepareRecorders()
-    {
-        logger.info("prepareRecorders");
-        for (Entry<MediaType, RTPTranslator> e : rtpTranslators.entrySet())
-        {
-            Recorder recorder = new VideoRecorderImpl(e.getValue());
-            recorders.put(e.getKey(), recorder);
-        }
-    }
-
-    @Override
-    public void startRecording() throws IOException, MediaException
+    
+    private void startRecordingStreams() throws IOException, MediaException
     {
         logger.info("startRecording");
         prepareRecorders();
@@ -170,22 +148,49 @@ public class JireconRecorderImpl
             e.getValue().setEventHandler(
                 new RecorderEventHandlerJSONImpl("./" + e.getKey() + "_meta"));
         }
+        updateState(JireconRecorderState.RECORDING_STREAM);
     }
 
-    @Override
-    public void stopRecording()
+    private void stopRecordingStreams()
     {
         logger.info("stopRecording");
         for (Entry<MediaType, Recorder> e : recorders.entrySet())
         {
             e.getValue().stop();
         }
+        updateState(JireconRecorderState.STOP_RECORDING_STREAM);
+    }
+    
+    private void stopReceivingStreams()
+    {
+        logger.info("stopRecording");
+        for (Map.Entry<MediaType, MediaStream> e : streams.entrySet())
+        {
+            e.getValue().stop();
+            e.getValue().close();
+        }
+
+        updateState(JireconRecorderState.STOP_RECEIVING_STREAM);
     }
 
-    @Override
-    public JireconRecorderInfo getRecorderInfo()
+    private void createMediaStreams()
     {
-        return info;
+        logger.info("prepareMediaStreams");
+        for (MediaType mediaType : MediaType.values())
+        {
+            if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
+            {
+                continue;
+            }
+            final MediaStream stream =
+                mediaService.createMediaStream(mediaType);
+            streams.put(mediaType, stream);
+
+            stream.setName(mediaType.toString());
+            stream.setDirection(MediaDirection.RECVONLY);
+            recorderInfo.addLocalSsrc(mediaType,
+                stream.getLocalSourceID() & 0xFFFFFFFFL);
+        }
     }
 
     private RTPTranslator getTranslator(MediaType mediaType)
@@ -200,4 +205,10 @@ public class JireconRecorderImpl
 
         return translator;
     }
+
+    private void updateState(JireconRecorderState state)
+    {
+        recorderInfo.setState(state);
+    }
+
 }

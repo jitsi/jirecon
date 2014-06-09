@@ -30,7 +30,7 @@ public class JireconImpl
 
     private MediaService mediaService;
 
-    private Map<String, JireconTask> jirecons =
+    private Map<String, JireconTask> jireconTasks =
         new HashMap<String, JireconTask>();
 
     private static final Logger logger = Logger.getLogger(JireconImpl.class);
@@ -79,6 +79,10 @@ public class JireconImpl
     public void uninit()
     {
         logger.debug(this.getClass() + "uninit");
+        for (JireconTask task : jireconTasks.values())
+        {
+            task.uninit();
+        }
         LibJitsi.stop();
         disconnect();
         configuration = null;
@@ -90,14 +94,14 @@ public class JireconImpl
     {
         logger.debug(this.getClass() + "startJireconTask: " + conferenceJid);
 
-        if (jirecons.containsKey(conferenceJid))
+        if (jireconTasks.containsKey(conferenceJid))
         {
             logger.info("Failed to start Jirecon by conferenceJid: "
                 + conferenceJid + ". Duplicate conferenceJid.");
             return;
         }
         JireconTask j = new JireconTaskImpl();
-        jirecons.put(conferenceJid, j);
+        jireconTasks.put(conferenceJid, j);
         j.addEventListener(this);
         j.init(configuration, conferenceJid, connection, mediaService);
         j.start();
@@ -107,12 +111,12 @@ public class JireconImpl
     public void stopJireconTask(String conferenceJid)
     {
         logger.debug(this.getClass() + "stopJireconTask: " + conferenceJid);
-        if (!jirecons.containsKey(conferenceJid))
+        if (!jireconTasks.containsKey(conferenceJid))
         {
             logger.info("Failed to stop Jirecon by conferenceJid: "
                 + conferenceJid + ". Nonexisted Jid.");
         }
-        JireconTask j = jirecons.remove(conferenceJid);
+        JireconTask j = jireconTasks.remove(conferenceJid);
         j.stop();
         j.uninit();
     }
