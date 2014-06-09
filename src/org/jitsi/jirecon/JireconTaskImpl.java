@@ -45,14 +45,13 @@ public class JireconTaskImpl
 
     private JireconTaskInfo info = new JireconTaskInfo();
 
-    private static final Logger logger = Logger.getLogger(JireconTaskImpl.class);
+    private static final Logger logger = Logger
+        .getLogger(JireconTaskImpl.class);
 
     public JireconTaskImpl()
     {
-        session = new JireconSessionImpl();
         transport = new JireconIceUdpTransportManagerImpl();
         srtpControl = new JireconDtlsControlManagerImpl();
-        recorder = new JireconRecorderImpl();
     }
 
     @Override
@@ -64,8 +63,9 @@ public class JireconTaskImpl
 
         transport.init(configuration);
         srtpControl.init(mediaService, configuration);
-        session.init(configuration, connection, conferenceJid);
-        recorder.init(configuration, mediaService, srtpControl);
+        session =
+            new JireconSessionImpl(configuration, connection, conferenceJid);
+        recorder = new JireconRecorderImpl(configuration, mediaService);
         updateState(JireconTaskState.INITIATED);
     }
 
@@ -74,10 +74,8 @@ public class JireconTaskImpl
     {
         info = new JireconTaskInfo();
         listeners.clear();
-        recorder.uninit();
-        session.uninit();
-        transport.uninit();
         srtpControl.uinit();
+        transport.uninit();
     }
 
     @Override
@@ -87,15 +85,11 @@ public class JireconTaskImpl
         {
             transport.harvestLocalCandidates();
 
-            session.joinConference();
-
-            JingleIQ initPacket = session.waitForInitPacket();
-
-            session.recordSessionInfo(initPacket);
-
-            session.sendAck(initPacket);
-
-            recorder.prepareMediaStreams();
+            JireconSessionInfo sessionInfo = session.getSessionInfo();
+            JireconRecorderInfo recorderInfo = recorder.getRecorderInfo();
+            JingleIQ initPacket =
+                session.connect(sessionInfo, recorderInfo, transport,
+                    srtpControl);
 
             Map<MediaType, String> fingerprints =
                 JinglePacketParser.getFingerprint(initPacket);
@@ -107,13 +101,6 @@ public class JireconTaskImpl
             Map<MediaType, IceUdpTransportPacketExtension> transportPEs =
                 JinglePacketParser.getTransportPacketExts(initPacket);
             transport.harvestRemoteCandidates(transportPEs);
-
-            JireconSessionInfo sessionInfo = session.getSessionInfo();
-            JireconRecorderInfo recorderInfo = recorder.getRecorderInfo();
-            session.sendAccpetPacket(sessionInfo, recorderInfo, transport,
-                srtpControl);
-
-            session.waitForAckPacket();
 
             transport.startConnectivityCheck();
 
@@ -137,14 +124,8 @@ public class JireconTaskImpl
             }
             Map<MediaFormat, Byte> formatAndDynamicPTs =
                 JinglePacketParser.getFormatAndDynamicPTs(initPacket);
-            recorder.completeMediaStreams(formatAndDynamicPTs,
-                streamConnectors, mediaStreamTargets);
-
-            recorder.prepareRecorders();
-
-            recorder.startReceiving();
-
-            recorder.startRecording();
+            recorder.startRecording(formatAndDynamicPTs, streamConnectors,
+                mediaStreamTargets);
         }
         catch (BindException e)
         {
@@ -183,9 +164,7 @@ public class JireconTaskImpl
     {
         logger.info(this.getClass() + " stop.");
         recorder.stopRecording();
-        recorder.stopReceiving();
-        session.sendByePacket(Reason.SUCCESS, "OK, gotta go.");
-        session.leaveConference();
+        session.disconnect(Reason.SUCCESS, "OK, gotta go.");
     }
 
     @Override

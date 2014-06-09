@@ -42,26 +42,21 @@ public class JireconSessionImpl
 
     private JireconSessionInfo info = new JireconSessionInfo();
 
-    private static final Logger logger = Logger.getLogger(JireconSessionImpl.class);
+    private static final Logger logger = Logger
+        .getLogger(JireconSessionImpl.class);
 
-    private final String NICK_KEY = "JIRECON_NICKNAME";
+    private final static String NICK_KEY = "JIRECON_NICKNAME";
 
-    private String nick = "default";
+    private String NICK = "default";
 
     private List<JireconSessionPacketListener> packetListeners =
         new ArrayList<JireconSessionPacketListener>();
 
-    public JireconSessionImpl()
-    {
-        logger.setLevelDebug();
-    }
-
-    @Override
-    public void init(JireconConfiguration configuration,
+    public JireconSessionImpl(JireconConfiguration configuration,
         XMPPConnection connection, String conferenceJid)
     {
-        logger.info("init");
-        this.nick = configuration.getProperty(NICK_KEY);
+        logger.setLevelDebug();
+        this.NICK = configuration.getProperty(NICK_KEY);
         this.connection = connection;
         this.info.setConferenceJid(conferenceJid);
 
@@ -83,25 +78,45 @@ public class JireconSessionImpl
     }
 
     @Override
-    public void uninit()
+    public JingleIQ connect(JireconSessionInfo sessionInfo,
+        JireconRecorderInfo recorderInfo,
+        JireconTransportManager transportManager,
+        JireconSrtpControlManager srtpControlManager)
+        throws XMPPException,
+        OperationFailedException
     {
-        logger.info("uninit");
-        this.nick = null;
-        this.connection = null;
-        this.info = new JireconSessionInfo();
-        packetListeners.clear();
+        joinConference();
+        JingleIQ initPacket = waitForInitPacket();
+        recordSessionInfo(initPacket);
+        sendAck(initPacket);
+        sendAccpetPacket(sessionInfo, recorderInfo, transportManager,
+            srtpControlManager);
+        waitForAckPacket();
+
+        return initPacket;
     }
 
     @Override
-    public void joinConference() throws XMPPException
+    public void disconnect(Reason reason, String reasonText)
+    {
+        sendByePacket(reason, reasonText);
+        leaveConference();
+    }
+
+    @Override
+    public JireconSessionInfo getSessionInfo()
+    {
+        return info;
+    }
+
+    private void joinConference() throws XMPPException
     {
         logger.info("joinConference");
         conference = new MultiUserChat(connection, info.getConferenceJid());
-        conference.join(nick);
+        conference.join(NICK);
     }
 
-    @Override
-    public void leaveConference()
+    private void leaveConference()
     {
         logger.info("leaveConference");
         if (null != conference)
@@ -110,8 +125,7 @@ public class JireconSessionImpl
         }
     }
 
-    @Override
-    public void sendAccpetPacket(JireconSessionInfo sessionInfo,
+    private void sendAccpetPacket(JireconSessionInfo sessionInfo,
         JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager)
@@ -123,15 +137,13 @@ public class JireconSessionImpl
         connection.sendPacket(acceptPacket);
     }
 
-    @Override
-    public void sendAck(JingleIQ jiq)
+    private void sendAck(JingleIQ jiq)
     {
         logger.info("sendAck");
         connection.sendPacket(IQ.createResultIQ(jiq));
     }
 
-    @Override
-    public void sendByePacket(Reason reason, String reasonText)
+    private void sendByePacket(Reason reason, String reasonText)
     {
         logger.info("sendByePacket");
         connection.sendPacket(JinglePacketFactory.createSessionTerminate(
@@ -139,22 +151,14 @@ public class JireconSessionImpl
             reasonText));
     }
 
-    @Override
-    public JireconSessionInfo getSessionInfo()
-    {
-        return info;
-    }
-
-    @Override
-    public void recordSessionInfo(JingleIQ jiq)
+    private void recordSessionInfo(JingleIQ jiq)
     {
         info.setLocalJid(jiq.getTo());
         info.setRemoteJid(jiq.getFrom());
         info.setSid(jiq.getSID());
     }
 
-    @Override
-    public JingleIQ waitForInitPacket() throws OperationFailedException
+    private JingleIQ waitForInitPacket() throws OperationFailedException
     {
         logger.info("waitForInitPacket");
         final List<JingleIQ> resultList = new ArrayList<JingleIQ>();
@@ -214,8 +218,7 @@ public class JireconSessionImpl
         return resultList.get(0);
     }
 
-    @Override
-    public void waitForAckPacket() throws OperationFailedException
+    private void waitForAckPacket() throws OperationFailedException
     {
         logger.info("waitForAckPacket");
         final List<Packet> resultList = new ArrayList<Packet>();
@@ -423,7 +426,7 @@ public class JireconSessionImpl
             @Override
             public void processPacket(Packet packet)
             {
-                logger.debug("--->: " + packet.toXML());
+                // logger.debug("--->: " + packet.toXML());
                 System.out.println("--->: " + packet.toXML());
             }
         }, new PacketFilter()
@@ -443,8 +446,9 @@ public class JireconSessionImpl
             @Override
             public void processPacket(Packet packet)
             {
-                logger.debug(packet.getClass() + "<---: " + packet.toXML());
-                System.out.println(packet.getClass() + "<---: " + packet.toXML());
+                // logger.debug(packet.getClass() + "<---: " + packet.toXML());
+                System.out.println(packet.getClass() + "<---: "
+                    + packet.toXML());
                 handlePacket(packet);
             }
         }, new PacketFilter()

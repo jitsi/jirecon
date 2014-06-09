@@ -11,34 +11,16 @@ import net.java.sip.communicator.service.protocol.OperationFailedException;
 import org.jitsi.jirecon.dtlscontrol.*;
 import org.jitsi.jirecon.recorder.*;
 import org.jitsi.jirecon.transport.*;
-import org.jitsi.jirecon.utils.*;
 import org.jivesoftware.smack.*;
 
 public interface JireconSession
 {
-    public void init(JireconConfiguration configuration,
-        XMPPConnection connection, String conferenceJid);
-
-    public void uninit();
-
-    public void joinConference() throws XMPPException;
-
-    public void leaveConference();
-
-    public void sendAck(JingleIQ jiq);
-
-    public void sendAccpetPacket(JireconSessionInfo sessionInfo,
+    public JingleIQ connect(JireconSessionInfo sessionInfo,
         JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
-        JireconSrtpControlManager srtpControlManager);
-
-    public void sendByePacket(Reason reason, String reasonText);
-
-    public JingleIQ waitForInitPacket() throws OperationFailedException;
-
-    public void waitForAckPacket() throws OperationFailedException;
-
-    public void recordSessionInfo(JingleIQ jiq);
+        JireconSrtpControlManager srtpControlManager) throws XMPPException, OperationFailedException;
+    
+    public void disconnect(Reason reason, String reasonText);
 
     public JireconSessionInfo getSessionInfo();
 
