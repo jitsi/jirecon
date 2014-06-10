@@ -13,7 +13,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
 import org.jitsi.jirecon.utils.JireconConfigurationImpl;
 import org.jitsi.service.libjitsi.LibJitsi;
-import org.jitsi.service.neomedia.MediaService;
 import org.jitsi.util.Logger;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.provider.ProviderManager;
@@ -27,8 +26,6 @@ public class JireconImpl
     private JireconConfigurationImpl configuration;
 
     private XMPPConnection connection;
-
-    private MediaService mediaService;
 
     private Map<String, JireconTask> jireconTasks =
         new HashMap<String, JireconTask>();
@@ -71,8 +68,6 @@ public class JireconImpl
             uninit();
             throw e;
         }
-
-        mediaService = LibJitsi.getMediaService();
     }
 
     @Override
@@ -84,9 +79,8 @@ public class JireconImpl
             task.uninit();
         }
         LibJitsi.stop();
-        disconnect();
+        closeConnection();
         configuration = null;
-        mediaService = null;
     }
 
     @Override
@@ -105,7 +99,7 @@ public class JireconImpl
             JireconTask j = new JireconTaskImpl();
             jireconTasks.put(conferenceJid, j);
             j.addEventListener(this);
-            j.init(configuration, conferenceJid, connection, mediaService);
+            j.init(configuration, conferenceJid, connection);
             j.start();
         }
     }
@@ -133,9 +127,9 @@ public class JireconImpl
         connection.connect();
     }
 
-    private void disconnect()
+    private void closeConnection()
     {
-        logger.debug(this.getClass() + "disconnect");
+        logger.debug(this.getClass() + "closeConnection");
         connection.disconnect();
     }
 

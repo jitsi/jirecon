@@ -9,6 +9,7 @@ package org.jitsi.jirecon.dtlscontrol;
 import java.util.*;
 
 import org.jitsi.jirecon.utils.*;
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 
 public class JireconDtlsControlManagerImpl
@@ -21,15 +22,10 @@ public class JireconDtlsControlManagerImpl
 
     final private String HASH_FUNCTION_KEY = "DTLS_HASH_FUNTION";
 
-    public JireconDtlsControlManagerImpl()
-    {
-    }
-
-    @Override
-    public void init(MediaService mediaService,
-        JireconConfiguration configuration)
+    public JireconDtlsControlManagerImpl(JireconConfiguration configuration)
     {
         hashFunction = configuration.getProperty(HASH_FUNCTION_KEY);
+        MediaService mediaService = LibJitsi.getMediaService();
 
         for (MediaType mediaType : MediaType.values())
         {
@@ -43,13 +39,6 @@ public class JireconDtlsControlManagerImpl
         }
     }
 
-    @Override
-    public void uinit()
-    {
-        hashFunction = null;
-        dtlsControls.clear();
-    }
-    
     @Override
     public void addRemoteFingerprint(MediaType mediaType, String fingerprint)
     {

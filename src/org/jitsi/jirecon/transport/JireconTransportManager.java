@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.BindException;
 import java.util.Map;
 
-import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.service.neomedia.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.IceUdpTransportPacketExtension;
@@ -17,9 +16,7 @@ import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 public interface JireconTransportManager
 {
-    public void init(JireconConfiguration configuration);
-
-    public void uninit();
+    public void free();
 
     public void harvestLocalCandidates()
         throws BindException,

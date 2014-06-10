@@ -41,12 +41,7 @@ public class JireconIceUdpTransportManagerImpl
 
     private int MAX_STREAM_PORT;
 
-    public JireconIceUdpTransportManagerImpl()
-    {
-    }
-
-    @Override
-    public void init(JireconConfiguration configuration)
+    public JireconIceUdpTransportManagerImpl(JireconConfiguration configuration)
     {
         logger.info("init");
         iceAgent = new Agent();
@@ -56,13 +51,9 @@ public class JireconIceUdpTransportManagerImpl
             Integer.valueOf(configuration.getProperty(MAX_STREAM_PORT_KEY));
     }
 
-    @Override
-    public void uninit()
+    public void free()
     {
-        logger.info("uninit");
         iceAgent.free();
-        MIN_STREAM_PORT = -1;
-        MAX_STREAM_PORT = -1;
     }
 
     @Override

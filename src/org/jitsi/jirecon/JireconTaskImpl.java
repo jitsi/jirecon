@@ -48,24 +48,18 @@ public class JireconTaskImpl
     private static final Logger logger = Logger
         .getLogger(JireconTaskImpl.class);
 
-    public JireconTaskImpl()
-    {
-        transport = new JireconIceUdpTransportManagerImpl();
-        srtpControl = new JireconDtlsControlManagerImpl();
-    }
-
     @Override
     public void init(JireconConfiguration configuration, String conferenceJid,
-        XMPPConnection connection, MediaService mediaService)
+        XMPPConnection connection)
     {
         logger.setLevelAll();
         logger.debug(this.getClass() + " init");
 
-        transport.init(configuration);
-        srtpControl.init(mediaService, configuration);
+        transport = new JireconIceUdpTransportManagerImpl(configuration);
+        srtpControl = new JireconDtlsControlManagerImpl(configuration);
         session =
             new JireconSessionImpl(configuration, connection, conferenceJid);
-        recorder = new JireconRecorderImpl(configuration, mediaService);
+        recorder = new JireconRecorderImpl(configuration);
         updateState(JireconTaskState.INITIATED);
     }
 
@@ -76,8 +70,7 @@ public class JireconTaskImpl
         stop();
         info = new JireconTaskInfo();
         listeners.clear();
-        srtpControl.uinit();
-        transport.uninit();
+        transport.free();
     }
 
     @Override

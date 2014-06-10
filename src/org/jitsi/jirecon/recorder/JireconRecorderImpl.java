@@ -14,6 +14,7 @@ import net.java.sip.communicator.service.protocol.OperationFailedException;
 import org.jitsi.impl.neomedia.recording.*;
 import org.jitsi.jirecon.recorder.JireconRecorderInfo.JireconRecorderEvent;
 import org.jitsi.jirecon.utils.JireconConfiguration;
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
@@ -38,10 +39,10 @@ public class JireconRecorderImpl
     private static final Logger logger = Logger
         .getLogger(JireconRecorderImpl.class);
 
-    public JireconRecorderImpl(JireconConfiguration configuration,
-        MediaService mediaService)
+    public JireconRecorderImpl(JireconConfiguration configuration)
     {
-        this.mediaService = mediaService;
+        // Have to make sure that Libjitsi has been started.
+        this.mediaService = LibJitsi.getMediaService();
         createMediaStreams();
     }
 
@@ -123,7 +124,7 @@ public class JireconRecorderImpl
             // FIXME: How to deal with DTLS control?
             stream.setRTPTranslator(getTranslator(mediaType));
         }
-        
+
         updateState(JireconRecorderEvent.PREPARE_STREAM);
     }
 
@@ -142,7 +143,7 @@ public class JireconRecorderImpl
             Recorder recorder = new VideoRecorderImpl(e.getValue());
             recorders.put(e.getKey(), recorder);
         }
-        
+
         updateState(JireconRecorderEvent.PREPARE_RECORDER);
     }
 
@@ -190,14 +191,14 @@ public class JireconRecorderImpl
                 OperationFailedException.GENERAL_ERROR);
         }
 
-//        prepareRecorders();
+        // prepareRecorders();
         for (Entry<MediaType, Recorder> e : recorders.entrySet())
         {
             e.getValue().start("useless", ".");
             e.getValue().setEventHandler(
                 new RecorderEventHandlerJSONImpl("./" + e.getKey() + "_meta"));
         }
-        
+
         updateState(JireconRecorderEvent.START_RECORDING_STREAM);
     }
 
@@ -215,7 +216,7 @@ public class JireconRecorderImpl
         {
             e.getValue().stop();
         }
-        
+
         updateState(JireconRecorderEvent.STOP_RECORDING_STREAM);
     }
 
