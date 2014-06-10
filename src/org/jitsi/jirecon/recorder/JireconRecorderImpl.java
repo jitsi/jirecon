@@ -13,6 +13,7 @@ import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
 import org.jitsi.jirecon.recorder.JireconRecorderInfo.JireconRecorderEvent;
+import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -38,10 +39,20 @@ public class JireconRecorderImpl
     private static final Logger logger = Logger
         .getLogger(JireconRecorderImpl.class);
 
+    private String SAVE_DIR;
+
+    private final static String SAVE_DIR_KEY = "SAVE_DIR";
+
     public JireconRecorderImpl()
     {
         // Have to make sure that Libjitsi has been started.
         this.mediaService = LibJitsi.getMediaService();
+        ConfigurationService configuration = LibJitsi.getConfigurationService();
+        SAVE_DIR = configuration.getString(SAVE_DIR_KEY);
+        if ('/' == SAVE_DIR.charAt(SAVE_DIR.length() - 1))
+        {
+            SAVE_DIR = SAVE_DIR.substring(0, SAVE_DIR.length() - 1);
+        }
         createMediaStreams();
     }
 
@@ -193,9 +204,9 @@ public class JireconRecorderImpl
         // prepareRecorders();
         for (Entry<MediaType, Recorder> e : recorders.entrySet())
         {
-            e.getValue().start("useless", ".");
+            e.getValue().start("useless", SAVE_DIR);
             e.getValue().setEventHandler(
-                new RecorderEventHandlerJSONImpl("./" + e.getKey() + "_meta"));
+                new RecorderEventHandlerJSONImpl(SAVE_DIR + "/" + e.getKey() + "_meta"));
         }
 
         updateState(JireconRecorderEvent.START_RECORDING_STREAM);

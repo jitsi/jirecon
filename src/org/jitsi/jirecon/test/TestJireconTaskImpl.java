@@ -74,7 +74,7 @@ public class TestJireconTaskImpl
             new MediaExtensionProvider());
 
         task = new JireconTaskImpl();
-        task.init("85nljzhjzu7eqaor@conference.example.com", connection);
+        task.init("ixl8z6xleu8cwhfr@conference.example.com", connection);
     }
 
     public void testSessionAndRecorder()
