@@ -94,17 +94,20 @@ public class JireconImpl
     {
         logger.debug(this.getClass() + "startJireconTask: " + conferenceJid);
 
-        if (jireconTasks.containsKey(conferenceJid))
+        synchronized (jireconTasks)
         {
-            logger.info("Failed to start Jirecon by conferenceJid: "
-                + conferenceJid + ". Duplicate conferenceJid.");
-            return;
+            if (jireconTasks.containsKey(conferenceJid))
+            {
+                logger.info("Failed to start Jirecon by conferenceJid: "
+                    + conferenceJid + ". Duplicate conferenceJid.");
+                return;
+            }
+            JireconTask j = new JireconTaskImpl();
+            jireconTasks.put(conferenceJid, j);
+            j.addEventListener(this);
+            j.init(configuration, conferenceJid, connection, mediaService);
+            j.start();
         }
-        JireconTask j = new JireconTaskImpl();
-        jireconTasks.put(conferenceJid, j);
-        j.addEventListener(this);
-        j.init(configuration, conferenceJid, connection, mediaService);
-        j.start();
     }
 
     @Override
