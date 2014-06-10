@@ -16,7 +16,7 @@ import net.java.sip.communicator.util.Logger;
 import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.extension.MediaExtension;
 import org.jitsi.jirecon.recorder.JireconRecorderInfo;
-import org.jitsi.jirecon.session.JireconSessionInfo.JireconSessionState;
+import org.jitsi.jirecon.session.JireconSessionInfo.JireconSessionEvent;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.service.neomedia.*;
@@ -94,16 +94,29 @@ public class JireconSessionImpl
             srtpControlManager);
         waitForAckPacket();
 
-        updateState(JireconSessionState.CONNECTED);
         return initPacket;
     }
 
     @Override
     public void disconnect(Reason reason, String reasonText)
     {
-        sendByePacket(reason, reasonText);
-        leaveConference();
-        updateState(JireconSessionState.DISCONNECTED);
+        try
+        {
+            sendByePacket(reason, reasonText);
+        }
+        catch (OperationFailedException e)
+        {
+            e.printStackTrace();
+        }
+        
+        try
+        {
+            leaveConference();
+        }
+        catch (OperationFailedException e)
+        {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -112,51 +125,79 @@ public class JireconSessionImpl
         return sessionInfo;
     }
 
-    private void joinConference() throws XMPPException
+    private void joinConference() throws XMPPException, OperationFailedException
     {
         logger.info("joinConference");
-        conference = new MultiUserChat(connection, sessionInfo.getConferenceJid());
+        if (!sessionInfo.readyTo(JireconSessionEvent.JOIN_CONFERENCE))
+        {
+            throw new OperationFailedException(
+                "Could not join conference, other reason.",
+                OperationFailedException.GENERAL_ERROR);
+        }
+        
+        conference =
+            new MultiUserChat(connection, sessionInfo.getConferenceJid());
         conference.join(NICK);
-        updateState(JireconSessionState.JOIN_CONFERENCE);
+        updateState(JireconSessionEvent.JOIN_CONFERENCE);
     }
 
-    private void leaveConference()
+    private void leaveConference() throws OperationFailedException
     {
         logger.info("leaveConference");
+        if (!sessionInfo.readyTo(JireconSessionEvent.LEAVE_CONFERENCE))
+        {
+            throw new OperationFailedException(
+                "Could not leave conference, not in conference.",
+                OperationFailedException.GENERAL_ERROR);
+        }
+        
         if (null != conference)
         {
             conference.leave();
         }
-        updateState(JireconSessionState.LEAVE_CONFERENCE);
+        updateState(JireconSessionEvent.LEAVE_CONFERENCE);
     }
 
     private void sendAccpetPacket(JireconSessionInfo sessionInfo,
         JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
-        JireconSrtpControlManager srtpControlManager)
+        JireconSrtpControlManager srtpControlManager) throws OperationFailedException
     {
         logger.info("sendAcceptPacket");
+        if (!sessionInfo.readyTo(JireconSessionEvent.SEND_SESSION_ACCEPT))
+        {
+            throw new OperationFailedException(
+                "Could not send session-accept, haven't gotten session-init.",
+                OperationFailedException.GENERAL_ERROR);
+        }
+        
         JingleIQ acceptPacket =
             createAcceptPacket(sessionInfo, recorderInfo, transportManager,
                 srtpControlManager);
         connection.sendPacket(acceptPacket);
-        updateState(JireconSessionState.SEND_SESSION_ACCEPT);
+        updateState(JireconSessionEvent.SEND_SESSION_ACCEPT);
     }
 
     private void sendAck(JingleIQ jiq)
     {
         logger.info("sendAck");
         connection.sendPacket(IQ.createResultIQ(jiq));
-        updateState(JireconSessionState.SEND_SESSION_ACK);
     }
 
-    private void sendByePacket(Reason reason, String reasonText)
+    private void sendByePacket(Reason reason, String reasonText) throws OperationFailedException
     {
         logger.info("sendByePacket");
+        if (!sessionInfo.readyTo(JireconSessionEvent.SEND_SESSION_TERMINATE))
+        {
+            throw new OperationFailedException(
+                "Could not send session-terminate, session hasn't been built.",
+                OperationFailedException.GENERAL_ERROR);
+        }
+        
         connection.sendPacket(JinglePacketFactory.createSessionTerminate(
-            sessionInfo.getLocalJid(), sessionInfo.getRemoteJid(), sessionInfo.getSid(), reason,
-            reasonText));
-        updateState(JireconSessionState.SEND_SESSION_TERMINATE);
+            sessionInfo.getLocalJid(), sessionInfo.getRemoteJid(),
+            sessionInfo.getSid(), reason, reasonText));
+        updateState(JireconSessionEvent.SEND_SESSION_TERMINATE);
     }
 
     private void recordSessionInfo(JingleIQ jiq)
@@ -169,6 +210,13 @@ public class JireconSessionImpl
     private JingleIQ waitForInitPacket() throws OperationFailedException
     {
         logger.info("waitForInitPacket");
+        if (!sessionInfo.readyTo(JireconSessionEvent.WAIT_SESSION_INIT))
+        {
+            throw new OperationFailedException(
+                "Could not wait for session-init, hasn't joined conference.",
+                OperationFailedException.GENERAL_ERROR);
+        }
+        
         final List<JingleIQ> resultList = new ArrayList<JingleIQ>();
         final Object waitForInitPacketSyncRoot = new Object();
         JireconSessionPacketListener packetListener =
@@ -223,12 +271,20 @@ public class JireconSessionImpl
                 OperationFailedException.GENERAL_ERROR);
         }
 
+        updateState(JireconSessionEvent.WAIT_SESSION_INIT);
         return resultList.get(0);
     }
 
     private void waitForAckPacket() throws OperationFailedException
     {
         logger.info("waitForAckPacket");
+        if (!sessionInfo.readyTo(JireconSessionEvent.WAIT_SESSION_ACK))
+        {
+            throw new OperationFailedException(
+                "Could not wait for session-ack, hasn't sent session-init.",
+                OperationFailedException.GENERAL_ERROR);
+        }
+        
         final List<Packet> resultList = new ArrayList<Packet>();
         final Object waitForAckPacketSyncRoot = new Object();
         JireconSessionPacketListener packetListener =
@@ -274,6 +330,8 @@ public class JireconSessionImpl
             throw new OperationFailedException("Could not get ack packet",
                 OperationFailedException.GENERAL_ERROR);
         }
+        
+        updateState(JireconSessionEvent.WAIT_SESSION_ACK);
     }
 
     private void handlePresencePacket(Presence p)
@@ -426,10 +484,10 @@ public class JireconSessionImpl
             l.handlePacket(packet);
         }
     }
-    
-    private void updateState(JireconSessionState state)
+
+    private void updateState(JireconSessionEvent evt)
     {
-        sessionInfo.setState(state);
+        sessionInfo.updateState(evt);
     }
 
     private void addPacketSendingListener()

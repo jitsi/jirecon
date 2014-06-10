@@ -29,7 +29,7 @@ public class JireconSessionInfo
 
     private JireconSessionState status;
 
-    private JireconSessionState state;
+    private JireconSessionState state = JireconSessionState.INIT;
 
     private Map<MediaType, InfoBox> infoBoxes =
         new HashMap<MediaType, InfoBox>();
@@ -161,11 +161,6 @@ public class JireconSessionInfo
         return infoBoxes.get(media).remoteFingerprint;
     }
 
-    public void setState(JireconSessionState state)
-    {
-        this.state = state;
-    }
-
     public JireconSessionState getState()
     {
         return state;
@@ -182,15 +177,75 @@ public class JireconSessionInfo
         private String remoteFingerprint;
     }
 
-    public enum JireconSessionState
+    public boolean readyTo(JireconSessionEvent evt)
     {
-        INIT,
-        CONNECTED,
-        DISCONNECTED,
+        switch (evt)
+        {
+        case JOIN_CONFERENCE:
+            if (JireconSessionState.INIT != state)
+                return false;
+            break;
+        case LEAVE_CONFERENCE:
+            if (JireconSessionState.IN_CONFERENCE != state)
+                return false;
+            break;
+        case SEND_SESSION_ACCEPT:
+            if (JireconSessionState.GOT_SESSION_INIT != state)
+                return false;
+            break;
+        case SEND_SESSION_TERMINATE:
+            if (JireconSessionState.CONNECTED != state)
+                return false;
+            break;
+        case WAIT_SESSION_ACK:
+            if (JireconSessionState.SENT_SESSION_ACCEPT != state)
+                return false;
+            break;
+        case WAIT_SESSION_INIT:
+            if (JireconSessionState.IN_CONFERENCE != state)
+                return false;
+            break;
+        }
+        return true;
+    }
+
+    public void updateState(JireconSessionEvent evt)
+    {
+        switch (evt)
+        {
+        case JOIN_CONFERENCE:
+            state = JireconSessionState.IN_CONFERENCE;
+            break;
+        case LEAVE_CONFERENCE:
+            state = JireconSessionState.INIT;
+            break;
+        case SEND_SESSION_ACCEPT:
+            state = JireconSessionState.SENT_SESSION_ACCEPT;
+            break;
+        case SEND_SESSION_TERMINATE:
+            state = JireconSessionState.IN_CONFERENCE;
+            break;
+        case WAIT_SESSION_ACK:
+            state = JireconSessionState.CONNECTED;
+            break;
+        case WAIT_SESSION_INIT:
+            state = JireconSessionState.GOT_SESSION_INIT;
+            break;
+        }
+    }
+
+    public enum JireconSessionEvent
+    {
         JOIN_CONFERENCE,
         LEAVE_CONFERENCE,
         SEND_SESSION_ACCEPT,
-        SEND_SESSION_ACK,
         SEND_SESSION_TERMINATE,
+        WAIT_SESSION_INIT,
+        WAIT_SESSION_ACK,
+    }
+
+    public enum JireconSessionState
+    {
+        INIT, IN_CONFERENCE, GOT_SESSION_INIT, SENT_SESSION_ACCEPT, CONNECTED,
     }
 }

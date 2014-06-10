@@ -72,6 +72,8 @@ public class JireconTaskImpl
     @Override
     public void uninit()
     {
+        // Stop the task in case of something hasn't been released correctly.
+        stop();
         info = new JireconTaskInfo();
         listeners.clear();
         srtpControl.uinit();
