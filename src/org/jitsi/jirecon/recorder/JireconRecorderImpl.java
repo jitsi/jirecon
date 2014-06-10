@@ -13,7 +13,6 @@ import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
 import org.jitsi.jirecon.recorder.JireconRecorderInfo.JireconRecorderEvent;
-import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -39,7 +38,7 @@ public class JireconRecorderImpl
     private static final Logger logger = Logger
         .getLogger(JireconRecorderImpl.class);
 
-    public JireconRecorderImpl(JireconConfiguration configuration)
+    public JireconRecorderImpl()
     {
         // Have to make sure that Libjitsi has been started.
         this.mediaService = LibJitsi.getMediaService();

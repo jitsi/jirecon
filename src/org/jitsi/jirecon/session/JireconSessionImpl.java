@@ -19,7 +19,8 @@ import org.jitsi.jirecon.recorder.JireconRecorderInfo;
 import org.jitsi.jirecon.session.JireconSessionInfo.JireconSessionEvent;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JinglePacketParser;
-import org.jitsi.jirecon.utils.JireconConfiguration;
+import org.jitsi.service.configuration.ConfigurationService;
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jivesoftware.smack.*;
@@ -54,11 +55,11 @@ public class JireconSessionImpl
     private List<JireconSessionPacketListener> packetListeners =
         new ArrayList<JireconSessionPacketListener>();
 
-    public JireconSessionImpl(JireconConfiguration configuration,
-        XMPPConnection connection, String conferenceJid)
+    public JireconSessionImpl(XMPPConnection connection, String conferenceJid)
     {
         logger.setLevelDebug();
-        this.NICK = configuration.getProperty(NICK_KEY);
+        ConfigurationService configuration = LibJitsi.getConfigurationService();
+        this.NICK = configuration.getString(NICK_KEY);
         this.connection = connection;
         this.sessionInfo.setConferenceJid(conferenceJid);
 
@@ -109,7 +110,7 @@ public class JireconSessionImpl
         {
             e.printStackTrace();
         }
-        
+
         try
         {
             leaveMUC();
@@ -135,7 +136,7 @@ public class JireconSessionImpl
                 "Could not join conference, other reason.",
                 OperationFailedException.GENERAL_ERROR);
         }
-        
+
         conference =
             new MultiUserChat(connection, sessionInfo.getConferenceJid());
         conference.join(NICK);
@@ -151,7 +152,7 @@ public class JireconSessionImpl
                 "Could not leave conference, not in conference.",
                 OperationFailedException.GENERAL_ERROR);
         }
-        
+
         if (null != conference)
         {
             conference.leave();
@@ -159,10 +160,11 @@ public class JireconSessionImpl
         updateState(JireconSessionEvent.LEAVE_MUC);
     }
 
-    private void sendAccpetPacket(JingleIQ initIq, JireconSessionInfo sessionInfo,
-        JireconRecorderInfo recorderInfo,
+    private void sendAccpetPacket(JingleIQ initIq,
+        JireconSessionInfo sessionInfo, JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
-        JireconSrtpControlManager srtpControlManager) throws OperationFailedException
+        JireconSrtpControlManager srtpControlManager)
+        throws OperationFailedException
     {
         logger.info("sendAcceptPacket");
         if (!sessionInfo.readyTo(JireconSessionEvent.SEND_SESSION_ACCEPT))
@@ -171,10 +173,10 @@ public class JireconSessionImpl
                 "Could not send session-accept, haven't gotten session-init.",
                 OperationFailedException.GENERAL_ERROR);
         }
-        
+
         JingleIQ acceptPacket =
-            createAcceptPacket(initIq, sessionInfo, recorderInfo, transportManager,
-                srtpControlManager);
+            createAcceptPacket(initIq, sessionInfo, recorderInfo,
+                transportManager, srtpControlManager);
         connection.sendPacket(acceptPacket);
         updateState(JireconSessionEvent.SEND_SESSION_ACCEPT);
     }
@@ -185,7 +187,8 @@ public class JireconSessionImpl
         connection.sendPacket(IQ.createResultIQ(jiq));
     }
 
-    private void sendByePacket(Reason reason, String reasonText) throws OperationFailedException
+    private void sendByePacket(Reason reason, String reasonText)
+        throws OperationFailedException
     {
         logger.info("sendByePacket");
         if (!sessionInfo.readyTo(JireconSessionEvent.SEND_SESSION_TERMINATE))
@@ -194,7 +197,7 @@ public class JireconSessionImpl
                 "Could not send session-terminate, session hasn't been built.",
                 OperationFailedException.GENERAL_ERROR);
         }
-        
+
         connection.sendPacket(JinglePacketFactory.createSessionTerminate(
             sessionInfo.getLocalJid(), sessionInfo.getRemoteJid(),
             sessionInfo.getSid(), reason, reasonText));
@@ -217,7 +220,7 @@ public class JireconSessionImpl
                 "Could not wait for session-init, hasn't joined conference.",
                 OperationFailedException.GENERAL_ERROR);
         }
-        
+
         final List<JingleIQ> resultList = new ArrayList<JingleIQ>();
         final Object waitForInitPacketSyncRoot = new Object();
         JireconSessionPacketListener packetListener =
@@ -285,7 +288,7 @@ public class JireconSessionImpl
                 "Could not wait for session-ack, hasn't sent session-init.",
                 OperationFailedException.GENERAL_ERROR);
         }
-        
+
         final List<Packet> resultList = new ArrayList<Packet>();
         final Object waitForAckPacketSyncRoot = new Object();
         JireconSessionPacketListener packetListener =
@@ -331,7 +334,7 @@ public class JireconSessionImpl
             throw new OperationFailedException("Could not get ack packet",
                 OperationFailedException.GENERAL_ERROR);
         }
-        
+
         updateState(JireconSessionEvent.WAIT_SESSION_ACK);
     }
 
@@ -367,8 +370,8 @@ public class JireconSessionImpl
         }
     }
 
-    private JingleIQ createAcceptPacket(JingleIQ initIq, JireconSessionInfo sessionInfo,
-        JireconRecorderInfo recorderInfo,
+    private JingleIQ createAcceptPacket(JingleIQ initIq,
+        JireconSessionInfo sessionInfo, JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager)
     {
@@ -383,9 +386,12 @@ public class JireconSessionImpl
                 continue;
             }
 
-            ContentPacketExtension initIqContent = JinglePacketParser.getContentPacketExt(initIq, mediaType);
-            contents.add(createContentPacketExtension(mediaType, initIqContent, sessionInfo,
-                recorderInfo, transportManager, srtpControlManager));
+            ContentPacketExtension initIqContent =
+                JinglePacketParser.getContentPacketExt(initIq, mediaType);
+            contents
+                .add(createContentPacketExtension(mediaType, initIqContent,
+                    sessionInfo, recorderInfo, transportManager,
+                    srtpControlManager));
         }
 
         JingleIQ acceptJiq =
@@ -396,8 +402,8 @@ public class JireconSessionImpl
     }
 
     private ContentPacketExtension createContentPacketExtension(
-        MediaType mediaType, ContentPacketExtension initIqContent, JireconSessionInfo sessionInfo,
-        JireconRecorderInfo recorderInfo,
+        MediaType mediaType, ContentPacketExtension initIqContent,
+        JireconSessionInfo sessionInfo, JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager)
     {

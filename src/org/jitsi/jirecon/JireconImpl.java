@@ -11,7 +11,7 @@ import java.util.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
-import org.jitsi.jirecon.utils.JireconConfigurationImpl;
+import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.util.Logger;
 import org.jivesoftware.smack.*;
@@ -23,19 +23,19 @@ public class JireconImpl
     private List<JireconEventListener> listeners =
         new ArrayList<JireconEventListener>();
 
-    private JireconConfigurationImpl configuration;
-
     private XMPPConnection connection;
 
     private Map<String, JireconTask> jireconTasks =
         new HashMap<String, JireconTask>();
 
     private static final Logger logger = Logger.getLogger(JireconImpl.class);
+    
+    private static final String CONFIGURATION_FILE_PATH = "jirecon.properties";
 
     private static final String XMPP_HOST_KEY = "XMPP_HOST";
 
     private static final String XMPP_PORT_KEY = "XMPP_PORT";
-
+    
     public JireconImpl()
     {
         logger.setLevelDebug();
@@ -51,12 +51,11 @@ public class JireconImpl
         initiatePacketProviders();
 
         LibJitsi.start();
-        configuration = new JireconConfigurationImpl();
-        configuration.loadConfiguration(configurationPath);
+        System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_NAME, CONFIGURATION_FILE_PATH);
+        ConfigurationService configuration = LibJitsi.getConfigurationService();
 
-        final String xmppHost = configuration.getProperty(XMPP_HOST_KEY);
-        final int xmppPort =
-            Integer.valueOf(configuration.getProperty(XMPP_PORT_KEY));
+        final String xmppHost = configuration.getString(XMPP_HOST_KEY);
+        final int xmppPort = configuration.getInt(XMPP_PORT_KEY, -1);
         try
         {
             connect(xmppHost, xmppPort);
@@ -80,7 +79,6 @@ public class JireconImpl
         }
         LibJitsi.stop();
         closeConnection();
-        configuration = null;
     }
 
     @Override
@@ -99,7 +97,7 @@ public class JireconImpl
             JireconTask j = new JireconTaskImpl();
             jireconTasks.put(conferenceJid, j);
             j.addEventListener(this);
-            j.init(configuration, conferenceJid, connection);
+            j.init(conferenceJid, connection);
             j.start();
         }
     }

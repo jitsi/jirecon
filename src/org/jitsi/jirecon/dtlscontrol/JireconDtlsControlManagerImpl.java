@@ -8,7 +8,7 @@ package org.jitsi.jirecon.dtlscontrol;
 
 import java.util.*;
 
-import org.jitsi.jirecon.utils.*;
+import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 
@@ -20,11 +20,12 @@ public class JireconDtlsControlManagerImpl
 
     private String hashFunction;
 
-    final private String HASH_FUNCTION_KEY = "DTLS_HASH_FUNTION";
+    private final static String HASH_FUNCTION_KEY = "DTLS_HASH_FUNTION";
 
-    public JireconDtlsControlManagerImpl(JireconConfiguration configuration)
+    public JireconDtlsControlManagerImpl()
     {
-        hashFunction = configuration.getProperty(HASH_FUNCTION_KEY);
+        ConfigurationService configuration = LibJitsi.getConfigurationService();
+        hashFunction = configuration.getString(HASH_FUNCTION_KEY);
         MediaService mediaService = LibJitsi.getMediaService();
 
         for (MediaType mediaType : MediaType.values())

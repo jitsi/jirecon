@@ -5,7 +5,6 @@
  */
 package org.jitsi.jirecon;
 
-import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jivesoftware.smack.XMPPConnection;
 
 /**
@@ -16,7 +15,7 @@ import org.jivesoftware.smack.XMPPConnection;
  */
 public interface JireconTask
 {
-    public void init(JireconConfiguration configuration, String conferenceJid,
+    public void init(String conferenceJid,
         XMPPConnection connection);
 
     public void uninit();

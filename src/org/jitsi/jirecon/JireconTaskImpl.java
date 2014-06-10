@@ -49,17 +49,17 @@ public class JireconTaskImpl
         .getLogger(JireconTaskImpl.class);
 
     @Override
-    public void init(JireconConfiguration configuration, String conferenceJid,
+    public void init(String conferenceJid,
         XMPPConnection connection)
     {
         logger.setLevelAll();
         logger.debug(this.getClass() + " init");
 
-        transport = new JireconIceUdpTransportManagerImpl(configuration);
-        srtpControl = new JireconDtlsControlManagerImpl(configuration);
+        transport = new JireconIceUdpTransportManagerImpl();
+        srtpControl = new JireconDtlsControlManagerImpl();
         session =
-            new JireconSessionImpl(configuration, connection, conferenceJid);
-        recorder = new JireconRecorderImpl(configuration);
+            new JireconSessionImpl(connection, conferenceJid);
+        recorder = new JireconRecorderImpl();
         updateState(JireconTaskState.INITIATED);
     }
 

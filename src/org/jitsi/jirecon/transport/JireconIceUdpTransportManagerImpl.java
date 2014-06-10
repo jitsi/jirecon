@@ -17,6 +17,8 @@ import net.java.sip.communicator.service.protocol.OperationFailedException;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.jitsi.jirecon.utils.*;
+import org.jitsi.service.configuration.ConfigurationService;
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 
@@ -31,7 +33,8 @@ public class JireconIceUdpTransportManagerImpl
     private Map<MediaType, MediaStreamTarget> mediaStreamTargets =
         new HashMap<MediaType, MediaStreamTarget>();
 
-    private static final Logger logger = Logger.getLogger(JireconIceUdpTransportManagerImpl.class);
+    private static final Logger logger = Logger
+        .getLogger(JireconIceUdpTransportManagerImpl.class);
 
     private String MIN_STREAM_PORT_KEY = "MIN_STREAM_PORT";
 
@@ -41,14 +44,13 @@ public class JireconIceUdpTransportManagerImpl
 
     private int MAX_STREAM_PORT;
 
-    public JireconIceUdpTransportManagerImpl(JireconConfiguration configuration)
+    public JireconIceUdpTransportManagerImpl()
     {
         logger.info("init");
         iceAgent = new Agent();
-        MIN_STREAM_PORT =
-            Integer.valueOf(configuration.getProperty(MIN_STREAM_PORT_KEY));
-        MAX_STREAM_PORT =
-            Integer.valueOf(configuration.getProperty(MAX_STREAM_PORT_KEY));
+        ConfigurationService configuration = LibJitsi.getConfigurationService();
+        MIN_STREAM_PORT = configuration.getInt(MIN_STREAM_PORT_KEY, -1);
+        MAX_STREAM_PORT = configuration.getInt(MAX_STREAM_PORT_KEY, -1);
     }
 
     public void free()

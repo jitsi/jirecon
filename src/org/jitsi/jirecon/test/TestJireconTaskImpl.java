@@ -5,14 +5,12 @@
  */
 package org.jitsi.jirecon.test;
 
-import java.io.IOException;
-
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.extension.*;
-import org.jitsi.jirecon.utils.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.*;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.provider.*;
@@ -28,28 +26,23 @@ public class TestJireconTaskImpl
 
     private final static String XMPP_PORT_KEY = "XMPP_PORT";
 
+    private static final String CONFIGURATION_FILE_PATH = "jirecon.properties";
+
     private static XMPPConnection connection;
 
     @Override
     protected void setUp()
     {
         LibJitsi.start();
-        JireconConfiguration configuration = new JireconConfigurationImpl();
-        try
-        {
-            configuration.loadConfiguration("jirecon.property");
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-            configuration = null;
-        }
-        assertTrue(null != configuration);
+
+        System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_NAME,
+            CONFIGURATION_FILE_PATH);
+        ConfigurationService configuration = LibJitsi.getConfigurationService();
 
         String xmppHost = null;
         int xmppPort = -1;
-        xmppHost = configuration.getProperty(XMPP_HOST_KEY);
-        xmppPort = Integer.valueOf(configuration.getProperty(XMPP_PORT_KEY));
+        xmppHost = configuration.getString(XMPP_HOST_KEY);
+        xmppPort = configuration.getInt(XMPP_PORT_KEY, -1);
 
         assertTrue(xmppHost.length() > 0);
         assertTrue(xmppPort > 0);
@@ -81,8 +74,7 @@ public class TestJireconTaskImpl
             new MediaExtensionProvider());
 
         task = new JireconTaskImpl();
-        task.init(configuration, "twhyrwf6sigm0a4i@conference.example.com",
-            connection);
+        task.init("85nljzhjzu7eqaor@conference.example.com", connection);
     }
 
     public void testSessionAndRecorder()
