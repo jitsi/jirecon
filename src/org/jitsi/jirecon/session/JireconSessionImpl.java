@@ -18,6 +18,7 @@ import org.jitsi.jirecon.extension.MediaExtension;
 import org.jitsi.jirecon.recorder.JireconRecorderInfo;
 import org.jitsi.jirecon.session.JireconSessionInfo.JireconSessionEvent;
 import org.jitsi.jirecon.transport.JireconTransportManager;
+import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.jirecon.utils.JireconConfiguration;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -86,15 +87,15 @@ public class JireconSessionImpl
         throws XMPPException,
         OperationFailedException
     {
-        joinConference();
-        JingleIQ initPacket = waitForInitPacket();
-        recordSessionInfo(initPacket);
-        sendAck(initPacket);
-        sendAccpetPacket(sessionInfo, recorderInfo, transportManager,
+        joinMUC();
+        JingleIQ initIq = waitForInitPacket();
+        recordSessionInfo(initIq);
+        sendAck(initIq);
+        sendAccpetPacket(initIq, sessionInfo, recorderInfo, transportManager,
             srtpControlManager);
         waitForAckPacket();
 
-        return initPacket;
+        return initIq;
     }
 
     @Override
@@ -111,7 +112,7 @@ public class JireconSessionImpl
         
         try
         {
-            leaveConference();
+            leaveMUC();
         }
         catch (OperationFailedException e)
         {
@@ -125,10 +126,10 @@ public class JireconSessionImpl
         return sessionInfo;
     }
 
-    private void joinConference() throws XMPPException, OperationFailedException
+    private void joinMUC() throws XMPPException, OperationFailedException
     {
-        logger.info("joinConference");
-        if (!sessionInfo.readyTo(JireconSessionEvent.JOIN_CONFERENCE))
+        logger.info("joinMUC");
+        if (!sessionInfo.readyTo(JireconSessionEvent.JOIN_MUC))
         {
             throw new OperationFailedException(
                 "Could not join conference, other reason.",
@@ -138,13 +139,13 @@ public class JireconSessionImpl
         conference =
             new MultiUserChat(connection, sessionInfo.getConferenceJid());
         conference.join(NICK);
-        updateState(JireconSessionEvent.JOIN_CONFERENCE);
+        updateState(JireconSessionEvent.JOIN_MUC);
     }
 
-    private void leaveConference() throws OperationFailedException
+    private void leaveMUC() throws OperationFailedException
     {
-        logger.info("leaveConference");
-        if (!sessionInfo.readyTo(JireconSessionEvent.LEAVE_CONFERENCE))
+        logger.info("leaveMUC");
+        if (!sessionInfo.readyTo(JireconSessionEvent.LEAVE_MUC))
         {
             throw new OperationFailedException(
                 "Could not leave conference, not in conference.",
@@ -155,10 +156,10 @@ public class JireconSessionImpl
         {
             conference.leave();
         }
-        updateState(JireconSessionEvent.LEAVE_CONFERENCE);
+        updateState(JireconSessionEvent.LEAVE_MUC);
     }
 
-    private void sendAccpetPacket(JireconSessionInfo sessionInfo,
+    private void sendAccpetPacket(JingleIQ initIq, JireconSessionInfo sessionInfo,
         JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager) throws OperationFailedException
@@ -172,7 +173,7 @@ public class JireconSessionImpl
         }
         
         JingleIQ acceptPacket =
-            createAcceptPacket(sessionInfo, recorderInfo, transportManager,
+            createAcceptPacket(initIq, sessionInfo, recorderInfo, transportManager,
                 srtpControlManager);
         connection.sendPacket(acceptPacket);
         updateState(JireconSessionEvent.SEND_SESSION_ACCEPT);
@@ -356,7 +357,7 @@ public class JireconSessionImpl
                 MediaDirection direction =
                     MediaDirection.parseString(mediaExt.getDirection(mediaType
                         .toString()));
-                String ssrc = mediaExt.getDirection(mediaType.toString());
+                String ssrc = mediaExt.getSsrc(mediaType.toString());
                 if (direction == MediaDirection.SENDONLY
                     || direction == MediaDirection.SENDRECV)
                 {
@@ -366,7 +367,7 @@ public class JireconSessionImpl
         }
     }
 
-    private JingleIQ createAcceptPacket(JireconSessionInfo sessionInfo,
+    private JingleIQ createAcceptPacket(JingleIQ initIq, JireconSessionInfo sessionInfo,
         JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager)
@@ -382,7 +383,8 @@ public class JireconSessionImpl
                 continue;
             }
 
-            contents.add(createContentPacketExtension(mediaType, sessionInfo,
+            ContentPacketExtension initIqContent = JinglePacketParser.getContentPacketExt(initIq, mediaType);
+            contents.add(createContentPacketExtension(mediaType, initIqContent, sessionInfo,
                 recorderInfo, transportManager, srtpControlManager));
         }
 
@@ -394,7 +396,7 @@ public class JireconSessionImpl
     }
 
     private ContentPacketExtension createContentPacketExtension(
-        MediaType mediaType, JireconSessionInfo sessionInfo,
+        MediaType mediaType, ContentPacketExtension initIqContent, JireconSessionInfo sessionInfo,
         JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager)
@@ -469,7 +471,7 @@ public class JireconSessionImpl
 
         ContentPacketExtension content = new ContentPacketExtension();
         content.setCreator(CreatorEnum.responder);
-        content.setName(description.getMedia());
+        content.setName(initIqContent.getName());
         content.setSenders(SendersEnum.initiator);
         content.addChildExtension(description);
         content.addChildExtension(transportPE);

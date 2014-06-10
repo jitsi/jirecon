@@ -181,11 +181,11 @@ public class JireconSessionInfo
     {
         switch (evt)
         {
-        case JOIN_CONFERENCE:
+        case JOIN_MUC:
             if (JireconSessionState.INIT != state)
                 return false;
             break;
-        case LEAVE_CONFERENCE:
+        case LEAVE_MUC:
             if (JireconSessionState.IN_CONFERENCE != state)
                 return false;
             break;
@@ -213,10 +213,10 @@ public class JireconSessionInfo
     {
         switch (evt)
         {
-        case JOIN_CONFERENCE:
+        case JOIN_MUC:
             state = JireconSessionState.IN_CONFERENCE;
             break;
-        case LEAVE_CONFERENCE:
+        case LEAVE_MUC:
             state = JireconSessionState.INIT;
             break;
         case SEND_SESSION_ACCEPT:
@@ -236,8 +236,8 @@ public class JireconSessionInfo
 
     public enum JireconSessionEvent
     {
-        JOIN_CONFERENCE,
-        LEAVE_CONFERENCE,
+        JOIN_MUC,
+        LEAVE_MUC,
         SEND_SESSION_ACCEPT,
         SEND_SESSION_TERMINATE,
         WAIT_SESSION_INIT,

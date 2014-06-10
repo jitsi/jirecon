@@ -82,19 +82,19 @@ public class JireconTaskImpl
 
             JireconSessionInfo sessionInfo = session.getSessionInfo();
             JireconRecorderInfo recorderInfo = recorder.getRecorderInfo();
-            JingleIQ initPacket =
+            JingleIQ initIq =
                 session.connect(sessionInfo, recorderInfo, transport,
                     srtpControl);
 
             Map<MediaType, String> fingerprints =
-                JinglePacketParser.getFingerprint(initPacket);
+                JinglePacketParser.getFingerprint(initIq);
             for (Entry<MediaType, String> f : fingerprints.entrySet())
             {
                 srtpControl.addRemoteFingerprint(f.getKey(), f.getValue());
             }
 
             Map<MediaType, IceUdpTransportPacketExtension> transportPEs =
-                JinglePacketParser.getTransportPacketExts(initPacket);
+                JinglePacketParser.getTransportPacketExts(initIq);
             transport.harvestRemoteCandidates(transportPEs);
 
             transport.startConnectivityCheck();
@@ -118,7 +118,7 @@ public class JireconTaskImpl
                 mediaStreamTargets.put(mediaType, mediaStreamTarget);
             }
             Map<MediaFormat, Byte> formatAndDynamicPTs =
-                JinglePacketParser.getFormatAndDynamicPTs(initPacket);
+                JinglePacketParser.getFormatAndDynamicPTs(initIq);
             recorder.startRecording(formatAndDynamicPTs, streamConnectors,
                 mediaStreamTargets);
         }
