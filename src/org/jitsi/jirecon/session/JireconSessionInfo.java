@@ -7,6 +7,7 @@ package org.jitsi.jirecon.session;
 
 // TODO: Rewrite those import statements to package import statement.
 import java.util.*;
+import java.util.Map.Entry;
 
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.MediaFormat;
@@ -21,18 +22,26 @@ public class JireconSessionInfo
 {
     private String localJid;
 
+    // Where we send packet to(actually is mucJid)
     private String remoteJid;
 
     private String sid;
 
-    private String conferenceJid;
+    private String mucJid;
 
     private JireconSessionState status;
 
     private JireconSessionState state = JireconSessionState.INIT;
 
-    private Map<MediaType, InfoBox> infoBoxes =
-        new HashMap<MediaType, InfoBox>();
+    // <format, payloadTypeId>
+    public Map<MediaFormat, Byte> formatAndPayloadTypes =
+        new HashMap<MediaFormat, Byte>();
+
+    // private Map<MediaType, InfoBox> infoBoxes =
+    // new HashMap<MediaType, InfoBox>();
+
+    private Map<String, ParticipantInfo> participantsInfo =
+        new HashMap<String, ParticipantInfo>();
 
     /**
      * Constructor of JingleSessionInfo
@@ -40,66 +49,76 @@ public class JireconSessionInfo
     public JireconSessionInfo()
     {
         status = JireconSessionState.INIT;
-        for (MediaType mediaType : MediaType.values())
+        // for (MediaType mediaType : MediaType.values())
+        // {
+        // // Make sure that we only handle audio or video type.
+        // if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+        // {
+        // continue;
+        // }
+        //
+        // infoBoxes.put(mediaType, new InfoBox());
+        // }
+    }
+
+    // public void addPayloadType(MediaType media, MediaFormat format,
+    // byte payloadTypeId)
+    // {
+    // infoBoxes.get(media).payloadTypes.put(format, payloadTypeId);
+    // }
+
+    public void addFormatAndPayloadType(MediaFormat format, byte payloadTypeId)
+    {
+        formatAndPayloadTypes.put(format, payloadTypeId);
+    }
+
+    public void setFormatAndPayloadTypes(
+        Map<MediaFormat, Byte> formatAndPayloadTypes)
+    {
+        this.formatAndPayloadTypes = formatAndPayloadTypes;
+    }
+
+    // public void addRemoteSsrc(MediaType media, String remoteJid, String ssrc)
+    // {
+    // if (infoBoxes.get(media).remoteSsrcs.containsKey(remoteJid))
+    // {
+    // return;
+    // }
+    // infoBoxes.get(media).remoteSsrcs.put(remoteJid, ssrc);
+    // }
+
+    // public Map<MediaFormat, Byte> getPayloadTypes(MediaType media)
+    // {
+    // return infoBoxes.get(media).payloadTypes;
+    // }
+
+    public Map<MediaFormat, Byte> getFormatAndPayloadTypes(MediaType mediaType)
+    {
+        Map<MediaFormat, Byte> result = new HashMap<MediaFormat, Byte>();
+        for (Entry<MediaFormat, Byte> e : formatAndPayloadTypes.entrySet())
         {
-            // Make sure that we only handle audio or video type.
-            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
-            {
-                continue;
-            }
-
-            infoBoxes.put(mediaType, new InfoBox());
+            if (e.getKey().getMediaType().equals(mediaType))
+                result.put(e.getKey(), e.getValue());
         }
+
+        if (result.size() > 0)
+            return result;
+        else
+            return null;
     }
 
-    /**
-     * Add media formats and bind it with specified type of media.
-     * 
-     * @param media The media type, video or audio.
-     * @param format The format which will be added.
-     */
-    public void addPayloadType(MediaType media, MediaFormat format,
-        byte payloadTypeId)
+    public Map<MediaFormat, Byte> getFormatAndPayloadTypes()
     {
-        infoBoxes.get(media).payloadTypes.put(format, payloadTypeId);
+        if (formatAndPayloadTypes.size() > 0)
+            return formatAndPayloadTypes;
+        else
+            return null;
     }
 
-    /**
-     * Add remote SSRC and bind it with specified type of media.
-     * 
-     * @param media The media type, video or audio.
-     * @param ssrc The remote SSRC which wll be added.
-     */
-    public void addRemoteSsrc(MediaType media, String remoteJid, String ssrc)
-    {
-        if (infoBoxes.get(media).remoteSsrcs.containsKey(remoteJid))
-        {
-            return;
-        }
-        infoBoxes.get(media).remoteSsrcs.put(remoteJid, ssrc);
-    }
-
-    /**
-     * Get the format of a specified media type.
-     * 
-     * @param media The media type, video or audio.
-     * @return
-     */
-    public Map<MediaFormat, Byte> getPayloadTypes(MediaType media)
-    {
-        return infoBoxes.get(media).payloadTypes;
-    }
-
-    /**
-     * Get the remote SSRC of a specified media type.
-     * 
-     * @param media The media type, video or audio.
-     * @return
-     */
-    public Map<String, String> getRemoteSsrcs(MediaType media)
-    {
-        return infoBoxes.get(media).remoteSsrcs;
-    }
+    // public Map<String, String> getRemoteSsrcs(MediaType media)
+    // {
+    // return infoBoxes.get(media).remoteSsrcs;
+    // }
 
     public void setSessionStatus(JireconSessionState status)
     {
@@ -111,14 +130,14 @@ public class JireconSessionInfo
         return status;
     }
 
-    public String getConferenceJid()
+    public String getMucJid()
     {
-        return conferenceJid;
+        return mucJid;
     }
 
-    public void setConferenceJid(String conferenceJid)
+    public void setMucJid(String mucJid)
     {
-        this.conferenceJid = conferenceJid;
+        this.mucJid = mucJid;
     }
 
     public String getLocalJid()
@@ -151,31 +170,113 @@ public class JireconSessionInfo
         this.sid = sid;
     }
 
-    public void setRemoteFingerprint(MediaType media, String fingerprint)
-    {
-        infoBoxes.get(media).remoteFingerprint = fingerprint;
-    }
-
-    public String getRemoteFingerprint(MediaType media)
-    {
-        return infoBoxes.get(media).remoteFingerprint;
-    }
+    // public void setRemoteFingerprint(MediaType media, String fingerprint)
+    // {
+    // infoBoxes.get(media).remoteFingerprint = fingerprint;
+    // }
+    //
+    // public String getRemoteFingerprint(MediaType media)
+    // {
+    // return infoBoxes.get(media).remoteFingerprint;
+    // }
 
     public JireconSessionState getState()
     {
         return state;
     }
 
-    private class InfoBox
+    public void setParticipantSsrcs(String participantJid,
+        Map<MediaType, String> ssrcs)
     {
-        // <format, payloadTypeId>
-        public Map<MediaFormat, Byte> payloadTypes =
-            new HashMap<MediaFormat, Byte>();
+        if (!participantsInfo.containsKey(participantJid))
+        {
+            participantsInfo.put(participantJid, new ParticipantInfo());
+        }
 
-        private Map<String, String> remoteSsrcs = new HashMap<String, String>();
-
-        private String remoteFingerprint;
+        ParticipantInfo info = participantsInfo.get(participantJid);
+        info.setSsrcs(ssrcs);
     }
+
+    public Map<String, Map<MediaType, String>> getParticipantsSsrcs()
+    {
+        Map<String, Map<MediaType, String>> result =
+            new HashMap<String, Map<MediaType, String>>();
+        for (Entry<String, ParticipantInfo> e : participantsInfo.entrySet())
+        {
+            result.put(e.getKey(), e.getValue().getSsrcs());
+        }
+
+        if (result.size() > 0)
+            return result;
+        else
+            return null;
+    }
+
+    public Map<MediaType, String> getParticipantSsrcs(String participantJid)
+    {
+        if (participantsInfo.containsKey(participantJid))
+            return participantsInfo.get(participantJid).getSsrcs();
+        else
+            return null;
+    }
+
+    public void setParticipantFingerprint(String participantJid,
+        String fingerprint)
+    {
+        if (!participantsInfo.containsKey(participantJid))
+        {
+            participantsInfo.put(participantJid, new ParticipantInfo());
+        }
+
+        ParticipantInfo info = participantsInfo.get(participantJid);
+        info.setFingerprint(fingerprint);
+    }
+
+    public String getParticipantFingerprint(String participantJid)
+    {
+        if (participantsInfo.containsKey(participantJid))
+            return participantsInfo.get(participantJid).getFingerprint();
+        else
+            return null;
+    }
+
+    public class ParticipantInfo
+    {
+        private String fingerprint;
+
+        private Map<MediaType, String> ssrcs;
+
+        public void setFingerprint(String fingerprint)
+        {
+            this.fingerprint = fingerprint;
+        }
+
+        public void setSsrcs(Map<MediaType, String> ssrcs)
+        {
+            this.ssrcs = ssrcs;
+        }
+
+        public String getFingerprint()
+        {
+            return fingerprint;
+        }
+
+        public Map<MediaType, String> getSsrcs()
+        {
+            return ssrcs;
+        }
+    }
+
+    // private class InfoBox
+    // {
+    // // <format, payloadTypeId>
+    // public Map<MediaFormat, Byte> payloadTypes =
+    // new HashMap<MediaFormat, Byte>();
+    //
+    // private Map<String, String> remoteSsrcs = new HashMap<String, String>();
+    //
+    // private String remoteFingerprint;
+    // }
 
     public boolean readyTo(JireconSessionEvent evt)
     {

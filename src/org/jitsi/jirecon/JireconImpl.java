@@ -29,13 +29,13 @@ public class JireconImpl
         new HashMap<String, JireconTask>();
 
     private static final Logger logger = Logger.getLogger(JireconImpl.class);
-    
+
     private static final String CONFIGURATION_FILE_PATH = "jirecon.properties";
 
     private static final String XMPP_HOST_KEY = "XMPP_HOST";
 
     private static final String XMPP_PORT_KEY = "XMPP_PORT";
-    
+
     public JireconImpl()
     {
         logger.setLevelDebug();
@@ -51,7 +51,8 @@ public class JireconImpl
         initiatePacketProviders();
 
         LibJitsi.start();
-        System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_NAME, CONFIGURATION_FILE_PATH);
+        System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_NAME,
+            CONFIGURATION_FILE_PATH);
         ConfigurationService configuration = LibJitsi.getConfigurationService();
 
         final String xmppHost = configuration.getString(XMPP_HOST_KEY);
@@ -106,14 +107,18 @@ public class JireconImpl
     public void stopJireconTask(String conferenceJid)
     {
         logger.debug(this.getClass() + "stopJireconTask: " + conferenceJid);
-        if (!jireconTasks.containsKey(conferenceJid))
+        synchronized (jireconTasks)
         {
-            logger.info("Failed to stop Jirecon by conferenceJid: "
-                + conferenceJid + ". Nonexisted Jid.");
+            if (!jireconTasks.containsKey(conferenceJid))
+            {
+                logger.info("Failed to stop Jirecon by conferenceJid: "
+                    + conferenceJid + ". Nonexisted Jid.");
+                return;
+            }
+            JireconTask j = jireconTasks.remove(conferenceJid);
+            j.stop();
+            j.uninit();
         }
-        JireconTask j = jireconTasks.remove(conferenceJid);
-        j.stop();
-        j.uninit();
     }
 
     private void connect(String xmppHost, int xmppPort) throws XMPPException

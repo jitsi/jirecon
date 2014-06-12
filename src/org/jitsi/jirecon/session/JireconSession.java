@@ -5,6 +5,8 @@
  */
 package org.jitsi.jirecon.session;
 
+import java.io.IOException;
+
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
@@ -18,11 +20,13 @@ public interface JireconSession
     public JingleIQ connect(JireconSessionInfo sessionInfo,
         JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
-        JireconSrtpControlManager srtpControlManager) throws XMPPException, OperationFailedException;
+        JireconSrtpControlManager srtpControlManager) throws XMPPException, OperationFailedException, IOException;
     
     public void disconnect(Reason reason, String reasonText);
 
     public JireconSessionInfo getSessionInfo();
+    
+    public void writeMetaData(String filename) throws IOException;
 
     // public void addEventListener(JireconEventListener listener);
 

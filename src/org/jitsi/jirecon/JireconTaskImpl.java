@@ -117,10 +117,11 @@ public class JireconTaskImpl
                     transport.getStreamTarget(mediaType);
                 mediaStreamTargets.put(mediaType, mediaStreamTarget);
             }
-            Map<MediaFormat, Byte> formatAndDynamicPTs =
-                JinglePacketParser.getFormatAndDynamicPTs(initIq);
+            Map<MediaFormat, Byte> formatAndDynamicPTs = sessionInfo.getFormatAndPayloadTypes();
             recorder.startRecording(formatAndDynamicPTs, streamConnectors,
                 mediaStreamTargets);
+            
+            session.writeMetaData("meta");
         }
         catch (BindException e)
         {

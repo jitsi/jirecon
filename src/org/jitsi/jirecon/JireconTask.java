@@ -5,6 +5,8 @@
  */
 package org.jitsi.jirecon;
 
+import java.io.IOException;
+
 import org.jivesoftware.smack.XMPPConnection;
 
 /**

@@ -5,7 +5,11 @@
  */
 package org.jitsi.jirecon.session;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
+import java.util.Map.Entry;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.SourcePacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
@@ -23,11 +27,13 @@ import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
+import org.jitsi.service.neomedia.recording.RecorderEvent;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.filter.PacketFilter;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smackx.muc.MultiUserChat;
 import org.jivesoftware.smackx.packet.MUCUser;
+import org.json.simple.JSONObject;
 
 /**
  * This class is responsible for managing a Jingle session and extract some
@@ -61,7 +67,7 @@ public class JireconSessionImpl
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         this.NICK = configuration.getString(NICK_KEY);
         this.connection = connection;
-        this.sessionInfo.setConferenceJid(conferenceJid);
+        this.sessionInfo.setMucJid(conferenceJid);
 
         addPacketSendingListener();
         addPacketReceivingListener();
@@ -86,8 +92,24 @@ public class JireconSessionImpl
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager)
         throws XMPPException,
-        OperationFailedException
+        OperationFailedException,
+        IOException
     {
+        // Remove the suffix '/' in SAVE_DIR
+        // if ('/' == SAVE_DIR.charAt(SAVE_DIR.length() - 1))
+        // {
+        // SAVE_DIR = SAVE_DIR.substring(0, SAVE_DIR.length() - 1);
+        // }
+        // String filename = SAVE_DIR + "/meta";
+        // metaFile = new File(filename);
+        // if (!metaFile.createNewFile())
+        // throw new IOException("File exists or cannot be created: "
+        // + metaFile);
+        //
+        // if (!metaFile.canWrite())
+        // throw new IOException("Cannot write to file: " + metaFile);
+        // metaFileWriter = new FileWriter(metaFile, false);
+
         joinMUC();
         JingleIQ initIq = waitForInitPacket();
         recordSessionInfo(initIq);
@@ -137,8 +159,7 @@ public class JireconSessionImpl
                 OperationFailedException.GENERAL_ERROR);
         }
 
-        conference =
-            new MultiUserChat(connection, sessionInfo.getConferenceJid());
+        conference = new MultiUserChat(connection, sessionInfo.getMucJid());
         conference.join(NICK);
         updateState(JireconSessionEvent.JOIN_MUC);
     }
@@ -209,6 +230,8 @@ public class JireconSessionImpl
         sessionInfo.setLocalJid(jiq.getTo());
         sessionInfo.setRemoteJid(jiq.getFrom());
         sessionInfo.setSid(jiq.getSID());
+        sessionInfo.setFormatAndPayloadTypes(JinglePacketParser
+            .getFormatAndDynamicPTs(jiq));
     }
 
     private JingleIQ waitForInitPacket() throws OperationFailedException
@@ -344,10 +367,12 @@ public class JireconSessionImpl
         MUCUser userExt =
             (MUCUser) p
                 .getExtension("x", "http://jabber.org/protocol/muc#user");
-        String remoteJid = userExt.getItem().getJid();
-        if (null != remoteJid && null != packetExt)
+        String participantJid = userExt.getItem().getJid();
+        if (null != participantJid && null != packetExt)
         {
             MediaExtension mediaExt = (MediaExtension) packetExt;
+            Map<MediaType, String> participantSsrcs =
+                new HashMap<MediaType, String>();
             for (MediaType mediaType : MediaType.values())
             {
                 // Make sure that we only handle audio or video type.
@@ -364,9 +389,10 @@ public class JireconSessionImpl
                 if (direction == MediaDirection.SENDONLY
                     || direction == MediaDirection.SENDRECV)
                 {
-                    sessionInfo.addRemoteSsrc(mediaType, remoteJid, ssrc);
+                    participantSsrcs.put(mediaType, ssrc);
                 }
             }
+            sessionInfo.setParticipantSsrcs(participantJid, participantSsrcs);
         }
     }
 
@@ -428,8 +454,8 @@ public class JireconSessionImpl
 
         List<PayloadTypePacketExtension> payloadTypes =
             new ArrayList<PayloadTypePacketExtension>();
-        for (Map.Entry<MediaFormat, Byte> e : sessionInfo.getPayloadTypes(
-            mediaType).entrySet())
+        for (Map.Entry<MediaFormat, Byte> e : sessionInfo
+            .getFormatAndPayloadTypes(mediaType).entrySet())
         {
             PayloadTypePacketExtension payloadType =
                 new PayloadTypePacketExtension();
@@ -465,8 +491,8 @@ public class JireconSessionImpl
         description.setSsrc(recorderInfo.getLocalSsrc(mediaType).toString());
 
         sourcePacketExtension.setSSRC(recorderInfo.getLocalSsrc(mediaType));
-        // sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
-        // "cname", LibJitsi.getMediaService().getRtpCname()));
+        sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
+            "cname", LibJitsi.getMediaService().getRtpCname()));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
             "msid", recorderInfo.getMsid(mediaType)));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
@@ -545,6 +571,51 @@ public class JireconSessionImpl
                 return true;
             }
         });
+    }
+
+    public void writeMetaData(String filename) throws IOException
+    {
+        // TODO
+        File metaFile = new File(filename);
+        if (!metaFile.createNewFile())
+            throw new IOException("File exists or cannot be created: "
+                + metaFile);
+
+        if (!metaFile.canWrite())
+            throw new IOException("Cannot write to file: " + metaFile);
+
+        FileWriter metaFileWriter = null;
+        metaFileWriter = new FileWriter(metaFile, false);
+
+        try
+        {
+            Map<String, Map<MediaType, String>> participantsSscrs =
+                sessionInfo.getParticipantsSsrcs();
+            if (null != participantsSscrs)
+            {
+                int i = 0;
+                for (Entry<String, Map<MediaType, String>> e : participantsSscrs
+                    .entrySet())
+                {
+                    metaFileWriter.write("participant_" + i++ + ": "
+                        + e.getKey() + "\n");
+                    for (Entry<MediaType, String> el : e.getValue().entrySet())
+                    {
+                        metaFileWriter.write("\t" + el.getKey() + ": "
+                            + el.getValue() + "\n");
+                    }
+                }
+            }
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+
+        }
+        finally
+        {
+            metaFileWriter.close();
+        }
     }
 
     private interface JireconSessionPacketListener

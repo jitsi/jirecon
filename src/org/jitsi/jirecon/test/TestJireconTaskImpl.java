@@ -5,6 +5,8 @@
  */
 package org.jitsi.jirecon.test;
 
+import java.io.IOException;
+
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.jirecon.*;
@@ -74,7 +76,7 @@ public class TestJireconTaskImpl
             new MediaExtensionProvider());
 
         task = new JireconTaskImpl();
-        task.init("ixl8z6xleu8cwhfr@conference.example.com", connection);
+        task.init("cneu5rc19lbfyldi@conference.example.com", connection);
     }
 
     public void testSessionAndRecorder()
