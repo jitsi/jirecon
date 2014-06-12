@@ -43,21 +43,13 @@ public class JireconRecorderImpl
     private static final Logger logger = Logger
         .getLogger(JireconRecorderImpl.class);
 
-    private String SAVE_DIR;
+    private final String SAVING_DIR;
 
-    private final static String SAVE_DIR_KEY = "SAVE_DIR";
-
-    public JireconRecorderImpl()
+    public JireconRecorderImpl(String SAVING_DIR)
     {
         // Have to make sure that Libjitsi has been started.
         this.mediaService = LibJitsi.getMediaService();
-        ConfigurationService configuration = LibJitsi.getConfigurationService();
-        SAVE_DIR = configuration.getString(SAVE_DIR_KEY);
-        // Remove the suffix '/' in SAVE_DIR
-        if ('/' == SAVE_DIR.charAt(SAVE_DIR.length() - 1))
-        {
-            SAVE_DIR = SAVE_DIR.substring(0, SAVE_DIR.length() - 1);
-        }
+        this.SAVING_DIR = SAVING_DIR;
         createMediaStreams();
     }
 
@@ -206,12 +198,12 @@ public class JireconRecorderImpl
                 OperationFailedException.GENERAL_ERROR);
         }
 
-        RecorderEventHandler eventHandler =
-            new JireconRecorderEventHandler(SAVE_DIR + "/meta");
+//        RecorderEventHandler eventHandler =
+//            new JireconRecorderEventHandler(SAVING_DIR + "/meta");
         for (Entry<MediaType, Recorder> e : recorders.entrySet())
         {
-            e.getValue().start("useless", SAVE_DIR);
-            e.getValue().setEventHandler(eventHandler);
+            e.getValue().start("useless", SAVING_DIR);
+//            e.getValue().setEventHandler(eventHandler);
         }
 
         updateState(JireconRecorderEvent.START_RECORDING_STREAM);

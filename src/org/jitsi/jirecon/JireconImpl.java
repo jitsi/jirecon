@@ -36,6 +36,10 @@ public class JireconImpl
 
     private static final String XMPP_PORT_KEY = "XMPP_PORT";
 
+    private static final String SAVING_DIR_KEY = "OUTPUT_DIR";
+
+    private String SAVING_DIR;
+
     public JireconImpl()
     {
         logger.setLevelDebug();
@@ -54,6 +58,12 @@ public class JireconImpl
         System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_NAME,
             CONFIGURATION_FILE_PATH);
         ConfigurationService configuration = LibJitsi.getConfigurationService();
+        SAVING_DIR = configuration.getString(SAVING_DIR_KEY);
+        // Remove the suffix '/' in SAVE_DIR
+        if ('/' == SAVING_DIR.charAt(SAVING_DIR.length() - 1))
+        {
+            SAVING_DIR = SAVING_DIR.substring(0, SAVING_DIR.length() - 1);
+        }
 
         final String xmppHost = configuration.getString(XMPP_HOST_KEY);
         final int xmppPort = configuration.getInt(XMPP_PORT_KEY, -1);
@@ -83,39 +93,39 @@ public class JireconImpl
     }
 
     @Override
-    public void startJireconTask(String conferenceJid) throws XMPPException
+    public void startJireconTask(String mucJid) throws XMPPException
     {
-        logger.debug(this.getClass() + "startJireconTask: " + conferenceJid);
+        logger.debug(this.getClass() + "startJireconTask: " + mucJid);
 
         synchronized (jireconTasks)
         {
-            if (jireconTasks.containsKey(conferenceJid))
+            if (jireconTasks.containsKey(mucJid))
             {
-                logger.info("Failed to start Jirecon by conferenceJid: "
-                    + conferenceJid + ". Duplicate conferenceJid.");
+                logger.info("Failed to start Jirecon by mucJid: "
+                    + mucJid + ". Duplicate mucJid.");
                 return;
             }
             JireconTask j = new JireconTaskImpl();
-            jireconTasks.put(conferenceJid, j);
+            jireconTasks.put(mucJid, j);
             j.addEventListener(this);
-            j.init(conferenceJid, connection);
+            j.init(mucJid, connection, SAVING_DIR + "/" + mucJid);
             j.start();
         }
     }
 
     @Override
-    public void stopJireconTask(String conferenceJid)
+    public void stopJireconTask(String mucJid)
     {
-        logger.debug(this.getClass() + "stopJireconTask: " + conferenceJid);
+        logger.debug(this.getClass() + "stopJireconTask: " + mucJid);
         synchronized (jireconTasks)
         {
-            if (!jireconTasks.containsKey(conferenceJid))
+            if (!jireconTasks.containsKey(mucJid))
             {
-                logger.info("Failed to stop Jirecon by conferenceJid: "
-                    + conferenceJid + ". Nonexisted Jid.");
+                logger.info("Failed to stop Jirecon by mucJid: "
+                    + mucJid + ". Nonexisted Jid.");
                 return;
             }
-            JireconTask j = jireconTasks.remove(conferenceJid);
+            JireconTask j = jireconTasks.remove(mucJid);
             j.stop();
             j.uninit();
         }
@@ -175,12 +185,12 @@ public class JireconImpl
         case TASK_ABORTED:
             if (evt.getSource() instanceof JireconTask)
             {
-                String conferenceJid =
+                String mucJid =
                     ((JireconTask) evt.getSource()).getTaskInfo()
-                        .getConferenceJid();
-                stopJireconTask(conferenceJid);
-                logger.fatal("Failed to start task of conferenceJid "
-                    + conferenceJid + ".");
+                        .getMucJid();
+                stopJireconTask(mucJid);
+                logger.fatal("Failed to start task of mucJid "
+                    + mucJid + ".");
             }
             break;
         default:

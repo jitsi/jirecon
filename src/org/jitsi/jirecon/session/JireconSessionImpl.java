@@ -57,13 +57,16 @@ public class JireconSessionImpl
     private final static String NICK_KEY = "JIRECON_NICKNAME";
 
     private String NICK = "default";
+    
+    private String SAVING_DIR;
 
     private List<JireconSessionPacketListener> packetListeners =
         new ArrayList<JireconSessionPacketListener>();
 
-    public JireconSessionImpl(XMPPConnection connection, String conferenceJid)
+    public JireconSessionImpl(XMPPConnection connection, String conferenceJid, String SAVING_DIR)
     {
         logger.setLevelDebug();
+        this.SAVING_DIR = SAVING_DIR;
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         this.NICK = configuration.getString(NICK_KEY);
         this.connection = connection;
@@ -573,10 +576,11 @@ public class JireconSessionImpl
         });
     }
 
-    public void writeMetaData(String filename) throws IOException
+    public void writeMetaData() throws IOException
     {
         // TODO
-        File metaFile = new File(filename);
+        new File(SAVING_DIR).mkdir();
+        File metaFile = new File(SAVING_DIR + "/meta");
         if (!metaFile.createNewFile())
             throw new IOException("File exists or cannot be created: "
                 + metaFile);

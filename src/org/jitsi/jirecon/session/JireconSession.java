@@ -26,7 +26,7 @@ public interface JireconSession
 
     public JireconSessionInfo getSessionInfo();
     
-    public void writeMetaData(String filename) throws IOException;
+    public void writeMetaData() throws IOException;
 
     // public void addEventListener(JireconEventListener listener);
 

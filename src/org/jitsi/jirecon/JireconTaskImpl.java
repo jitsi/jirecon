@@ -44,22 +44,22 @@ public class JireconTaskImpl
     private JireconRecorder recorder;
 
     private JireconTaskInfo info = new JireconTaskInfo();
-
+    
     private static final Logger logger = Logger
         .getLogger(JireconTaskImpl.class);
-
+    
     @Override
     public void init(String conferenceJid,
-        XMPPConnection connection)
+        XMPPConnection connection, String savingDir)
     {
         logger.setLevelAll();
         logger.debug(this.getClass() + " init");
-
+        
         transport = new JireconIceUdpTransportManagerImpl();
         srtpControl = new JireconDtlsControlManagerImpl();
         session =
-            new JireconSessionImpl(connection, conferenceJid);
-        recorder = new JireconRecorderImpl();
+            new JireconSessionImpl(connection, conferenceJid, savingDir);
+        recorder = new JireconRecorderImpl(savingDir);
         updateState(JireconTaskState.INITIATED);
     }
 
@@ -121,7 +121,7 @@ public class JireconTaskImpl
             recorder.startRecording(formatAndDynamicPTs, streamConnectors,
                 mediaStreamTargets);
             
-            session.writeMetaData("meta");
+            session.writeMetaData();
         }
         catch (BindException e)
         {

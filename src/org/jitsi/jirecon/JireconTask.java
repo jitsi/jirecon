@@ -17,8 +17,8 @@ import org.jivesoftware.smack.XMPPConnection;
  */
 public interface JireconTask
 {
-    public void init(String conferenceJid,
-        XMPPConnection connection);
+    public void init(String conferenceJid, XMPPConnection connection,
+        String savingDir);
 
     public void uninit();
 

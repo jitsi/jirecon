@@ -7,18 +7,18 @@ package org.jitsi.jirecon;
 
 public class JireconTaskInfo
 {
-    private String conferenceJid;
+    private String mucJid;
 
     private JireconTaskState state;
 
-    public void setConferenceJid(String conferenceJid)
+    public void setMucJid(String mucJid)
     {
-        this.conferenceJid = conferenceJid;
+        this.mucJid = mucJid;
     }
 
-    public String getConferenceJid()
+    public String getMucJid()
     {
-        return conferenceJid;
+        return mucJid;
     }
 
     public void setState(JireconTaskState state)

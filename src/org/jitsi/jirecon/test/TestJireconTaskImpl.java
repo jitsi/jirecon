@@ -28,6 +28,8 @@ public class TestJireconTaskImpl
 
     private final static String XMPP_PORT_KEY = "XMPP_PORT";
 
+    private static final String SAVING_DIR_KEY = "OUTPUT_DIR";
+
     private static final String CONFIGURATION_FILE_PATH = "jirecon.properties";
 
     private static XMPPConnection connection;
@@ -43,11 +45,14 @@ public class TestJireconTaskImpl
 
         String xmppHost = null;
         int xmppPort = -1;
+        String savingDir = null;
         xmppHost = configuration.getString(XMPP_HOST_KEY);
         xmppPort = configuration.getInt(XMPP_PORT_KEY, -1);
+        savingDir = configuration.getString(SAVING_DIR_KEY);
 
         assertTrue(xmppHost.length() > 0);
         assertTrue(xmppPort > 0);
+        assertTrue(savingDir.length() > 0);
 
         try
         {
@@ -76,7 +81,8 @@ public class TestJireconTaskImpl
             new MediaExtensionProvider());
 
         task = new JireconTaskImpl();
-        task.init("cneu5rc19lbfyldi@conference.example.com", connection);
+        String mucJid = "d2eod5y1vopc766r@conference.example.com";
+        task.init(mucJid, connection, savingDir + "/" + mucJid);
     }
 
     public void testSessionAndRecorder()
