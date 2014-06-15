@@ -3,10 +3,11 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon;
+package org.jitsi.jirecon.task;
 
 import java.io.IOException;
 
+import org.jitsi.jirecon.JireconEventListener;
 import org.jivesoftware.smack.XMPPConnection;
 
 /**

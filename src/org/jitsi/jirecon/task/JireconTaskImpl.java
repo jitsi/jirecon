@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon;
+package org.jitsi.jirecon.task;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,9 +14,11 @@ import java.util.Map.Entry;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
+import org.jitsi.jirecon.JireconEvent;
+import org.jitsi.jirecon.JireconEventListener;
 import org.jitsi.jirecon.dtlscontrol.*;
-import org.jitsi.jirecon.recorder.*;
-import org.jitsi.jirecon.session.*;
+import org.jitsi.jirecon.task.recorder.*;
+import org.jitsi.jirecon.task.session.*;
 import org.jitsi.jirecon.transport.*;
 import org.jitsi.jirecon.utils.*;
 import org.jitsi.service.neomedia.*;
@@ -125,8 +127,6 @@ public class JireconTaskImpl
             Map<MediaFormat, Byte> formatAndDynamicPTs = sessionInfo.getFormatAndPayloadTypes();
             recorder.startRecording(formatAndDynamicPTs, streamConnectors,
                 mediaStreamTargets);
-            
-//            session.writeMetaData();
         }
         catch (BindException e)
         {

@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.recorder;
+package org.jitsi.jirecon.task.recorder;
 
 import java.io.IOException;
 import java.util.Map;

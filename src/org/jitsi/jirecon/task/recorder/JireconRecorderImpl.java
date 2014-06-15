@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.recorder;
+package org.jitsi.jirecon.task.recorder;
 
 import java.io.IOException;
 import java.util.*;
@@ -12,7 +12,7 @@ import java.util.Map.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
-import org.jitsi.jirecon.session.JireconSessionInfo;
+import org.jitsi.jirecon.task.session.JireconSessionInfo;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;

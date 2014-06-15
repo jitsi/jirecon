@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.session;
+package org.jitsi.jirecon.task.session;
 
 // TODO: Rewrite those import statements to package import statement.
 import java.util.*;

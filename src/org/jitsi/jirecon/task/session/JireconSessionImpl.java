@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.session;
+package org.jitsi.jirecon.task.session;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -19,7 +19,7 @@ import net.java.sip.communicator.util.Logger;
 
 import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.extension.MediaExtension;
-import org.jitsi.jirecon.recorder.JireconRecorderInfo;
+import org.jitsi.jirecon.task.recorder.JireconRecorderInfo;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.service.configuration.ConfigurationService;

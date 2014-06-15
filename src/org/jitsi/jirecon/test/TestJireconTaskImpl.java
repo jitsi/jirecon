@@ -9,6 +9,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.extension.*;
+import org.jitsi.jirecon.task.JireconTask;
+import org.jitsi.jirecon.task.JireconTaskImpl;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.*;
@@ -79,7 +81,7 @@ public class TestJireconTaskImpl
             new MediaExtensionProvider());
 
         task = new JireconTaskImpl();
-        String mucJid = "yz6wpjyij2n2vs4i@conference.example.com";
+        String mucJid = "gju0o26ipz3kgldi@conference.example.com";
         task.init(mucJid, connection, savingDir + "/" + mucJid);
     }
 
