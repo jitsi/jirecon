@@ -5,25 +5,19 @@
  */
 package org.jitsi.jirecon.recorder;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.util.*;
 import java.util.Map.*;
 
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
-import org.jitsi.jirecon.recorder.JireconRecorderInfo.JireconRecorderEvent;
 import org.jitsi.jirecon.session.JireconSessionInfo;
-import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
-import org.json.simple.JSONObject;
 
 public class JireconRecorderImpl
     implements JireconRecorder
@@ -42,6 +36,8 @@ public class JireconRecorderImpl
     private JireconRecorderInfo recorderInfo;
 
     private JireconSessionInfo sessionInfo;
+    
+    private JireconRecorderState state = JireconRecorderState.INIT;
 
     private static final Logger logger = Logger
         .getLogger(JireconRecorderImpl.class);
@@ -108,7 +104,7 @@ public class JireconRecorderImpl
         throws OperationFailedException
     {
         logger.info("completeMediaStreams");
-        if (!recorderInfo.readyTo(JireconRecorderEvent.PREPARE_STREAM))
+        if (!readyTo(JireconRecorderEvent.PREPARE_STREAM))
         {
             throw new OperationFailedException(
                 "Could not prepare streams, other reason.",
@@ -144,7 +140,7 @@ public class JireconRecorderImpl
     private void prepareRecorders() throws OperationFailedException
     {
         logger.info("prepareRecorders");
-        if (!recorderInfo.readyTo(JireconRecorderEvent.PREPARE_RECORDER))
+        if (!readyTo(JireconRecorderEvent.PREPARE_RECORDER))
         {
             throw new OperationFailedException(
                 "Could not prepare recorders, streams are not ready.",
@@ -163,7 +159,7 @@ public class JireconRecorderImpl
     private void startReceivingStreams() throws OperationFailedException
     {
         logger.info("startReceiving");
-        if (!recorderInfo.readyTo(JireconRecorderEvent.START_RECEIVING_STREAM))
+        if (!readyTo(JireconRecorderEvent.START_RECEIVING_STREAM))
         {
             throw new OperationFailedException(
                 "Could not start receiving streams, streams are not ready.",
@@ -197,7 +193,7 @@ public class JireconRecorderImpl
         OperationFailedException
     {
         logger.info("startRecording");
-        if (!recorderInfo.readyTo(JireconRecorderEvent.START_RECORDING_STREAM))
+        if (!readyTo(JireconRecorderEvent.START_RECORDING_STREAM))
         {
             throw new OperationFailedException(
                 "Could not start recording streams, recorders are not ready.",
@@ -218,7 +214,7 @@ public class JireconRecorderImpl
     private void stopRecordingStreams() throws OperationFailedException
     {
         logger.info("stopRecording");
-        if (!recorderInfo.readyTo(JireconRecorderEvent.STOP_RECORDING_STREAM))
+        if (!readyTo(JireconRecorderEvent.STOP_RECORDING_STREAM))
         {
             throw new OperationFailedException(
                 "Could not stop recording streams, streams are not been recording.",
@@ -236,7 +232,7 @@ public class JireconRecorderImpl
     private void stopReceivingStreams() throws OperationFailedException
     {
         logger.info("stopRecording");
-        if (!recorderInfo.readyTo(JireconRecorderEvent.STOP_RECEIVING_STREAM))
+        if (!readyTo(JireconRecorderEvent.STOP_RECEIVING_STREAM))
         {
             throw new OperationFailedException(
                 "Could not stop receiving streams, streams are not been receiving.",
@@ -283,11 +279,6 @@ public class JireconRecorderImpl
         rtpTranslators.put(mediaType, translator);
 
         return translator;
-    }
-
-    private void updateState(JireconRecorderEvent evt)
-    {
-        recorderInfo.updateState(evt);
     }
 
     private long getAssociatedSsrc(long ssrc, MediaType mediaType)
@@ -364,4 +355,77 @@ public class JireconRecorderImpl
         }
     }
 
+    private void updateState(JireconRecorderEvent evt)
+    {
+        switch (evt)
+        {
+        case PREPARE_STREAM:
+            state = JireconRecorderState.STREAM_READY;
+            break;
+        case PREPARE_RECORDER:
+            state = JireconRecorderState.RECORDER_READY;
+            break;
+        case START_RECEIVING_STREAM:
+            state = JireconRecorderState.RECEIVING_STREAM;
+            break;
+        case START_RECORDING_STREAM:
+            state = JireconRecorderState.RECORDING_STREAM;
+            break;
+        case STOP_RECEIVING_STREAM:
+            state = JireconRecorderState.STREAM_READY;
+            break;
+        case STOP_RECORDING_STREAM:
+            state = JireconRecorderState.RECORDER_READY;
+            break;
+        }
+    }
+
+    private boolean readyTo(JireconRecorderEvent evt)
+        throws OperationFailedException
+    {
+        switch (evt)
+        {
+        case PREPARE_STREAM:
+            if (JireconRecorderState.INIT != state)
+                return false;
+            break;
+        case START_RECEIVING_STREAM:
+            if (JireconRecorderState.STREAM_READY != state)
+                return false;
+            break;
+        case PREPARE_RECORDER:
+            if (JireconRecorderState.RECEIVING_STREAM != state)
+                return false;
+            break;
+        case START_RECORDING_STREAM:
+            if (JireconRecorderState.RECORDER_READY != state)
+                return false;
+            break;
+        case STOP_RECEIVING_STREAM:
+            if (JireconRecorderState.RECEIVING_STREAM != state)
+                return false;
+            break;
+        case STOP_RECORDING_STREAM:
+            if (JireconRecorderState.RECORDING_STREAM != state)
+                return false;
+            break;
+        }
+        return true;
+    }
+
+    private enum JireconRecorderEvent
+    {
+        PREPARE_STREAM,
+        PREPARE_RECORDER,
+        START_RECEIVING_STREAM,
+        STOP_RECEIVING_STREAM,
+        START_RECORDING_STREAM,
+        STOP_RECORDING_STREAM
+    }
+
+    private enum JireconRecorderState
+    {
+        INIT, STREAM_READY, RECEIVING_STREAM, RECORDER_READY, RECORDING_STREAM,
+    }
+    
 }
