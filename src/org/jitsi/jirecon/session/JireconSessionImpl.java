@@ -20,20 +20,17 @@ import net.java.sip.communicator.util.Logger;
 import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.extension.MediaExtension;
 import org.jitsi.jirecon.recorder.JireconRecorderInfo;
-import org.jitsi.jirecon.session.JireconSessionInfo.JireconSessionEvent;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
-import org.jitsi.service.neomedia.recording.RecorderEvent;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.filter.PacketFilter;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smackx.muc.MultiUserChat;
 import org.jivesoftware.smackx.packet.MUCUser;
-import org.json.simple.JSONObject;
 
 /**
  * This class is responsible for managing a Jingle session and extract some
@@ -52,6 +49,8 @@ public class JireconSessionImpl
     private JireconSessionInfo sessionInfo;
 
     private JireconRecorderInfo recorderInfo;
+
+    private JireconSessionState state = JireconSessionState.INIT;
 
     private static final Logger logger = Logger
         .getLogger(JireconSessionImpl.class);
@@ -146,7 +145,7 @@ public class JireconSessionImpl
     private void joinMUC() throws XMPPException, OperationFailedException
     {
         logger.info("joinMUC");
-        if (!sessionInfo.readyTo(JireconSessionEvent.JOIN_MUC))
+        if (!readyTo(JireconSessionEvent.JOIN_MUC))
         {
             throw new OperationFailedException(
                 "Could not join conference, other reason.",
@@ -161,7 +160,7 @@ public class JireconSessionImpl
     private void leaveMUC() throws OperationFailedException
     {
         logger.info("leaveMUC");
-        if (!sessionInfo.readyTo(JireconSessionEvent.LEAVE_MUC))
+        if (!readyTo(JireconSessionEvent.LEAVE_MUC))
         {
             throw new OperationFailedException(
                 "Could not leave conference, not in conference.",
@@ -182,7 +181,7 @@ public class JireconSessionImpl
         throws OperationFailedException
     {
         logger.info("sendAcceptPacket");
-        if (!sessionInfo.readyTo(JireconSessionEvent.SEND_SESSION_ACCEPT))
+        if (!readyTo(JireconSessionEvent.SEND_SESSION_ACCEPT))
         {
             throw new OperationFailedException(
                 "Could not send session-accept, haven't gotten session-init.",
@@ -206,7 +205,7 @@ public class JireconSessionImpl
         throws OperationFailedException
     {
         logger.info("sendByePacket");
-        if (!sessionInfo.readyTo(JireconSessionEvent.SEND_SESSION_TERMINATE))
+        if (!readyTo(JireconSessionEvent.SEND_SESSION_TERMINATE))
         {
             throw new OperationFailedException(
                 "Could not send session-terminate, session hasn't been built.",
@@ -231,7 +230,7 @@ public class JireconSessionImpl
     private JingleIQ waitForInitPacket() throws OperationFailedException
     {
         logger.info("waitForInitPacket");
-        if (!sessionInfo.readyTo(JireconSessionEvent.WAIT_SESSION_INIT))
+        if (!readyTo(JireconSessionEvent.WAIT_SESSION_INIT))
         {
             throw new OperationFailedException(
                 "Could not wait for session-init, hasn't joined conference.",
@@ -299,7 +298,7 @@ public class JireconSessionImpl
     private void waitForAckPacket() throws OperationFailedException
     {
         logger.info("waitForAckPacket");
-        if (!sessionInfo.readyTo(JireconSessionEvent.WAIT_SESSION_ACK))
+        if (!readyTo(JireconSessionEvent.WAIT_SESSION_ACK))
         {
             throw new OperationFailedException(
                 "Could not wait for session-ack, hasn't sent session-init.",
@@ -513,11 +512,6 @@ public class JireconSessionImpl
         }
     }
 
-    private void updateState(JireconSessionEvent evt)
-    {
-        sessionInfo.updateState(evt);
-    }
-
     private void addPacketSendingListener()
     {
         connection.addPacketSendingListener(new PacketListener()
@@ -611,6 +605,78 @@ public class JireconSessionImpl
         {
             metaFileWriter.close();
         }
+    }
+
+    private boolean readyTo(JireconSessionEvent evt)
+    {
+        switch (evt)
+        {
+        case JOIN_MUC:
+            if (JireconSessionState.INIT != state)
+                return false;
+            break;
+        case LEAVE_MUC:
+            if (JireconSessionState.IN_CONFERENCE != state)
+                return false;
+            break;
+        case SEND_SESSION_ACCEPT:
+            if (JireconSessionState.GOT_SESSION_INIT != state)
+                return false;
+            break;
+        case SEND_SESSION_TERMINATE:
+            if (JireconSessionState.CONNECTED != state)
+                return false;
+            break;
+        case WAIT_SESSION_ACK:
+            if (JireconSessionState.SENT_SESSION_ACCEPT != state)
+                return false;
+            break;
+        case WAIT_SESSION_INIT:
+            if (JireconSessionState.IN_CONFERENCE != state)
+                return false;
+            break;
+        }
+        return true;
+    }
+
+    private void updateState(JireconSessionEvent evt)
+    {
+        switch (evt)
+        {
+        case JOIN_MUC:
+            state = JireconSessionState.IN_CONFERENCE;
+            break;
+        case LEAVE_MUC:
+            state = JireconSessionState.INIT;
+            break;
+        case SEND_SESSION_ACCEPT:
+            state = JireconSessionState.SENT_SESSION_ACCEPT;
+            break;
+        case SEND_SESSION_TERMINATE:
+            state = JireconSessionState.IN_CONFERENCE;
+            break;
+        case WAIT_SESSION_ACK:
+            state = JireconSessionState.CONNECTED;
+            break;
+        case WAIT_SESSION_INIT:
+            state = JireconSessionState.GOT_SESSION_INIT;
+            break;
+        }
+    }
+
+    private enum JireconSessionEvent
+    {
+        JOIN_MUC,
+        LEAVE_MUC,
+        SEND_SESSION_ACCEPT,
+        SEND_SESSION_TERMINATE,
+        WAIT_SESSION_INIT,
+        WAIT_SESSION_ACK,
+    }
+
+    private enum JireconSessionState
+    {
+        INIT, IN_CONFERENCE, GOT_SESSION_INIT, SENT_SESSION_ACCEPT, CONNECTED,
     }
 
     private interface JireconSessionPacketListener
