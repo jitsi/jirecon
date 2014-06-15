@@ -49,7 +49,9 @@ public class JireconSessionImpl
 
     private MultiUserChat conference;
 
-    private JireconSessionInfo sessionInfo = new JireconSessionInfo();
+    private JireconSessionInfo sessionInfo;
+
+    private JireconRecorderInfo recorderInfo;
 
     private static final Logger logger = Logger
         .getLogger(JireconSessionImpl.class);
@@ -57,16 +59,20 @@ public class JireconSessionImpl
     private final static String NICK_KEY = "JIRECON_NICKNAME";
 
     private String NICK = "default";
-    
+
     private String SAVING_DIR;
 
     private List<JireconSessionPacketListener> packetListeners =
         new ArrayList<JireconSessionPacketListener>();
 
-    public JireconSessionImpl(XMPPConnection connection, String conferenceJid, String SAVING_DIR)
+    public JireconSessionImpl(XMPPConnection connection, String conferenceJid,
+        String SAVING_DIR, JireconSessionInfo sessionInfo,
+        JireconRecorderInfo recorderInfo)
     {
         logger.setLevelDebug();
         this.SAVING_DIR = SAVING_DIR;
+        this.sessionInfo = sessionInfo;
+        this.recorderInfo = recorderInfo;
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         this.NICK = configuration.getString(NICK_KEY);
         this.connection = connection;
@@ -98,21 +104,6 @@ public class JireconSessionImpl
         OperationFailedException,
         IOException
     {
-        // Remove the suffix '/' in SAVE_DIR
-        // if ('/' == SAVE_DIR.charAt(SAVE_DIR.length() - 1))
-        // {
-        // SAVE_DIR = SAVE_DIR.substring(0, SAVE_DIR.length() - 1);
-        // }
-        // String filename = SAVE_DIR + "/meta";
-        // metaFile = new File(filename);
-        // if (!metaFile.createNewFile())
-        // throw new IOException("File exists or cannot be created: "
-        // + metaFile);
-        //
-        // if (!metaFile.canWrite())
-        // throw new IOException("Cannot write to file: " + metaFile);
-        // metaFileWriter = new FileWriter(metaFile, false);
-
         joinMUC();
         JingleIQ initIq = waitForInitPacket();
         recordSessionInfo(initIq);

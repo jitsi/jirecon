@@ -16,6 +16,7 @@ import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
 import org.jitsi.jirecon.recorder.JireconRecorderInfo.JireconRecorderEvent;
+import org.jitsi.jirecon.session.JireconSessionInfo;
 import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
@@ -38,18 +39,23 @@ public class JireconRecorderImpl
     private Map<MediaType, Recorder> recorders =
         new HashMap<MediaType, Recorder>();
 
-    private JireconRecorderInfo recorderInfo = new JireconRecorderInfo();
+    private JireconRecorderInfo recorderInfo;
+
+    private JireconSessionInfo sessionInfo;
 
     private static final Logger logger = Logger
         .getLogger(JireconRecorderImpl.class);
 
     private final String SAVING_DIR;
 
-    public JireconRecorderImpl(String SAVING_DIR)
+    public JireconRecorderImpl(String SAVING_DIR,
+        JireconRecorderInfo recorderInfo, JireconSessionInfo sessionInfo)
     {
         // Have to make sure that Libjitsi has been started.
         this.mediaService = LibJitsi.getMediaService();
         this.SAVING_DIR = SAVING_DIR;
+        this.recorderInfo = recorderInfo;
+        this.sessionInfo = sessionInfo;
         createMediaStreams();
     }
 
@@ -198,12 +204,12 @@ public class JireconRecorderImpl
                 OperationFailedException.GENERAL_ERROR);
         }
 
-//        RecorderEventHandler eventHandler =
-//            new JireconRecorderEventHandler(SAVING_DIR + "/meta");
+        RecorderEventHandler eventHandler =
+            new JireconRecorderEventHandler(SAVING_DIR + "/meta");
         for (Entry<MediaType, Recorder> e : recorders.entrySet())
         {
-            e.getValue().start("useless", SAVING_DIR);
-//            e.getValue().setEventHandler(eventHandler);
+            e.getValue().setEventHandler(eventHandler);
+            e.getValue().start(e.getKey().toString(), SAVING_DIR);
         }
 
         updateState(JireconRecorderEvent.START_RECORDING_STREAM);
@@ -284,24 +290,44 @@ public class JireconRecorderImpl
         recorderInfo.updateState(evt);
     }
 
+    private long getAssociatedSsrc(long ssrc, MediaType mediaType)
+    {
+        Map<String, Map<MediaType, String>> participants =
+            sessionInfo.getParticipantsSsrcs();
+
+        if (null == participants)
+            return -1;
+        
+        for (Entry<String, Map<MediaType, String>> e : participants.entrySet())
+        {
+            System.out.println(e.getKey() + " audio " + e.getValue().get(MediaType.AUDIO));
+            System.out.println(e.getKey() + " video " + e.getValue().get(MediaType.VIDEO));
+        }
+
+        for (Entry<String, Map<MediaType, String>> e : participants.entrySet())
+        {
+            System.out.println(ssrc + " " + Long.valueOf(e.getValue().get(mediaType)));
+            if ((ssrc - Long.valueOf(e.getValue().get(mediaType))) == 0)
+            {
+                if (mediaType.equals(MediaType.AUDIO))
+                    return Long.valueOf(e.getValue().get(MediaType.VIDEO));
+                else if (mediaType.equals(MediaType.VIDEO))
+                    return Long.valueOf(e.getValue().get(MediaType.AUDIO));
+            }
+        }
+
+        return -1;
+    }
+
     private class JireconRecorderEventHandler
         implements RecorderEventHandler
     {
-        private File metaFile;
-
-        private Map<MediaType, List<RecorderEvent>> recorderEvents =
-            new HashMap<MediaType, List<RecorderEvent>>();
+        private RecorderEventHandler handler;
 
         public JireconRecorderEventHandler(String filename)
             throws IOException
         {
-            metaFile = new File(filename);
-            if (!metaFile.createNewFile())
-                throw new IOException("File exists or cannot be created: "
-                    + metaFile);
-
-            if (!metaFile.canWrite())
-                throw new IOException("Cannot write to file: " + metaFile);
+            handler = new RecorderEventHandlerJSONImpl(filename);
         }
 
         @Override
@@ -311,83 +337,31 @@ public class JireconRecorderImpl
         }
 
         @Override
-        public synchronized boolean handleEvent(RecorderEvent evt)
+        public synchronized boolean handleEvent(RecorderEvent event)
         {
-            System.out.println(evt + " " + evt.getAudioSsrc() + " "
-                + evt.getSsrc() + " " + evt.getFilename());
+            System.out.println(event + " ssrc:" + event.getSsrc());
+            RecorderEvent.Type type = event.getType();
 
-            MediaType mediaType = evt.getMediaType();
-            RecorderEvent.Type type = evt.getType();
-            long duration = evt.getDuration();
-            long ssrc = evt.getSsrc();
-
-            if (RecorderEvent.Type.RECORDING_STARTED.equals(type))
+            if (RecorderEvent.Type.SPEAKER_CHANGED.equals(type))
             {
-                saveRecorderEvent(evt);
-                return true;
-            }
-
-            /*
-             * For a RECORDING_ENDED event without a valid instant, find it's
-             * associated (i.e. with the same SSRC) RECORDING_STARTED event and
-             * compute the RECORDING_ENDED instance based on its duration.
-             */
-            if (RecorderEvent.Type.RECORDING_ENDED.equals(type))
-            {
-                if (evt.getInstant() == -1 && duration != -1)
+                System.out.println("SPEAKER_CHANGED audio ssrc: " + event.getAudioSsrc());
+                long audioSsrc = event.getAudioSsrc();
+                long videoSsrc = getAssociatedSsrc(audioSsrc, MediaType.AUDIO);
+                if (videoSsrc < 0)
                 {
-                    List<RecorderEvent> events = recorderEvents.get(mediaType);
+                    logger
+                        .fatal("Could not find video SSRC associated with audioSsrc="
+                            + audioSsrc);
 
-                    RecorderEvent start = null;
-                    for (RecorderEvent e : events)
-                    {
-                        if (RecorderEvent.Type.RECORDING_STARTED.equals(e
-                            .getType()) && e.getSsrc() == ssrc)
-                        {
-                            start = e;
-                            break;
-                        }
-                    }
-
-                    if (start != null)
-                        evt.setInstant(start.getInstant() + duration);
-                }
-
-                try
-                {
-                    writeMetaData(evt);
-                }
-                catch (IOException e)
-                {
-                    logger.warn("Failed to write recorder events to file: ", e);
+                    // don't write events without proper 'ssrc' values
                     return false;
                 }
+
+                // for the moment just use the first SSRC
+                event.setSsrc(videoSsrc);
             }
-
-            return true;
+            return handler.handleEvent(event);
         }
-
-        private void saveRecorderEvent(RecorderEvent evt)
-        {
-            MediaType mediaType = evt.getMediaType();
-            if (!recorderEvents.containsKey(mediaType))
-            {
-                recorderEvents.put(mediaType, new ArrayList<RecorderEvent>());
-            }
-
-            List<RecorderEvent> evtList = recorderEvents.get(mediaType);
-            evtList.add(evt);
-        }
-
-        private void writeMetaData(RecorderEvent evt) throws IOException
-        {
-            FileWriter writer = null;
-            writer = new FileWriter(metaFile, true);
-            writer.write(evt.getMediaType() + " " + evt.getSsrc() + "\n");
-            writer.close();
-        }
-
-        
     }
 
 }

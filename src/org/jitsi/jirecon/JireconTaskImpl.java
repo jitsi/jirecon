@@ -5,6 +5,7 @@
  */
 package org.jitsi.jirecon;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
 import java.util.*;
@@ -55,11 +56,15 @@ public class JireconTaskImpl
         logger.setLevelAll();
         logger.debug(this.getClass() + " init");
         
+        new File(savingDir).mkdir();
+        
         transport = new JireconIceUdpTransportManagerImpl();
         srtpControl = new JireconDtlsControlManagerImpl();
+        JireconSessionInfo sessionInfo = new JireconSessionInfo();
+        JireconRecorderInfo recorderInfo = new JireconRecorderInfo();
         session =
-            new JireconSessionImpl(connection, conferenceJid, savingDir);
-        recorder = new JireconRecorderImpl(savingDir);
+            new JireconSessionImpl(connection, conferenceJid, savingDir, sessionInfo, recorderInfo);
+        recorder = new JireconRecorderImpl(savingDir, recorderInfo, sessionInfo);
         updateState(JireconTaskState.INITIATED);
     }
 
@@ -121,7 +126,7 @@ public class JireconTaskImpl
             recorder.startRecording(formatAndDynamicPTs, streamConnectors,
                 mediaStreamTargets);
             
-            session.writeMetaData();
+//            session.writeMetaData();
         }
         catch (BindException e)
         {

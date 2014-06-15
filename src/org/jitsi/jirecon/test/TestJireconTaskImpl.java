@@ -81,7 +81,7 @@ public class TestJireconTaskImpl
             new MediaExtensionProvider());
 
         task = new JireconTaskImpl();
-        String mucJid = "d2eod5y1vopc766r@conference.example.com";
+        String mucJid = "tydc1bx5uioirudi@conference.example.com";
         task.init(mucJid, connection, savingDir + "/" + mucJid);
     }
 
@@ -90,7 +90,7 @@ public class TestJireconTaskImpl
         task.start();
         try
         {
-            Thread.sleep(20000);
+            Thread.sleep(60000);
         }
         catch (InterruptedException e)
         {
