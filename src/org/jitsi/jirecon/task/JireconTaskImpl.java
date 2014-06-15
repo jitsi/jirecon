@@ -46,27 +46,31 @@ public class JireconTaskImpl
 
     private JireconRecorder recorder;
 
+    private JireconTaskSharingInfo sharingInfo;
+
     private JireconTaskInfo info = new JireconTaskInfo();
-    
+
     private static final Logger logger = Logger
         .getLogger(JireconTaskImpl.class);
-    
+
     @Override
-    public void init(String conferenceJid,
-        XMPPConnection connection, String savingDir)
+    public void init(String conferenceJid, XMPPConnection connection,
+        String savingDir)
     {
         logger.setLevelAll();
         logger.debug(this.getClass() + " init");
-        
+
         new File(savingDir).mkdir();
-        
+
         transport = new JireconIceUdpTransportManagerImpl();
         srtpControl = new JireconDtlsControlManagerImpl();
-        JireconSessionInfo sessionInfo = new JireconSessionInfo();
-        JireconRecorderInfo recorderInfo = new JireconRecorderInfo();
+        sharingInfo = new JireconTaskSharingInfo();
+        // JireconSessionInfo sessionInfo = new JireconSessionInfo();
+        // JireconRecorderInfo recorderInfo = new JireconRecorderInfo();
         session =
-            new JireconSessionImpl(connection, conferenceJid, savingDir, sessionInfo, recorderInfo);
-        recorder = new JireconRecorderImpl(savingDir, recorderInfo, sessionInfo);
+            new JireconSessionImpl(connection, conferenceJid, savingDir,
+                sharingInfo);
+        recorder = new JireconRecorderImpl(savingDir, sharingInfo);
         updateState(JireconTaskState.INITIATED);
     }
 
@@ -87,11 +91,9 @@ public class JireconTaskImpl
         {
             transport.harvestLocalCandidates();
 
-            JireconSessionInfo sessionInfo = session.getSessionInfo();
-            JireconRecorderInfo recorderInfo = recorder.getRecorderInfo();
-            JingleIQ initIq =
-                session.connect(sessionInfo, recorderInfo, transport,
-                    srtpControl);
+            // JireconSessionInfo sessionInfo = session.getSessionInfo();
+            // JireconRecorderInfo recorderInfo = recorder.getRecorderInfo();
+            JingleIQ initIq = session.connect(transport, srtpControl);
 
             Map<MediaType, String> fingerprints =
                 JinglePacketParser.getFingerprint(initIq);
@@ -124,7 +126,8 @@ public class JireconTaskImpl
                     transport.getStreamTarget(mediaType);
                 mediaStreamTargets.put(mediaType, mediaStreamTarget);
             }
-            Map<MediaFormat, Byte> formatAndDynamicPTs = sessionInfo.getFormatAndPayloadTypes();
+            Map<MediaFormat, Byte> formatAndDynamicPTs =
+                sharingInfo.getFormatAndPayloadTypes();
             recorder.startRecording(formatAndDynamicPTs, streamConnectors,
                 mediaStreamTargets);
         }

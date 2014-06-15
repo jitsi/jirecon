@@ -11,21 +11,19 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.jirecon.dtlscontrol.*;
-import org.jitsi.jirecon.task.recorder.*;
 import org.jitsi.jirecon.transport.*;
 import org.jivesoftware.smack.*;
 
 public interface JireconSession
 {
-    public JingleIQ connect(JireconSessionInfo sessionInfo,
-        JireconRecorderInfo recorderInfo,
-        JireconTransportManager transportManager,
-        JireconSrtpControlManager srtpControlManager) throws XMPPException, OperationFailedException, IOException;
-    
+    public JingleIQ connect(JireconTransportManager transportManager,
+        JireconSrtpControlManager srtpControlManager)
+        throws XMPPException,
+        OperationFailedException,
+        IOException;
+
     public void disconnect(Reason reason, String reasonText);
 
-    public JireconSessionInfo getSessionInfo();
-    
     public void writeMetaData() throws IOException;
 
     // public void addEventListener(JireconEventListener listener);

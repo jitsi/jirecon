@@ -1,25 +1,19 @@
-/*
- * Jirecon, the Jitsi recorder container.
- * 
- * Distributable under LGPL license. See terms of license at gnu.org.
- */
-package org.jitsi.jirecon.task.session;
+package org.jitsi.jirecon.task;
 
-// TODO: Rewrite those import statements to package import statement.
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.Map.Entry;
 
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.MediaFormat;
 
-/**
- * This class is used to pack information of Jingle session.
- * 
- * @author lishunyang
- * 
- */
-public class JireconSessionInfo
+public class JireconTaskSharingInfo
 {
+    private Map<MediaType, Long> localSsrcs = new HashMap<MediaType, Long>();
+
+    private String msLabel = UUID.randomUUID().toString();
+    
     private String localJid;
 
     // Where we send packet to(actually is mucJid)
@@ -35,7 +29,32 @@ public class JireconSessionInfo
 
     private Map<String, ParticipantInfo> participantsInfo =
         new HashMap<String, ParticipantInfo>();
+    
+    public void addLocalSsrc(MediaType mediaType, Long ssrc)
+    {
+        localSsrcs.put(mediaType, ssrc);
+    }
 
+    public Long getLocalSsrc(MediaType mediaType)
+    {
+        return localSsrcs.get(mediaType);
+    }
+
+    public String getMsLabel()
+    {
+        return msLabel;
+    }
+
+    public String getLabel(MediaType mediaType)
+    {
+        return mediaType.toString();
+    }
+
+    public String getMsid(MediaType mediaType)
+    {
+        return msLabel + " " + getLabel(mediaType);
+    }
+    
     public void addFormatAndPayloadType(MediaFormat format, byte payloadTypeId)
     {
         formatAndPayloadTypes.put(format, payloadTypeId);
@@ -164,7 +183,7 @@ public class JireconSessionInfo
         else
             return null;
     }
-
+    
     public class ParticipantInfo
     {
         private String fingerprint;

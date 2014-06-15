@@ -24,8 +24,6 @@ public interface JireconRecorder
 
     public void stopRecording();
 
-    public JireconRecorderInfo getRecorderInfo();
-
     // public JireconRecorderState getState();
 
     // public void addEventListener(JireconEventListener listener);

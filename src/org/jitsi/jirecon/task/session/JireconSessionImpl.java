@@ -19,7 +19,7 @@ import net.java.sip.communicator.util.Logger;
 
 import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.extension.MediaExtension;
-import org.jitsi.jirecon.task.recorder.JireconRecorderInfo;
+import org.jitsi.jirecon.task.JireconTaskSharingInfo;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.service.configuration.ConfigurationService;
@@ -46,9 +46,7 @@ public class JireconSessionImpl
 
     private MultiUserChat conference;
 
-    private JireconSessionInfo sessionInfo;
-
-    private JireconRecorderInfo recorderInfo;
+    private JireconTaskSharingInfo sharingInfo;
 
     private JireconSessionState state = JireconSessionState.INIT;
 
@@ -65,17 +63,15 @@ public class JireconSessionImpl
         new ArrayList<JireconSessionPacketListener>();
 
     public JireconSessionImpl(XMPPConnection connection, String conferenceJid,
-        String SAVING_DIR, JireconSessionInfo sessionInfo,
-        JireconRecorderInfo recorderInfo)
+        String SAVING_DIR, JireconTaskSharingInfo sharingInfo)
     {
         logger.setLevelDebug();
         this.SAVING_DIR = SAVING_DIR;
-        this.sessionInfo = sessionInfo;
-        this.recorderInfo = recorderInfo;
+        this.sharingInfo = sharingInfo;
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         this.NICK = configuration.getString(NICK_KEY);
         this.connection = connection;
-        this.sessionInfo.setMucJid(conferenceJid);
+        this.sharingInfo.setMucJid(conferenceJid);
 
         addPacketSendingListener();
         addPacketReceivingListener();
@@ -95,9 +91,7 @@ public class JireconSessionImpl
     }
 
     @Override
-    public JingleIQ connect(JireconSessionInfo sessionInfo,
-        JireconRecorderInfo recorderInfo,
-        JireconTransportManager transportManager,
+    public JingleIQ connect(JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager)
         throws XMPPException,
         OperationFailedException,
@@ -107,8 +101,7 @@ public class JireconSessionImpl
         JingleIQ initIq = waitForInitPacket();
         recordSessionInfo(initIq);
         sendAck(initIq);
-        sendAccpetPacket(initIq, sessionInfo, recorderInfo, transportManager,
-            srtpControlManager);
+        sendAccpetPacket(initIq, transportManager, srtpControlManager);
         waitForAckPacket();
 
         return initIq;
@@ -136,12 +129,6 @@ public class JireconSessionImpl
         }
     }
 
-    @Override
-    public JireconSessionInfo getSessionInfo()
-    {
-        return sessionInfo;
-    }
-
     private void joinMUC() throws XMPPException, OperationFailedException
     {
         logger.info("joinMUC");
@@ -152,7 +139,7 @@ public class JireconSessionImpl
                 OperationFailedException.GENERAL_ERROR);
         }
 
-        conference = new MultiUserChat(connection, sessionInfo.getMucJid());
+        conference = new MultiUserChat(connection, sharingInfo.getMucJid());
         conference.join(NICK);
         updateState(JireconSessionEvent.JOIN_MUC);
     }
@@ -175,7 +162,6 @@ public class JireconSessionImpl
     }
 
     private void sendAccpetPacket(JingleIQ initIq,
-        JireconSessionInfo sessionInfo, JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager)
         throws OperationFailedException
@@ -189,8 +175,7 @@ public class JireconSessionImpl
         }
 
         JingleIQ acceptPacket =
-            createAcceptPacket(initIq, sessionInfo, recorderInfo,
-                transportManager, srtpControlManager);
+            createAcceptPacket(initIq, transportManager, srtpControlManager);
         connection.sendPacket(acceptPacket);
         updateState(JireconSessionEvent.SEND_SESSION_ACCEPT);
     }
@@ -213,17 +198,17 @@ public class JireconSessionImpl
         }
 
         connection.sendPacket(JinglePacketFactory.createSessionTerminate(
-            sessionInfo.getLocalJid(), sessionInfo.getRemoteJid(),
-            sessionInfo.getSid(), reason, reasonText));
+            sharingInfo.getLocalJid(), sharingInfo.getRemoteJid(),
+            sharingInfo.getSid(), reason, reasonText));
         updateState(JireconSessionEvent.SEND_SESSION_TERMINATE);
     }
 
     private void recordSessionInfo(JingleIQ jiq)
     {
-        sessionInfo.setLocalJid(jiq.getTo());
-        sessionInfo.setRemoteJid(jiq.getFrom());
-        sessionInfo.setSid(jiq.getSID());
-        sessionInfo.setFormatAndPayloadTypes(JinglePacketParser
+        sharingInfo.setLocalJid(jiq.getTo());
+        sharingInfo.setRemoteJid(jiq.getFrom());
+        sharingInfo.setSid(jiq.getSID());
+        sharingInfo.setFormatAndPayloadTypes(JinglePacketParser
             .getFormatAndDynamicPTs(jiq));
     }
 
@@ -385,12 +370,11 @@ public class JireconSessionImpl
                     participantSsrcs.put(mediaType, ssrc);
                 }
             }
-            sessionInfo.setParticipantSsrcs(participantJid, participantSsrcs);
+            sharingInfo.setParticipantSsrcs(participantJid, participantSsrcs);
         }
     }
 
     private JingleIQ createAcceptPacket(JingleIQ initIq,
-        JireconSessionInfo sessionInfo, JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager)
     {
@@ -407,22 +391,19 @@ public class JireconSessionImpl
 
             ContentPacketExtension initIqContent =
                 JinglePacketParser.getContentPacketExt(initIq, mediaType);
-            contents
-                .add(createContentPacketExtension(mediaType, initIqContent,
-                    sessionInfo, recorderInfo, transportManager,
-                    srtpControlManager));
+            contents.add(createContentPacketExtension(mediaType, initIqContent,
+                transportManager, srtpControlManager));
         }
 
         JingleIQ acceptJiq =
-            JinglePacketFactory.createSessionAccept(sessionInfo.getLocalJid(),
-                sessionInfo.getRemoteJid(), sessionInfo.getSid(), contents);
+            JinglePacketFactory.createSessionAccept(sharingInfo.getLocalJid(),
+                sharingInfo.getRemoteJid(), sharingInfo.getSid(), contents);
 
         return acceptJiq;
     }
 
     private ContentPacketExtension createContentPacketExtension(
         MediaType mediaType, ContentPacketExtension initIqContent,
-        JireconSessionInfo sessionInfo, JireconRecorderInfo recorderInfo,
         JireconTransportManager transportManager,
         JireconSrtpControlManager srtpControlManager)
     {
@@ -447,7 +428,7 @@ public class JireconSessionImpl
 
         List<PayloadTypePacketExtension> payloadTypes =
             new ArrayList<PayloadTypePacketExtension>();
-        for (Map.Entry<MediaFormat, Byte> e : sessionInfo
+        for (Map.Entry<MediaFormat, Byte> e : sharingInfo
             .getFormatAndPayloadTypes(mediaType).entrySet())
         {
             PayloadTypePacketExtension payloadType =
@@ -481,17 +462,17 @@ public class JireconSessionImpl
         }
         SourcePacketExtension sourcePacketExtension =
             new SourcePacketExtension();
-        description.setSsrc(recorderInfo.getLocalSsrc(mediaType).toString());
+        description.setSsrc(sharingInfo.getLocalSsrc(mediaType).toString());
 
-        sourcePacketExtension.setSSRC(recorderInfo.getLocalSsrc(mediaType));
+        sourcePacketExtension.setSSRC(sharingInfo.getLocalSsrc(mediaType));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
             "cname", LibJitsi.getMediaService().getRtpCname()));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
-            "msid", recorderInfo.getMsid(mediaType)));
+            "msid", sharingInfo.getMsid(mediaType)));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
-            "mslabel", recorderInfo.getMsLabel()));
+            "mslabel", sharingInfo.getMsLabel()));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
-            "label", recorderInfo.getLabel(mediaType)));
+            "label", sharingInfo.getLabel(mediaType)));
         description.addChildExtension(sourcePacketExtension);
 
         ContentPacketExtension content = new ContentPacketExtension();
@@ -549,11 +530,11 @@ public class JireconSessionImpl
             @Override
             public boolean accept(Packet packet)
             {
-                if (null != sessionInfo.getLocalJid()
-                    && !packet.getTo().equals(sessionInfo.getLocalJid()))
+                if (null != sharingInfo.getLocalJid()
+                    && !packet.getTo().equals(sharingInfo.getLocalJid()))
                 {
                     logger.fatal("packet failed: to " + packet.getTo()
-                        + ", but we are " + sessionInfo.getLocalJid());
+                        + ", but we are " + sharingInfo.getLocalJid());
                     return false;
                 }
                 return true;
@@ -579,7 +560,7 @@ public class JireconSessionImpl
         try
         {
             Map<String, Map<MediaType, String>> participantsSscrs =
-                sessionInfo.getParticipantsSsrcs();
+                sharingInfo.getParticipantsSsrcs();
             if (null != participantsSscrs)
             {
                 int i = 0;

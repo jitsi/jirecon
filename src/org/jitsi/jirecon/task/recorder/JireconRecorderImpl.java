@@ -12,7 +12,7 @@ import java.util.Map.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
-import org.jitsi.jirecon.task.session.JireconSessionInfo;
+import org.jitsi.jirecon.task.JireconTaskSharingInfo;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -33,10 +33,8 @@ public class JireconRecorderImpl
     private Map<MediaType, Recorder> recorders =
         new HashMap<MediaType, Recorder>();
 
-    private JireconRecorderInfo recorderInfo;
+    private JireconTaskSharingInfo sharingInfo;
 
-    private JireconSessionInfo sessionInfo;
-    
     private JireconRecorderState state = JireconRecorderState.INIT;
 
     private static final Logger logger = Logger
@@ -45,13 +43,12 @@ public class JireconRecorderImpl
     private final String SAVING_DIR;
 
     public JireconRecorderImpl(String SAVING_DIR,
-        JireconRecorderInfo recorderInfo, JireconSessionInfo sessionInfo)
+        JireconTaskSharingInfo sharingInfo)
     {
         // Have to make sure that Libjitsi has been started.
         this.mediaService = LibJitsi.getMediaService();
         this.SAVING_DIR = SAVING_DIR;
-        this.recorderInfo = recorderInfo;
-        this.sessionInfo = sessionInfo;
+        this.sharingInfo = sharingInfo;
         createMediaStreams();
     }
 
@@ -89,12 +86,6 @@ public class JireconRecorderImpl
         {
             e.printStackTrace();
         }
-    }
-
-    @Override
-    public JireconRecorderInfo getRecorderInfo()
-    {
-        return recorderInfo;
     }
 
     private void prepareMediaStreams(
@@ -263,7 +254,7 @@ public class JireconRecorderImpl
 
             stream.setName(mediaType.toString());
             stream.setDirection(MediaDirection.RECVONLY);
-            recorderInfo.addLocalSsrc(mediaType,
+            sharingInfo.addLocalSsrc(mediaType,
                 stream.getLocalSourceID() & 0xFFFFFFFFL);
         }
     }
@@ -284,20 +275,23 @@ public class JireconRecorderImpl
     private long getAssociatedSsrc(long ssrc, MediaType mediaType)
     {
         Map<String, Map<MediaType, String>> participants =
-            sessionInfo.getParticipantsSsrcs();
+            sharingInfo.getParticipantsSsrcs();
 
         if (null == participants)
             return -1;
-        
+
         for (Entry<String, Map<MediaType, String>> e : participants.entrySet())
         {
-            System.out.println(e.getKey() + " audio " + e.getValue().get(MediaType.AUDIO));
-            System.out.println(e.getKey() + " video " + e.getValue().get(MediaType.VIDEO));
+            System.out.println(e.getKey() + " audio "
+                + e.getValue().get(MediaType.AUDIO));
+            System.out.println(e.getKey() + " video "
+                + e.getValue().get(MediaType.VIDEO));
         }
 
         for (Entry<String, Map<MediaType, String>> e : participants.entrySet())
         {
-            System.out.println(ssrc + " " + Long.valueOf(e.getValue().get(mediaType)));
+            System.out.println(ssrc + " "
+                + Long.valueOf(e.getValue().get(mediaType)));
             if ((ssrc - Long.valueOf(e.getValue().get(mediaType))) == 0)
             {
                 if (mediaType.equals(MediaType.AUDIO))
@@ -335,7 +329,8 @@ public class JireconRecorderImpl
 
             if (RecorderEvent.Type.SPEAKER_CHANGED.equals(type))
             {
-                System.out.println("SPEAKER_CHANGED audio ssrc: " + event.getAudioSsrc());
+                System.out.println("SPEAKER_CHANGED audio ssrc: "
+                    + event.getAudioSsrc());
                 long audioSsrc = event.getAudioSsrc();
                 long videoSsrc = getAssociatedSsrc(audioSsrc, MediaType.AUDIO);
                 if (videoSsrc < 0)
@@ -427,5 +422,5 @@ public class JireconRecorderImpl
     {
         INIT, STREAM_READY, RECEIVING_STREAM, RECORDER_READY, RECORDING_STREAM,
     }
-    
+
 }

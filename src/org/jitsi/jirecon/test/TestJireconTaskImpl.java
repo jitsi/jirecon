@@ -81,7 +81,7 @@ public class TestJireconTaskImpl
             new MediaExtensionProvider());
 
         task = new JireconTaskImpl();
-        String mucJid = "gju0o26ipz3kgldi@conference.example.com";
+        String mucJid = "dp6vfpa8oxbt9@conference.example.com";
         task.init(mucJid, connection, savingDir + "/" + mucJid);
     }
 
