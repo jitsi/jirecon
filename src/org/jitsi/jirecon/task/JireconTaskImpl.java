@@ -6,13 +6,11 @@
 package org.jitsi.jirecon.task;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.BindException;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.jirecon.JireconEvent;
 import org.jitsi.jirecon.JireconEventListener;
@@ -33,7 +31,7 @@ import org.jivesoftware.smack.*;
  * 
  */
 public class JireconTaskImpl
-    implements JireconTask, JireconEventListener
+    implements JireconTask, JireconEventListener, Runnable
 {
     private List<JireconEventListener> listeners =
         new ArrayList<JireconEventListener>();
@@ -48,6 +46,10 @@ public class JireconTaskImpl
 
     private JireconTaskSharingInfo sharingInfo;
 
+    private ExecutorService executorService;
+    
+    private boolean isStopped = false;
+
     private JireconTaskInfo info = new JireconTaskInfo();
 
     private static final Logger logger = Logger
@@ -59,18 +61,20 @@ public class JireconTaskImpl
     {
         logger.setLevelAll();
         logger.debug(this.getClass() + " init");
+        executorService =
+            Executors.newSingleThreadExecutor(new HandlerThreadFactory());
 
         new File(savingDir).mkdir();
 
         transport = new JireconIceUdpTransportManagerImpl();
         srtpControl = new JireconDtlsControlManagerImpl();
         sharingInfo = new JireconTaskSharingInfo();
-        // JireconSessionInfo sessionInfo = new JireconSessionInfo();
-        // JireconRecorderInfo recorderInfo = new JireconRecorderInfo();
         session =
             new JireconSessionImpl(connection, conferenceJid, savingDir,
                 sharingInfo);
-        recorder = new JireconRecorderImpl(savingDir, sharingInfo);
+        recorder =
+            new JireconRecorderImpl(savingDir, sharingInfo,
+                srtpControl.getAllSrtpControl());
         updateState(JireconTaskState.INITIATED);
     }
 
@@ -87,12 +91,28 @@ public class JireconTaskImpl
     @Override
     public void start()
     {
+        executorService.execute(this);
+    }
+
+    @Override
+    public void stop()
+    {
+        if (isStopped)
+        {
+            logger.info(this.getClass() + " stop.");
+            recorder.stopRecording();
+            session.disconnect(Reason.SUCCESS, "OK, gotta go.");
+            isStopped = true;
+        }
+    }
+
+    @Override
+    public void run()
+    {
         try
         {
             transport.harvestLocalCandidates();
 
-            // JireconSessionInfo sessionInfo = session.getSessionInfo();
-            // JireconRecorderInfo recorderInfo = recorder.getRecorderInfo();
             JingleIQ initIq = session.connect(transport, srtpControl);
 
             Map<MediaType, String> fingerprints =
@@ -131,44 +151,12 @@ public class JireconTaskImpl
             recorder.startRecording(formatAndDynamicPTs, streamConnectors,
                 mediaStreamTargets);
         }
-        catch (BindException e)
+        catch (Exception e)
         {
-            // TODO Auto-generated catch block
             e.printStackTrace();
+            fireEvent(new JireconEvent(this,
+                JireconEvent.JireconEventId.TASK_ABORTED));
         }
-        catch (IllegalArgumentException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        catch (IOException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        catch (XMPPException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        catch (OperationFailedException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        catch (MediaException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void stop()
-    {
-        logger.info(this.getClass() + " stop.");
-        recorder.stopRecording();
-        session.disconnect(Reason.SUCCESS, "OK, gotta go.");
     }
 
     @Override
@@ -208,4 +196,34 @@ public class JireconTaskImpl
         info.setState(state);
     }
 
+    private class ThreadExceptionHandler
+        implements Thread.UncaughtExceptionHandler
+    {
+        @Override
+        public void uncaughtException(Thread t, Throwable e)
+        {
+            System.out.println("caught " + e);
+            if (t instanceof JireconTask)
+            {
+                ((JireconTask) e).stop();
+                fireEvent(new JireconEvent(JireconTaskImpl.this,
+                    JireconEvent.JireconEventId.TASK_ABORTED));
+            }
+        }
+    }
+
+    private class HandlerThreadFactory
+        implements ThreadFactory
+    {
+        @Override
+        public Thread newThread(Runnable r)
+        {
+            System.out.println(this + " creating new Thread");
+            Thread t = new Thread(r);
+            System.out.println("created " + t + " ID:" + t.getId());
+            t.setUncaughtExceptionHandler(new ThreadExceptionHandler());
+            System.out.println("eh=" + t.getUncaughtExceptionHandler());
+            return t;
+        }
+    }
 }

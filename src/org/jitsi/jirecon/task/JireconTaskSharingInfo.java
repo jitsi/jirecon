@@ -30,43 +30,43 @@ public class JireconTaskSharingInfo
     private Map<String, ParticipantInfo> participantsInfo =
         new HashMap<String, ParticipantInfo>();
     
-    public void addLocalSsrc(MediaType mediaType, Long ssrc)
+    public synchronized void addLocalSsrc(MediaType mediaType, Long ssrc)
     {
         localSsrcs.put(mediaType, ssrc);
     }
 
-    public Long getLocalSsrc(MediaType mediaType)
+    public synchronized Long getLocalSsrc(MediaType mediaType)
     {
         return localSsrcs.get(mediaType);
     }
 
-    public String getMsLabel()
+    public synchronized String getMsLabel()
     {
         return msLabel;
     }
 
-    public String getLabel(MediaType mediaType)
+    public synchronized String getLabel(MediaType mediaType)
     {
         return mediaType.toString();
     }
 
-    public String getMsid(MediaType mediaType)
+    public synchronized String getMsid(MediaType mediaType)
     {
         return msLabel + " " + getLabel(mediaType);
     }
     
-    public void addFormatAndPayloadType(MediaFormat format, byte payloadTypeId)
+    public synchronized void addFormatAndPayloadType(MediaFormat format, byte payloadTypeId)
     {
         formatAndPayloadTypes.put(format, payloadTypeId);
     }
 
-    public void setFormatAndPayloadTypes(
+    public synchronized void setFormatAndPayloadTypes(
         Map<MediaFormat, Byte> formatAndPayloadTypes)
     {
         this.formatAndPayloadTypes = formatAndPayloadTypes;
     }
 
-    public Map<MediaFormat, Byte> getFormatAndPayloadTypes(MediaType mediaType)
+    public synchronized Map<MediaFormat, Byte> getFormatAndPayloadTypes(MediaType mediaType)
     {
         Map<MediaFormat, Byte> result = new HashMap<MediaFormat, Byte>();
         for (Entry<MediaFormat, Byte> e : formatAndPayloadTypes.entrySet())
@@ -81,7 +81,7 @@ public class JireconTaskSharingInfo
             return null;
     }
 
-    public Map<MediaFormat, Byte> getFormatAndPayloadTypes()
+    public synchronized Map<MediaFormat, Byte> getFormatAndPayloadTypes()
     {
         if (formatAndPayloadTypes.size() > 0)
             return formatAndPayloadTypes;
@@ -89,47 +89,47 @@ public class JireconTaskSharingInfo
             return null;
     }
 
-    public String getMucJid()
+    public synchronized String getMucJid()
     {
         return mucJid;
     }
 
-    public void setMucJid(String mucJid)
+    public synchronized void setMucJid(String mucJid)
     {
         this.mucJid = mucJid;
     }
 
-    public String getLocalJid()
+    public synchronized String getLocalJid()
     {
         return localJid;
     }
 
-    public void setLocalJid(String localNode)
+    public synchronized void setLocalJid(String localNode)
     {
         this.localJid = localNode;
     }
 
-    public String getRemoteJid()
+    public synchronized String getRemoteJid()
     {
         return remoteJid;
     }
 
-    public void setRemoteJid(String remoteNode)
+    public synchronized void setRemoteJid(String remoteNode)
     {
         this.remoteJid = remoteNode;
     }
 
-    public String getSid()
+    public synchronized String getSid()
     {
         return sid;
     }
 
-    public void setSid(String sid)
+    public synchronized void setSid(String sid)
     {
         this.sid = sid;
     }
 
-    public void setParticipantSsrcs(String participantJid,
+    public synchronized void setParticipantSsrcs(String participantJid,
         Map<MediaType, String> ssrcs)
     {
         if (!participantsInfo.containsKey(participantJid))
@@ -141,7 +141,7 @@ public class JireconTaskSharingInfo
         info.setSsrcs(ssrcs);
     }
 
-    public Map<String, Map<MediaType, String>> getParticipantsSsrcs()
+    public synchronized Map<String, Map<MediaType, String>> getParticipantsSsrcs()
     {
         Map<String, Map<MediaType, String>> result =
             new HashMap<String, Map<MediaType, String>>();
@@ -156,7 +156,7 @@ public class JireconTaskSharingInfo
             return null;
     }
 
-    public Map<MediaType, String> getParticipantSsrcs(String participantJid)
+    public synchronized Map<MediaType, String> getParticipantSsrcs(String participantJid)
     {
         if (participantsInfo.containsKey(participantJid))
             return participantsInfo.get(participantJid).getSsrcs();
@@ -164,7 +164,7 @@ public class JireconTaskSharingInfo
             return null;
     }
 
-    public void setParticipantFingerprint(String participantJid,
+    public synchronized void setParticipantFingerprint(String participantJid,
         String fingerprint)
     {
         if (!participantsInfo.containsKey(participantJid))
@@ -176,7 +176,7 @@ public class JireconTaskSharingInfo
         info.setFingerprint(fingerprint);
     }
 
-    public String getParticipantFingerprint(String participantJid)
+    public synchronized String getParticipantFingerprint(String participantJid)
     {
         if (participantsInfo.containsKey(participantJid))
             return participantsInfo.get(participantJid).getFingerprint();

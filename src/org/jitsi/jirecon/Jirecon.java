@@ -17,9 +17,9 @@ public interface Jirecon
 
     public void uninit();
 
-    public void startJireconTask(String conferenceJid) throws XMPPException;
+    public void startJireconTask(String mucJid);
 
-    public void stopJireconTask(String conferenceJid);
+    public void stopJireconTask(String mucJid);
 
     public void addEventListener(JireconEventListener listener);
 

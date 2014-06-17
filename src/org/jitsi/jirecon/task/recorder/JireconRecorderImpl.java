@@ -12,6 +12,7 @@ import java.util.Map.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
+import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.task.JireconTaskSharingInfo;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
@@ -43,13 +44,13 @@ public class JireconRecorderImpl
     private final String SAVING_DIR;
 
     public JireconRecorderImpl(String SAVING_DIR,
-        JireconTaskSharingInfo sharingInfo)
+        JireconTaskSharingInfo sharingInfo, Map<MediaType, SrtpControl> srtpControls)
     {
         // Have to make sure that Libjitsi has been started.
         this.mediaService = LibJitsi.getMediaService();
         this.SAVING_DIR = SAVING_DIR;
         this.sharingInfo = sharingInfo;
-        createMediaStreams();
+        createMediaStreams(srtpControls);
     }
 
     @Override
@@ -94,7 +95,7 @@ public class JireconRecorderImpl
         Map<MediaType, MediaStreamTarget> targets)
         throws OperationFailedException
     {
-        logger.info("completeMediaStreams");
+        logger.info("prepareMediaStreams");
         if (!readyTo(JireconRecorderEvent.PREPARE_STREAM))
         {
             throw new OperationFailedException(
@@ -140,7 +141,7 @@ public class JireconRecorderImpl
 
         for (Entry<MediaType, RTPTranslator> e : rtpTranslators.entrySet())
         {
-            Recorder recorder = new VideoRecorderImpl(e.getValue());
+            Recorder recorder = new RecorderRtpImpl(e.getValue());
             recorders.put(e.getKey(), recorder);
         }
 
@@ -161,6 +162,7 @@ public class JireconRecorderImpl
         for (Entry<MediaType, MediaStream> e : streams.entrySet())
         {
             MediaStream stream = e.getValue();
+            stream.getSrtpControl().start(e.getKey());
             stream.start();
             if (stream.isStarted())
             {
@@ -239,7 +241,7 @@ public class JireconRecorderImpl
         updateState(JireconRecorderEvent.STOP_RECEIVING_STREAM);
     }
 
-    private void createMediaStreams()
+    private void createMediaStreams(Map<MediaType, SrtpControl> srtpControls)
     {
         logger.info("prepareMediaStreams");
         for (MediaType mediaType : MediaType.values())
@@ -249,7 +251,7 @@ public class JireconRecorderImpl
                 continue;
             }
             final MediaStream stream =
-                mediaService.createMediaStream(mediaType);
+                mediaService.createMediaStream(null, mediaType, srtpControls.get(mediaType));
             streams.put(mediaType, stream);
 
             stream.setName(mediaType.toString());

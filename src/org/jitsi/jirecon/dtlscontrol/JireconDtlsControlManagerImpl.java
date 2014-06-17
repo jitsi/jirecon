@@ -7,6 +7,7 @@
 package org.jitsi.jirecon.dtlscontrol;
 
 import java.util.*;
+import java.util.Map.Entry;
 
 import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
@@ -65,5 +66,17 @@ public class JireconDtlsControlManagerImpl
     public SrtpControl getSrtpControl(MediaType mediaType)
     {
         return dtlsControls.get(mediaType);
+    }
+
+    @Override
+    public Map<MediaType, SrtpControl> getAllSrtpControl()
+    {
+        Map<MediaType, SrtpControl> controls =
+            new HashMap<MediaType, SrtpControl>();
+        for (Entry<MediaType, DtlsControl> e : dtlsControls.entrySet())
+        {
+            controls.put(e.getKey(), e.getValue());
+        }
+        return controls;
     }
 }

@@ -15,7 +15,7 @@ import junit.framework.TestCase;
 public class TestJireconImpl
     extends TestCase
 {
-    public void testAll()
+    public void testStart()
     {
         Jirecon j = new JireconImpl();
 
@@ -35,6 +35,9 @@ public class TestJireconImpl
             e1.printStackTrace();
             result = false;
         }
+        
+        String mucJid = "dcofgabbbylxflxr@conference.example.com";
+        j.startJireconTask(mucJid);
 
         try
         {

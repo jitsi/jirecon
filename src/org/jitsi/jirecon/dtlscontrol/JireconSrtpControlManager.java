@@ -6,6 +6,8 @@
 
 package org.jitsi.jirecon.dtlscontrol;
 
+import java.util.Map;
+
 import org.jitsi.service.neomedia.*;
 
 public interface JireconSrtpControlManager
@@ -17,4 +19,6 @@ public interface JireconSrtpControlManager
     public String getLocalFingerprintHashFunction(MediaType mediaType);
 
     public SrtpControl getSrtpControl(MediaType mediaType);
+
+    public Map<MediaType, SrtpControl> getAllSrtpControl();
 }

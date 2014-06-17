@@ -7,6 +7,10 @@ package org.jitsi.jirecon;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
@@ -29,7 +33,7 @@ public class JireconImpl
 
     private Map<String, JireconTask> jireconTasks =
         new HashMap<String, JireconTask>();
-
+    
     private static final Logger logger = Logger.getLogger(JireconImpl.class);
 
     private static final String CONFIGURATION_FILE_PATH = "jirecon.properties";
@@ -95,7 +99,7 @@ public class JireconImpl
     }
 
     @Override
-    public void startJireconTask(String mucJid) throws XMPPException
+    public void startJireconTask(String mucJid)
     {
         logger.debug(this.getClass() + "startJireconTask: " + mucJid);
 

@@ -26,4 +26,9 @@ public class JireconEvent
     {
         return source;
     }
+    
+    public enum JireconEventId
+    {
+        TASK_ABORTED,
+    }
 }
