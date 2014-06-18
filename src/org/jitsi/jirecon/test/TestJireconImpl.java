@@ -23,7 +23,7 @@ public class TestJireconImpl
 
         try
         {
-            j.init("jirecon.property");
+            j.init("jirecon.properties");
         }
         catch (IOException e1)
         {
@@ -36,7 +36,7 @@ public class TestJireconImpl
             result = false;
         }
         
-        String mucJid = "dcofgabbbylxflxr@conference.example.com";
+        String mucJid = "vd2ktn4bn13piudi@conference.example.com";
         j.startJireconTask(mucJid);
 
         try

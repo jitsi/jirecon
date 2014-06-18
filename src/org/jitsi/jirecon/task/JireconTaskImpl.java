@@ -64,7 +64,11 @@ public class JireconTaskImpl
         executorService =
             Executors.newSingleThreadExecutor(new HandlerThreadFactory());
 
-        new File(savingDir).mkdir();
+        File dir = new File(savingDir);
+        if (!dir.exists())
+        {
+            dir.mkdirs();
+        }
 
         transport = new JireconIceUdpTransportManagerImpl();
         srtpControl = new JireconDtlsControlManagerImpl();
@@ -97,7 +101,7 @@ public class JireconTaskImpl
     @Override
     public void stop()
     {
-        if (isStopped)
+        if (!isStopped)
         {
             logger.info(this.getClass() + " stop.");
             recorder.stopRecording();

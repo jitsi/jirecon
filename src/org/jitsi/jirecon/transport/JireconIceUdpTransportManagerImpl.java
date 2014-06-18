@@ -83,7 +83,8 @@ public class JireconIceUdpTransportManagerImpl
     public void startConnectivityCheck() throws OperationFailedException
     {
         logger.info("waitForCheckFinished");
-
+        
+        
         final Object iceProcessingStateSyncRoot = new Object();
         PropertyChangeListener stateChangeListener =
             new PropertyChangeListener()
@@ -124,7 +125,7 @@ public class JireconIceUdpTransportManagerImpl
             {
                 try
                 {
-                    iceProcessingStateSyncRoot.wait();
+                    iceProcessingStateSyncRoot.wait(1000);
                 }
                 catch (InterruptedException ie)
                 {
@@ -134,7 +135,7 @@ public class JireconIceUdpTransportManagerImpl
         }
         if (interrupted)
             Thread.currentThread().interrupt();
-
+        
         /*
          * Make sure stateChangeListener is removed from iceAgent in case its
          * #propertyChange(PropertyChangeEvent) has never been executed.

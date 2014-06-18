@@ -12,7 +12,6 @@ import java.util.Map.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
-import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
 import org.jitsi.jirecon.task.JireconTaskSharingInfo;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
@@ -217,7 +216,9 @@ public class JireconRecorderImpl
         for (Entry<MediaType, Recorder> e : recorders.entrySet())
         {
             e.getValue().stop();
+            System.out.println("Stop " + e.getKey() + " Over");
         }
+        System.out.println("Stop Over");
 
         updateState(JireconRecorderEvent.STOP_RECORDING_STREAM);
     }

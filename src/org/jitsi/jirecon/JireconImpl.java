@@ -7,10 +7,6 @@ package org.jitsi.jirecon;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
@@ -36,7 +32,7 @@ public class JireconImpl
     
     private static final Logger logger = Logger.getLogger(JireconImpl.class);
 
-    private static final String CONFIGURATION_FILE_PATH = "jirecon.properties";
+//    private static final String CONFIGURATION_FILE_PATH = "jirecon.properties";
 
     private static final String XMPP_HOST_KEY = "XMPP_HOST";
 
@@ -62,7 +58,7 @@ public class JireconImpl
 
         LibJitsi.start();
         System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_NAME,
-            CONFIGURATION_FILE_PATH);
+            configurationPath);
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         SAVING_DIR = configuration.getString(SAVING_DIR_KEY);
         // Remove the suffix '/' in SAVE_DIR
@@ -197,6 +193,7 @@ public class JireconImpl
                 stopJireconTask(mucJid);
                 logger.fatal("Failed to start task of mucJid "
                     + mucJid + ".");
+                fireEvent(new JireconEvent(this, JireconEvent.JireconEventId.TASK_ABORTED));
             }
             break;
         default:
