@@ -73,18 +73,32 @@ public class JireconIceUdpTransportManagerImpl
         return transportPE;
     }
 
-    private void startConnectivityEstablishment()
+    @Override
+    public void startConnectivityEstablishment()
     {
         logger.info("startConnectivityEstablishment");
         iceAgent.startConnectivityEstablishment();
+        new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    startConnectivityCheck();
+                }
+                catch (OperationFailedException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
-    @Override
-    public void startConnectivityCheck() throws OperationFailedException
+    private void startConnectivityCheck() throws OperationFailedException
     {
         logger.info("waitForCheckFinished");
-        
-        
+
         final Object iceProcessingStateSyncRoot = new Object();
         PropertyChangeListener stateChangeListener =
             new PropertyChangeListener()
@@ -114,7 +128,7 @@ public class JireconIceUdpTransportManagerImpl
 
         iceAgent.addStateChangeListener(stateChangeListener);
 
-        startConnectivityEstablishment();
+        // startConnectivityEstablishment();
 
         // Wait for the connectivity checks to finish if they have been started.
         boolean interrupted = false;
@@ -135,7 +149,7 @@ public class JireconIceUdpTransportManagerImpl
         }
         if (interrupted)
             Thread.currentThread().interrupt();
-        
+
         /*
          * Make sure stateChangeListener is removed from iceAgent in case its
          * #propertyChange(PropertyChangeEvent) has never been executed.
@@ -189,16 +203,12 @@ public class JireconIceUdpTransportManagerImpl
             final String ufrag =
                 JinglePacketParser.getTransportUfrag(transportPE);
             if (null != ufrag)
-            {
                 stream.setRemoteUfrag(ufrag);
-            }
 
             final String password =
                 JinglePacketParser.getTransportPassword(transportPE);
             if (null != password)
-            {
                 stream.setRemotePassword(password);
-            }
 
             List<CandidatePacketExtension> candidates =
                 JinglePacketParser.getCandidatePacketExt(transportPE);
@@ -214,14 +224,30 @@ public class JireconIceUdpTransportManagerImpl
                 final Component component =
                     stream.getComponent(c.getComponent());
 
-                // FIXME: Add support for not-host address
-                final RemoteCandidate remoteCandidate =
+                String relAddr;
+                int relPort;
+                TransportAddress relatedAddress = null;
+
+                if (((relAddr = c.getRelAddr()) != null)
+                    && ((relPort = c.getRelPort()) != -1))
+                {
+                    relatedAddress =
+                        new TransportAddress(relAddr, relPort,
+                            Transport.parse(c.getProtocol()));
+                }
+
+                RemoteCandidate relatedCandidate =
+                    component.findRemoteCandidate(relatedAddress);
+
+                RemoteCandidate remoteCandidate =
                     new RemoteCandidate(new TransportAddress(c.getIP(),
                         c.getPort(), Transport.parse(c.getProtocol())),
                         component, org.ice4j.ice.CandidateType.parse(c
                             .getType().toString()), c.getFoundation(),
-                        c.getPriority(), getRelatedCandidate(c, component));
+                        c.getPriority(), relatedCandidate);
 
+                if (!canReach(component, remoteCandidate))
+                    continue;
                 component.addRemoteCandidate(remoteCandidate);
             }
         }
@@ -294,20 +320,20 @@ public class JireconIceUdpTransportManagerImpl
         return candidates;
     }
 
-    private RemoteCandidate getRelatedCandidate(
-        CandidatePacketExtension candidate, Component component)
-    {
-        if ((candidate.getRelAddr() != null) && (candidate.getRelPort() != -1))
-        {
-            final String relAddr = candidate.getRelAddr();
-            final int relPort = candidate.getRelPort();
-            final TransportAddress relatedAddress =
-                new TransportAddress(relAddr, relPort,
-                    Transport.parse(candidate.getProtocol()));
-            return component.findRemoteCandidate(relatedAddress);
-        }
-        return null;
-    }
+    // private RemoteCandidate getRelatedCandidate(
+    // CandidatePacketExtension candidate, Component component)
+    // {
+    // if ((candidate.getRelAddr() != null) && (candidate.getRelPort() != -1))
+    // {
+    // final String relAddr = candidate.getRelAddr();
+    // final int relPort = candidate.getRelPort();
+    // final TransportAddress relatedAddress =
+    // new TransportAddress(relAddr, relPort,
+    // Transport.parse(candidate.getProtocol()));
+    // return component.findRemoteCandidate(relatedAddress);
+    // }
+    // return null;
+    // }
 
     @Override
     public MediaStreamTarget getStreamTarget(MediaType mediaType)
@@ -359,6 +385,7 @@ public class JireconIceUdpTransportManagerImpl
 
     @Override
     public StreamConnector getStreamConnector(MediaType mediaType)
+        throws OperationFailedException
     {
         logger.info("getStreamConnector");
         if (streamConnectors.containsKey(mediaType))
@@ -368,11 +395,17 @@ public class JireconIceUdpTransportManagerImpl
 
         StreamConnector streamConnector = null;
         IceMediaStream stream = getIceMediaStream(mediaType);
-        if (stream != null)
+        if (null == stream)
         {
-            List<DatagramSocket> datagramSockets =
-                new ArrayList<DatagramSocket>();
+            throw new OperationFailedException(
+                "Could not get stream connector, ICE media stream was not prepared.",
+                OperationFailedException.GENERAL_ERROR);
+        }
 
+        List<DatagramSocket> datagramSockets =
+            new ArrayList<DatagramSocket>();
+        while (true)
+        {
             for (Component component : stream.getComponents())
             {
                 if (component != null)
@@ -386,17 +419,37 @@ public class JireconIceUdpTransportManagerImpl
                     }
                 }
             }
-            if (datagramSockets.size() > 0)
+            if (datagramSockets.size() > 1)
             {
                 streamConnector =
                     new DefaultStreamConnector(
                         datagramSockets.get(0) /* RTP */,
                         datagramSockets.get(1) /* RTCP */);
                 streamConnectors.put(mediaType, streamConnector);
+                break;
+            }
+            
+            try
+            {
+                Thread.sleep(1000);
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
             }
         }
 
         return streamConnector;
     }
 
+    private boolean canReach(Component component,
+        RemoteCandidate remoteCandidate)
+    {
+        for (LocalCandidate localCandidate : component.getLocalCandidates())
+        {
+            if (localCandidate.canReach(remoteCandidate))
+                return true;
+        }
+        return false;
+    }
 }

@@ -121,7 +121,6 @@ public class JireconRecorderImpl
                 }
             }
 
-            // FIXME: How to deal with DTLS control?
             stream.setRTPTranslator(getTranslator(mediaType));
         }
 

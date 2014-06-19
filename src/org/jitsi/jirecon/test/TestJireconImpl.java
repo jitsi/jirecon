@@ -36,12 +36,12 @@ public class TestJireconImpl
             result = false;
         }
         
-        String mucJid = "vd2ktn4bn13piudi@conference.example.com";
+        String mucJid = "8euvya9syycik9@conference.example.com";
         j.startJireconTask(mucJid);
 
         try
         {
-            Thread.sleep(10000);
+            Thread.sleep(60000);
         }
         catch (InterruptedException e)
         {

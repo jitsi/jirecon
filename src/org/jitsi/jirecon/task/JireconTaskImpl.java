@@ -130,7 +130,7 @@ public class JireconTaskImpl
                 JinglePacketParser.getTransportPacketExts(initIq);
             transport.harvestRemoteCandidates(transportPEs);
 
-            transport.startConnectivityCheck();
+            transport.startConnectivityEstablishment();
 
             Map<MediaType, StreamConnector> streamConnectors =
                 new HashMap<MediaType, StreamConnector>();
@@ -150,6 +150,8 @@ public class JireconTaskImpl
                     transport.getStreamTarget(mediaType);
                 mediaStreamTargets.put(mediaType, mediaStreamTarget);
             }
+            
+            
             Map<MediaFormat, Byte> formatAndDynamicPTs =
                 sharingInfo.getFormatAndPayloadTypes();
             recorder.startRecording(formatAndDynamicPTs, streamConnectors,

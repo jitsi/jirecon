@@ -13,7 +13,7 @@ import org.jitsi.service.neomedia.*;
 public interface JireconSrtpControlManager
 {
     public void addRemoteFingerprint(MediaType mediaType, String fingerprint);
-
+    
     public String getLocalFingerprint(MediaType mediaType);
 
     public String getLocalFingerprintHashFunction(MediaType mediaType);

@@ -30,7 +30,7 @@ public interface JireconTransportManager
 
     public MediaStreamTarget getStreamTarget(MediaType mediaType);
 
-    public StreamConnector getStreamConnector(MediaType mediaType);
+    public StreamConnector getStreamConnector(MediaType mediaType) throws OperationFailedException;
 
-    public void startConnectivityCheck() throws OperationFailedException;
+    public void startConnectivityEstablishment() throws OperationFailedException;
 }
