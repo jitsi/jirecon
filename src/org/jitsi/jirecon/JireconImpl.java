@@ -13,6 +13,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
 import org.jitsi.jirecon.task.JireconTask;
 import org.jitsi.jirecon.task.JireconTaskImpl;
+import org.jitsi.jirecon.task.JireconTaskInfo;
 import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.util.Logger;
@@ -187,6 +188,7 @@ public class JireconImpl
         case TASK_ABORTED:
             if (evt.getSource() instanceof JireconTask)
             {
+                JireconTaskInfo info = ((JireconTask) evt.getSource()).getTaskInfo();
                 String mucJid =
                     ((JireconTask) evt.getSource()).getTaskInfo()
                         .getMucJid();

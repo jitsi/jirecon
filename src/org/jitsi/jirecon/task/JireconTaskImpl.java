@@ -56,11 +56,12 @@ public class JireconTaskImpl
         .getLogger(JireconTaskImpl.class);
 
     @Override
-    public void init(String conferenceJid, XMPPConnection connection,
+    public void init(String mucJid, XMPPConnection connection,
         String savingDir)
     {
         logger.setLevelAll();
         logger.debug(this.getClass() + " init");
+        info.setMucJid(mucJid);
         executorService =
             Executors.newSingleThreadExecutor(new HandlerThreadFactory());
 
@@ -74,12 +75,11 @@ public class JireconTaskImpl
         srtpControl = new JireconDtlsControlManagerImpl();
         sharingInfo = new JireconTaskSharingInfo();
         session =
-            new JireconSessionImpl(connection, conferenceJid, savingDir,
+            new JireconSessionImpl(connection, mucJid, savingDir,
                 sharingInfo);
         recorder =
             new JireconRecorderImpl(savingDir, sharingInfo,
                 srtpControl.getAllSrtpControl());
-        updateState(JireconTaskState.INITIATED);
     }
 
     @Override
@@ -197,18 +197,12 @@ public class JireconTaskImpl
         }
     }
 
-    private void updateState(JireconTaskState state)
-    {
-        info.setState(state);
-    }
-
     private class ThreadExceptionHandler
         implements Thread.UncaughtExceptionHandler
     {
         @Override
         public void uncaughtException(Thread t, Throwable e)
         {
-            System.out.println("caught " + e);
             if (t instanceof JireconTask)
             {
                 ((JireconTask) e).stop();
@@ -226,9 +220,7 @@ public class JireconTaskImpl
         {
             System.out.println(this + " creating new Thread");
             Thread t = new Thread(r);
-            System.out.println("created " + t + " ID:" + t.getId());
             t.setUncaughtExceptionHandler(new ThreadExceptionHandler());
-            System.out.println("eh=" + t.getUncaughtExceptionHandler());
             return t;
         }
     }

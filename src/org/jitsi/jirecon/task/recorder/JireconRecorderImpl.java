@@ -35,7 +35,9 @@ public class JireconRecorderImpl
 
     private JireconTaskSharingInfo sharingInfo;
 
-    private JireconRecorderState state = JireconRecorderState.INIT;
+    private boolean isReceiving = false;
+
+    private boolean isRecording = false;
 
     private static final Logger logger = Logger
         .getLogger(JireconRecorderImpl.class);
@@ -43,7 +45,8 @@ public class JireconRecorderImpl
     private final String SAVING_DIR;
 
     public JireconRecorderImpl(String SAVING_DIR,
-        JireconTaskSharingInfo sharingInfo, Map<MediaType, SrtpControl> srtpControls)
+        JireconTaskSharingInfo sharingInfo,
+        Map<MediaType, SrtpControl> srtpControls)
     {
         // Have to make sure that Libjitsi has been started.
         this.mediaService = LibJitsi.getMediaService();
@@ -69,23 +72,9 @@ public class JireconRecorderImpl
     @Override
     public void stopRecording()
     {
-        try
-        {
-            stopRecordingStreams();
-        }
-        catch (OperationFailedException e)
-        {
-            e.printStackTrace();
-        }
-
-        try
-        {
-            stopReceivingStreams();
-        }
-        catch (OperationFailedException e)
-        {
-            e.printStackTrace();
-        }
+        stopRecordingStreams();
+        stopReceivingStreams();
+        stopTranslators();
     }
 
     private void prepareMediaStreams(
@@ -95,12 +84,6 @@ public class JireconRecorderImpl
         throws OperationFailedException
     {
         logger.info("prepareMediaStreams");
-        if (!readyTo(JireconRecorderEvent.PREPARE_STREAM))
-        {
-            throw new OperationFailedException(
-                "Could not prepare streams, other reason.",
-                OperationFailedException.GENERAL_ERROR);
-        }
 
         for (Entry<MediaType, MediaStream> e : streams.entrySet())
         {
@@ -123,38 +106,22 @@ public class JireconRecorderImpl
 
             stream.setRTPTranslator(getTranslator(mediaType));
         }
-
-        updateState(JireconRecorderEvent.PREPARE_STREAM);
     }
 
     private void prepareRecorders() throws OperationFailedException
     {
         logger.info("prepareRecorders");
-        if (!readyTo(JireconRecorderEvent.PREPARE_RECORDER))
-        {
-            throw new OperationFailedException(
-                "Could not prepare recorders, streams are not ready.",
-                OperationFailedException.GENERAL_ERROR);
-        }
 
         for (Entry<MediaType, RTPTranslator> e : rtpTranslators.entrySet())
         {
             Recorder recorder = new RecorderRtpImpl(e.getValue());
             recorders.put(e.getKey(), recorder);
         }
-
-        updateState(JireconRecorderEvent.PREPARE_RECORDER);
     }
 
     private void startReceivingStreams() throws OperationFailedException
     {
         logger.info("startReceiving");
-        if (!readyTo(JireconRecorderEvent.START_RECEIVING_STREAM))
-        {
-            throw new OperationFailedException(
-                "Could not start receiving streams, streams are not ready.",
-                OperationFailedException.GENERAL_ERROR);
-        }
 
         int startCount = 0;
         for (Entry<MediaType, MediaStream> e : streams.entrySet())
@@ -174,8 +141,7 @@ public class JireconRecorderImpl
                 "Could not start receiving streams",
                 OperationFailedException.GENERAL_ERROR);
         }
-
-        updateState(JireconRecorderEvent.START_RECEIVING_STREAM);
+        isReceiving = true;
     }
 
     private void startRecordingStreams()
@@ -184,7 +150,7 @@ public class JireconRecorderImpl
         OperationFailedException
     {
         logger.info("startRecording");
-        if (!readyTo(JireconRecorderEvent.START_RECORDING_STREAM))
+        if (!isReceiving || isRecording)
         {
             throw new OperationFailedException(
                 "Could not start recording streams, recorders are not ready.",
@@ -198,47 +164,46 @@ public class JireconRecorderImpl
             e.getValue().setEventHandler(eventHandler);
             e.getValue().start(e.getKey().toString(), SAVING_DIR);
         }
-
-        updateState(JireconRecorderEvent.START_RECORDING_STREAM);
+        isRecording = true;
     }
 
-    private void stopRecordingStreams() throws OperationFailedException
+    private void stopRecordingStreams()
     {
         logger.info("stopRecording");
-        if (!readyTo(JireconRecorderEvent.STOP_RECORDING_STREAM))
-        {
-            throw new OperationFailedException(
-                "Could not stop recording streams, streams are not been recording.",
-                OperationFailedException.GENERAL_ERROR);
-        }
+        if (!isRecording)
+            return;
 
         for (Entry<MediaType, Recorder> e : recorders.entrySet())
         {
             e.getValue().stop();
             System.out.println("Stop " + e.getKey() + " Over");
         }
-        System.out.println("Stop Over");
-
-        updateState(JireconRecorderEvent.STOP_RECORDING_STREAM);
+        recorders.clear();
+        isRecording = false;
     }
 
-    private void stopReceivingStreams() throws OperationFailedException
+    private void stopReceivingStreams()
     {
-        logger.info("stopRecording");
-        if (!readyTo(JireconRecorderEvent.STOP_RECEIVING_STREAM))
-        {
-            throw new OperationFailedException(
-                "Could not stop receiving streams, streams are not been receiving.",
-                OperationFailedException.GENERAL_ERROR);
-        }
+        logger.info("stopReceiving");
+        if (!isReceiving)
+            return;
 
         for (Map.Entry<MediaType, MediaStream> e : streams.entrySet())
         {
-            e.getValue().stop();
             e.getValue().close();
+            e.getValue().stop();
         }
-
-        updateState(JireconRecorderEvent.STOP_RECEIVING_STREAM);
+        streams.clear();
+        isReceiving = false;
+    }
+    
+    private void stopTranslators()
+    {
+        for (Entry<MediaType, RTPTranslator> e : rtpTranslators.entrySet())
+        {
+            e.getValue().dispose();
+        }
+        rtpTranslators.clear();
     }
 
     private void createMediaStreams(Map<MediaType, SrtpControl> srtpControls)
@@ -251,7 +216,8 @@ public class JireconRecorderImpl
                 continue;
             }
             final MediaStream stream =
-                mediaService.createMediaStream(null, mediaType, srtpControls.get(mediaType));
+                mediaService.createMediaStream(null, mediaType,
+                    srtpControls.get(mediaType));
             streams.put(mediaType, stream);
 
             stream.setName(mediaType.toString());
@@ -351,78 +317,4 @@ public class JireconRecorderImpl
             return handler.handleEvent(event);
         }
     }
-
-    private void updateState(JireconRecorderEvent evt)
-    {
-        switch (evt)
-        {
-        case PREPARE_STREAM:
-            state = JireconRecorderState.STREAM_READY;
-            break;
-        case PREPARE_RECORDER:
-            state = JireconRecorderState.RECORDER_READY;
-            break;
-        case START_RECEIVING_STREAM:
-            state = JireconRecorderState.RECEIVING_STREAM;
-            break;
-        case START_RECORDING_STREAM:
-            state = JireconRecorderState.RECORDING_STREAM;
-            break;
-        case STOP_RECEIVING_STREAM:
-            state = JireconRecorderState.STREAM_READY;
-            break;
-        case STOP_RECORDING_STREAM:
-            state = JireconRecorderState.RECORDER_READY;
-            break;
-        }
-    }
-
-    private boolean readyTo(JireconRecorderEvent evt)
-        throws OperationFailedException
-    {
-        switch (evt)
-        {
-        case PREPARE_STREAM:
-            if (JireconRecorderState.INIT != state)
-                return false;
-            break;
-        case START_RECEIVING_STREAM:
-            if (JireconRecorderState.STREAM_READY != state)
-                return false;
-            break;
-        case PREPARE_RECORDER:
-            if (JireconRecorderState.RECEIVING_STREAM != state)
-                return false;
-            break;
-        case START_RECORDING_STREAM:
-            if (JireconRecorderState.RECORDER_READY != state)
-                return false;
-            break;
-        case STOP_RECEIVING_STREAM:
-            if (JireconRecorderState.RECEIVING_STREAM != state)
-                return false;
-            break;
-        case STOP_RECORDING_STREAM:
-            if (JireconRecorderState.RECORDING_STREAM != state)
-                return false;
-            break;
-        }
-        return true;
-    }
-
-    private enum JireconRecorderEvent
-    {
-        PREPARE_STREAM,
-        PREPARE_RECORDER,
-        START_RECEIVING_STREAM,
-        STOP_RECEIVING_STREAM,
-        START_RECORDING_STREAM,
-        STOP_RECORDING_STREAM
-    }
-
-    private enum JireconRecorderState
-    {
-        INIT, STREAM_READY, RECEIVING_STREAM, RECORDER_READY, RECORDING_STREAM,
-    }
-
 }

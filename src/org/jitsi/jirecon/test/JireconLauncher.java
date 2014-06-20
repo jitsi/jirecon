@@ -82,6 +82,7 @@ public class JireconLauncher
 
         for (String jid : mucJids)
             jirecon.stopJireconTask(jid);
-        System.out.println("OK");
+        
+        jirecon.uninit();
     }
 }

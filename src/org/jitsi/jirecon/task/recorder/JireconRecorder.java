@@ -23,10 +23,4 @@ public interface JireconRecorder
         MediaException;
 
     public void stopRecording();
-
-    // public JireconRecorderState getState();
-
-    // public void addEventListener(JireconEventListener listener);
-
-    // public void removeEventListener(JireconEventListener listener);
 }

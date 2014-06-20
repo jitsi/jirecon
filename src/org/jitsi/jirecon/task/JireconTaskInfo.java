@@ -10,8 +10,6 @@ public class JireconTaskInfo
 {
     private String mucJid;
 
-    private JireconTaskState state;
-
     public void setMucJid(String mucJid)
     {
         this.mucJid = mucJid;
@@ -20,15 +18,5 @@ public class JireconTaskInfo
     public String getMucJid()
     {
         return mucJid;
-    }
-
-    public void setState(JireconTaskState state)
-    {
-        this.state = state;
-    }
-
-    public JireconTaskState getState()
-    {
-        return state;
     }
 }

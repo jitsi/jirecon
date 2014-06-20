@@ -371,7 +371,7 @@ public class JireconIceUdpTransportManagerImpl
                     }
                 }
             }
-            if (streamTargetAddresses.size() > 0)
+            if (streamTargetAddresses.size() > 1)
             {
                 streamTarget =
                     new MediaStreamTarget(
