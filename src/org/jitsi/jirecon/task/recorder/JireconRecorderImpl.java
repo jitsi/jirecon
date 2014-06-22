@@ -5,6 +5,7 @@
  */
 package org.jitsi.jirecon.task.recorder;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.Map.*;
@@ -158,7 +159,7 @@ public class JireconRecorderImpl
         }
 
         RecorderEventHandler eventHandler =
-            new JireconRecorderEventHandler(SAVING_DIR + "/meta");
+            new JireconRecorderEventHandler(SAVING_DIR + "/metadata.json");
         for (Entry<MediaType, Recorder> e : recorders.entrySet())
         {
             e.getValue().setEventHandler(eventHandler);
@@ -196,7 +197,7 @@ public class JireconRecorderImpl
         streams.clear();
         isReceiving = false;
     }
-    
+
     private void stopTranslators()
     {
         for (Entry<MediaType, RTPTranslator> e : rtpTranslators.entrySet())
@@ -250,22 +251,16 @@ public class JireconRecorderImpl
 
         for (Entry<String, Map<MediaType, String>> e : participants.entrySet())
         {
-            System.out.println(e.getKey() + " audio "
+            logger.info(e.getKey() + " audio "
                 + e.getValue().get(MediaType.AUDIO));
-            System.out.println(e.getKey() + " video "
+            logger.info(e.getKey() + " video "
                 + e.getValue().get(MediaType.VIDEO));
-        }
-
-        for (Entry<String, Map<MediaType, String>> e : participants.entrySet())
-        {
-            System.out.println(ssrc + " "
-                + Long.valueOf(e.getValue().get(mediaType)));
-            if ((ssrc - Long.valueOf(e.getValue().get(mediaType))) == 0)
+            for (String s : e.getValue().values())
             {
-                if (mediaType.equals(MediaType.AUDIO))
-                    return Long.valueOf(e.getValue().get(MediaType.VIDEO));
-                else if (mediaType.equals(MediaType.VIDEO))
-                    return Long.valueOf(e.getValue().get(MediaType.AUDIO));
+                if (ssrc == Long.valueOf(s))
+                {
+                    return Long.valueOf(e.getValue().get(mediaType));
+                }
             }
         }
 
@@ -278,9 +273,25 @@ public class JireconRecorderImpl
         private RecorderEventHandler handler;
 
         public JireconRecorderEventHandler(String filename)
-            throws IOException
         {
-            handler = new RecorderEventHandlerJSONImpl(filename);
+            int count = 1;
+            String filenameAvailable = filename;
+            while (true)
+            {
+                File file = new File(filenameAvailable);
+                if (file.exists())
+                    filenameAvailable = filename + "-" + count++;
+                else
+                    break;
+            }
+            try
+            {
+                handler = new RecorderEventHandlerJSONImpl(filenameAvailable);
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
         }
 
         @Override
@@ -300,7 +311,7 @@ public class JireconRecorderImpl
                 System.out.println("SPEAKER_CHANGED audio ssrc: "
                     + event.getAudioSsrc());
                 long audioSsrc = event.getAudioSsrc();
-                long videoSsrc = getAssociatedSsrc(audioSsrc, MediaType.AUDIO);
+                long videoSsrc = getAssociatedSsrc(audioSsrc, MediaType.VIDEO);
                 if (videoSsrc < 0)
                 {
                     logger

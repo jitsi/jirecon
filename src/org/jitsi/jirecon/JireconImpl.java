@@ -6,6 +6,7 @@
 package org.jitsi.jirecon;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
@@ -13,7 +14,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
 import org.jitsi.jirecon.task.JireconTask;
 import org.jitsi.jirecon.task.JireconTaskImpl;
-import org.jitsi.jirecon.task.JireconTaskInfo;
 import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.util.Logger;
@@ -30,10 +30,11 @@ public class JireconImpl
 
     private Map<String, JireconTask> jireconTasks =
         new HashMap<String, JireconTask>();
-    
+
     private static final Logger logger = Logger.getLogger(JireconImpl.class);
 
-//    private static final String CONFIGURATION_FILE_PATH = "jirecon.properties";
+    // private static final String CONFIGURATION_FILE_PATH =
+    // "jirecon.properties";
 
     private static final String XMPP_HOST_KEY = "XMPP_HOST";
 
@@ -104,14 +105,15 @@ public class JireconImpl
         {
             if (jireconTasks.containsKey(mucJid))
             {
-                logger.info("Failed to start Jirecon by mucJid: "
-                    + mucJid + ". Duplicate mucJid.");
+                logger.info("Failed to start Jirecon by mucJid: " + mucJid
+                    + ". Duplicate mucJid.");
                 return;
             }
             JireconTask j = new JireconTaskImpl();
             jireconTasks.put(mucJid, j);
             j.addEventListener(this);
-            j.init(mucJid, connection, SAVING_DIR + "/" + mucJid);
+            j.init(mucJid, connection, SAVING_DIR + "/" + mucJid
+                + new SimpleDateFormat("-yyMMdd-HHmmss").format(new Date()));
             j.start();
         }
     }
@@ -124,8 +126,8 @@ public class JireconImpl
         {
             if (!jireconTasks.containsKey(mucJid))
             {
-                logger.info("Failed to stop Jirecon by mucJid: "
-                    + mucJid + ". Nonexisted Jid.");
+                logger.info("Failed to stop Jirecon by mucJid: " + mucJid
+                    + ". Nonexisted Jid.");
                 return;
             }
             JireconTask j = jireconTasks.remove(mucJid);
@@ -188,14 +190,12 @@ public class JireconImpl
         case TASK_ABORTED:
             if (evt.getSource() instanceof JireconTask)
             {
-                JireconTaskInfo info = ((JireconTask) evt.getSource()).getTaskInfo();
                 String mucJid =
-                    ((JireconTask) evt.getSource()).getTaskInfo()
-                        .getMucJid();
+                    ((JireconTask) evt.getSource()).getTaskInfo().getMucJid();
                 stopJireconTask(mucJid);
-                logger.fatal("Failed to start task of mucJid "
-                    + mucJid + ".");
-                fireEvent(new JireconEvent(this, JireconEvent.JireconEventId.TASK_ABORTED));
+                logger.fatal("Failed to start task of mucJid " + mucJid + ".");
+                fireEvent(new JireconEvent(this,
+                    JireconEvent.JireconEventId.TASK_ABORTED));
             }
             break;
         default:
