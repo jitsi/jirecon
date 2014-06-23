@@ -23,10 +23,12 @@ import org.jitsi.util.Logger;
 /**
  * An implementation of <tt>JireconRecorder</tt>.
  * <p>
- * <tt>JireconRecorderImpl</tt> will record the media streams that you specified,
- * besides, it also records a meta data file which is used for post-proceeding.
+ * <tt>JireconRecorderImpl</tt> will record the media streams that you
+ * specified, besides, it also records a meta data file which is used for
+ * post-proceeding.
  * 
  * @author lishunyang
+ * @see JireconRecorder
  * 
  */
 public class JireconRecorderImpl
@@ -95,8 +97,8 @@ public class JireconRecorderImpl
      *            existed and writable.
      * @param sharingInfo includes some necessary information, it is shared with
      *            other classes.
-     * @param srtpControls is the mapping between <tt>MediaType</tt> and <tt>SrtpControl</tt>
-     *            which is used for SRTP transfer.
+     * @param srtpControls is the mapping between <tt>MediaType</tt> and
+     *            <tt>SrtpControl</tt> which is used for SRTP transfer.
      */
     public JireconRecorderImpl(String SAVING_DIR,
         JireconTaskSharingInfo sharingInfo,
@@ -137,16 +139,18 @@ public class JireconRecorderImpl
     }
 
     /**
-     * Make all <tt>JireconRecorderImpl</tt> ready to start receiving media streams.
+     * Make all <tt>JireconRecorderImpl</tt> ready to start receiving media
+     * streams.
      * 
-     * @param formatAndDynamicPTs is the mapping between <tt>MediaFormat</tt> and
-     *            dynamic payload type id. <tt>MediaStream</tt> needs those to
-     *            distinguish different <tt>MediaFormat</tt>.
+     * @param formatAndDynamicPTs is the mapping between <tt>MediaFormat</tt>
+     *            and dynamic payload type id. <tt>MediaStream</tt> needs those
+     *            to distinguish different <tt>MediaFormat</tt>.
      * @param connectors is the mapping between <tt>MediaType</tt> and
-     *            <tt>StreamConnector</tt>. Those connectors are used to transfer
-     *            stream data.
+     *            <tt>StreamConnector</tt>. Those connectors are used to
+     *            transfer stream data.
      * @param targets is the mapping between <tt>MediaType</tt> and
-     *            <tt>MediaStreamTarget</tt>. The target indicate media stream source.
+     *            <tt>MediaStreamTarget</tt>. The target indicate media stream
+     *            source.
      * @throws OperationFailedException if some operation failed and the
      *             preparation is aborted.
      */
@@ -182,7 +186,8 @@ public class JireconRecorderImpl
     }
 
     /**
-     * Make the <tt>JireconRecorderImpl</tt> ready to start recording media streams.
+     * Make the <tt>JireconRecorderImpl</tt> ready to start recording media
+     * streams.
      * 
      * @throws OperationFailedException if some operation failed and the
      *             preparation is aborted.
@@ -321,10 +326,11 @@ public class JireconRecorderImpl
      * Create media streams. After media streams are created, we can get ssrcs
      * of them.
      * <p>
-     * <strong>Warning:</strong> We can only add <tt>SrtpControl</tt> to <tt>MediaStream</tt>
-     * at this moment.
+     * <strong>Warning:</strong> We can only add <tt>SrtpControl</tt> to
+     * <tt>MediaStream</tt> at this moment.
      * 
-     * @param srtpControls is the mapping between <tt>MediaType</tt> and <tt>SrtpControl</tt>.
+     * @param srtpControls is the mapping between <tt>MediaType</tt> and
+     *            <tt>SrtpControl</tt>.
      */
     private void createMediaStreams(Map<MediaType, SrtpControl> srtpControls)
     {
@@ -352,8 +358,8 @@ public class JireconRecorderImpl
     }
 
     /**
-     * Get a <tt>RTPTranslator</tt> for a specified <tt>MediaType</tt>. Create a new one if it
-     * doesn't exist.
+     * Get a <tt>RTPTranslator</tt> for a specified <tt>MediaType</tt>. Create a
+     * new one if it doesn't exist.
      * 
      * @param mediaType is the <tt>MediaType</tt> that you specified.
      * @return <tt>RTPTranslator</tt>
@@ -372,14 +378,14 @@ public class JireconRecorderImpl
     }
 
     /**
-     * Find and get the <tt>MediaType</tt> ssrc which belongs to the same endpoint with
-     * an existed ssrc. An endpoint means a media stream source, each media
-     * stream source generally contains two ssrc, one for audio stream and one
-     * for video stream.
+     * Find and get the <tt>MediaType</tt> ssrc which belongs to the same
+     * endpoint with an existed ssrc. An endpoint means a media stream source,
+     * each media stream source generally contains two ssrc, one for audio
+     * stream and one for video stream.
      * 
      * @param ssrc indicates an endpoint.
-     * @param mediaType is the <tt>MediaType</tt> which indicates which ssrc you want
-     *            to get.
+     * @param mediaType is the <tt>MediaType</tt> which indicates which ssrc you
+     *            want to get.
      * @return ssrc or -1 if not found
      */
     private long getAssociatedSsrc(long ssrc, MediaType mediaType)
@@ -419,13 +425,14 @@ public class JireconRecorderImpl
         implements RecorderEventHandler
     {
         /**
-         * The true <tt>RecorderEventHandler</tt> which is used for handling event
-         * actually.
+         * The true <tt>RecorderEventHandler</tt> which is used for handling
+         * event actually.
          */
         private RecorderEventHandler handler;
 
         /**
-         * The construction method for creating <tt>JireconRecorderEventHandler</tt>.
+         * The construction method for creating
+         * <tt>JireconRecorderEventHandler</tt>.
          * 
          * @param filename the meta data file's name.
          */
