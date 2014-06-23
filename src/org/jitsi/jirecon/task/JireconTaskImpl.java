@@ -40,7 +40,7 @@ public class JireconTaskImpl
 
     private JireconTransportManager transport;
 
-    private JireconSrtpControlManager srtpControl;
+    private SrtpControlManager srtpControl;
 
     private JireconRecorder recorder;
 
@@ -72,7 +72,7 @@ public class JireconTaskImpl
         }
 
         transport = new JireconIceUdpTransportManagerImpl();
-        srtpControl = new JireconDtlsControlManagerImpl();
+        srtpControl = new DtlsControlManagerImpl();
         sharingInfo = new JireconTaskSharingInfo();
         session =
             new JireconSessionImpl(connection, mucJid, savingDir,

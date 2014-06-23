@@ -9,10 +9,19 @@ import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.xmlpull.v1.XmlPullParser;
 
+/**
+ * The <tt>MediaExtensionProvider</tt> parses "media" elements into
+ * <tt>MediaExtension</tt> instances.
+ * 
+ * @author lishunyang
+ * @see MediaExtension
+ */
 public class MediaExtensionProvider
     implements PacketExtensionProvider
 {
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public PacketExtension parseExtension(XmlPullParser parser)
         throws Exception
@@ -55,13 +64,9 @@ public class MediaExtensionProvider
             }
 
             case XmlPullParser.TEXT:
-            {
                 break;
             }
-            }
-
         }
         return result;
-
     }
 }

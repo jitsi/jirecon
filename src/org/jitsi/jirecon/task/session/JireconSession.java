@@ -17,7 +17,7 @@ import org.jivesoftware.smack.*;
 public interface JireconSession
 {
     public JingleIQ connect(JireconTransportManager transportManager,
-        JireconSrtpControlManager srtpControlManager)
+        SrtpControlManager srtpControlManager)
         throws XMPPException,
         OperationFailedException,
         IOException;

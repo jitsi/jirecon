@@ -17,7 +17,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentP
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 import net.java.sip.communicator.util.Logger;
 
-import org.jitsi.jirecon.dtlscontrol.JireconSrtpControlManager;
+import org.jitsi.jirecon.dtlscontrol.SrtpControlManager;
 import org.jitsi.jirecon.extension.MediaExtension;
 import org.jitsi.jirecon.task.JireconTaskSharingInfo;
 import org.jitsi.jirecon.transport.JireconTransportManager;
@@ -92,7 +92,7 @@ public class JireconSessionImpl
 
     @Override
     public JingleIQ connect(JireconTransportManager transportManager,
-        JireconSrtpControlManager srtpControlManager)
+        SrtpControlManager srtpControlManager)
         throws XMPPException,
         OperationFailedException,
         IOException
@@ -163,7 +163,7 @@ public class JireconSessionImpl
 
     private void sendAccpetPacket(JingleIQ initIq,
         JireconTransportManager transportManager,
-        JireconSrtpControlManager srtpControlManager)
+        SrtpControlManager srtpControlManager)
         throws OperationFailedException
     {
         logger.info("sendAcceptPacket");
@@ -376,7 +376,7 @@ public class JireconSessionImpl
 
     private JingleIQ createAcceptPacket(JingleIQ initIq,
         JireconTransportManager transportManager,
-        JireconSrtpControlManager srtpControlManager)
+        SrtpControlManager srtpControlManager)
     {
         logger.info("createSessionAcceptPacket");
         final List<ContentPacketExtension> contents =
@@ -405,7 +405,7 @@ public class JireconSessionImpl
     private ContentPacketExtension createContentPacketExtension(
         MediaType mediaType, ContentPacketExtension initIqContent,
         JireconTransportManager transportManager,
-        JireconSrtpControlManager srtpControlManager)
+        SrtpControlManager srtpControlManager)
     {
         logger.debug(this.getClass() + " createContentPacketExtension");
         IceUdpTransportPacketExtension transportPE =

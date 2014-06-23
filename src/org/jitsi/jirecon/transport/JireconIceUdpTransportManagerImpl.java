@@ -371,7 +371,7 @@ public class JireconIceUdpTransportManagerImpl
                     }
                 }
             }
-            if (streamTargetAddresses.size() > 1)
+            if (streamTargetAddresses.size() >= 2)
             {
                 streamTarget =
                     new MediaStreamTarget(
@@ -419,7 +419,7 @@ public class JireconIceUdpTransportManagerImpl
                     }
                 }
             }
-            if (datagramSockets.size() > 1)
+            if (datagramSockets.size() >= 2)
             {
                 streamConnector =
                     new DefaultStreamConnector(

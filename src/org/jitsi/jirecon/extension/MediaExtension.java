@@ -10,33 +10,55 @@ import java.util.Map.*;
 
 import org.jivesoftware.smack.packet.PacketExtension;
 
+/**
+ * Media extension in presence packet.
+ * 
+ * @author lishunyang
+ */
 public class MediaExtension
     implements PacketExtension
 {
+    /**
+     * The name of the "media" element.
+     */
     public static final String ELEMENT_NAME = "media";
 
+    /**
+     * The namespace for the "media" element.
+     */
     public static final String NAMESPACE = "http://estos.de/ns/mjs";
 
+    /**
+     * The mapping between attribute "type" and "ssrc".
+     */
     private Map<String, String> ssrcs = new HashMap<String, String>();
 
+    /**
+     * The mapping between attribute "type" and "direction".
+     */
     private Map<String, String> directions = new HashMap<String, String>();
 
-    public MediaExtension()
-    {
-    }
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getElementName()
     {
         return ELEMENT_NAME;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getNamespace()
     {
         return NAMESPACE;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String toXML()
     {
@@ -58,21 +80,45 @@ public class MediaExtension
         return builder.toString();
     }
 
+    /**
+     * Set attribute "ssrc" of specified "type".
+     * 
+     * @param type The specified "type"
+     * @param ssrc The "ssrc" to be added.
+     */
     public void setSsrc(String type, String ssrc)
     {
         ssrcs.put(type, ssrc);
     }
 
+    /**
+     * Get attribute "ssrc" of specified "type".
+     * 
+     * @param type The specified "type".
+     * @return Attribute "ssrc".
+     */
     public String getSsrc(String type)
     {
         return ssrcs.get(type);
     }
 
+    /**
+     * Set attribute "direction" of specified "type".
+     * 
+     * @param type The specified "type".
+     * @param direction The "direction" to be added.
+     */
     public void setDirection(String type, String direction)
     {
         directions.put(type, direction);
     }
 
+    /**
+     * Get attribute "direction" of specified "type".
+     * 
+     * @param type The specified "type".
+     * @return Attribute "direction".
+     */
     public String getDirection(String type)
     {
         return directions.get(type);
