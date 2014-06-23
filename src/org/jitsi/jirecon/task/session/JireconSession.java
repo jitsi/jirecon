@@ -23,12 +23,4 @@ public interface JireconSession
         IOException;
 
     public void disconnect(Reason reason, String reasonText);
-
-    public void writeMetaData() throws IOException;
-
-    // public void addEventListener(JireconEventListener listener);
-
-    // public void removeEventListener(JireconEventListener listener);
-
-    // public void sendAcceptPacket(JireconRecorderInfo info);
 }

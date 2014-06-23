@@ -47,7 +47,7 @@ public class JireconTaskImpl
     private JireconTaskSharingInfo sharingInfo;
 
     private ExecutorService executorService;
-    
+
     private boolean isStopped = false;
 
     private JireconTaskInfo info = new JireconTaskInfo();
@@ -56,8 +56,7 @@ public class JireconTaskImpl
         .getLogger(JireconTaskImpl.class);
 
     @Override
-    public void init(String mucJid, XMPPConnection connection,
-        String savingDir)
+    public void init(String mucJid, XMPPConnection connection, String savingDir)
     {
         logger.setLevelAll();
         logger.debug(this.getClass() + " init");
@@ -74,9 +73,7 @@ public class JireconTaskImpl
         transport = new JireconIceUdpTransportManagerImpl();
         srtpControl = new DtlsControlManagerImpl();
         sharingInfo = new JireconTaskSharingInfo();
-        session =
-            new JireconSessionImpl(connection, mucJid, savingDir,
-                sharingInfo);
+        session = new JireconSessionImpl(connection, mucJid, sharingInfo);
         recorder =
             new JireconRecorderImpl(savingDir, sharingInfo,
                 srtpControl.getAllSrtpControl());
@@ -150,8 +147,7 @@ public class JireconTaskImpl
                     transport.getStreamTarget(mediaType);
                 mediaStreamTargets.put(mediaType, mediaStreamTarget);
             }
-            
-            
+
             Map<MediaFormat, Byte> formatAndDynamicPTs =
                 sharingInfo.getFormatAndPayloadTypes();
             recorder.startRecording(formatAndDynamicPTs, streamConnectors,
