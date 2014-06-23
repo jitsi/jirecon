@@ -30,8 +30,7 @@ import org.jivesoftware.smackx.muc.MultiUserChat;
 import org.jivesoftware.smackx.packet.MUCUser;
 
 /**
- * This class is responsible for managing a Jingle session and extract some
- * information which could be used by others.
+ * An implementation of <tt>JireconSessoin</tt>.
  * 
  * @author lishunyang
  * 
@@ -39,37 +38,81 @@ import org.jivesoftware.smackx.packet.MUCUser;
 public class JireconSessionImpl
     implements JireconSession
 {
+    /**
+     * The <tt>XMPPConnection</tt> is used to send/receive XMPP packet.
+     */
     private XMPPConnection connection;
 
-    private MultiUserChat conference;
+    /**
+     * The instance of a <tt>MultiUserChat</tt>. <tt>JireconSessionImpl</tt>
+     * will join it as the first step.
+     */
+    private MultiUserChat muc;
 
+    /**
+     * The <tt>JireconTaskSharingInfo</tt> is used to share some necessary
+     * information between <tt>JireconSessionImpl</tt> and other classes.
+     */
     private JireconTaskSharingInfo sharingInfo;
 
+    /**
+     * The <tt>Logger</tt>, used to log messages to standard output.
+     */
     private static final Logger logger = Logger
         .getLogger(JireconSessionImpl.class);
 
+    // TODO: This should be moved to upper class, add a parameter when
+    // creating JireconSessionImpl
+    /**
+     * The hash nick name item key in configuration file.
+     */
     private final static String NICK_KEY = "JIRECON_NICKNAME";
 
+    /**
+     * The nick name which will be showed up when joining a muc.
+     */
     private String NICK = "default";
 
+    /**
+     * The list of <tt>JireconSessionPacketListener</tt> which is used for
+     * handling kinds of XMPP packet.
+     */
     private List<JireconSessionPacketListener> packetListeners =
         new ArrayList<JireconSessionPacketListener>();
 
+    /**
+     * Indicate how many ms <tt>JireconSessionImpl</tt> will wait for a XMPP
+     * packet. For instance, wait for a session-init packet after joining muc.
+     */
     private final long MAX_WAIT_TIME = 20000;
 
-    public JireconSessionImpl(XMPPConnection connection, String conferenceJid,
+    // TODO: I think mucJid should be moved into connect method.
+    /**
+     * Construction method of <tt>JireconSessionImpl</tt>.
+     * <p>
+     * <strong>Warning:</strong> LibJitsi must be started before calling this
+     * method.
+     * 
+     * @param connection is used for send/receive XMPP packet.
+     * @param mucJid indicate which MUC we will connect.
+     * @param sharingInfo includes some necessary information, it is shared with
+     *            other classes.
+     */
+    public JireconSessionImpl(XMPPConnection connection, String mucJid,
         JireconTaskSharingInfo sharingInfo)
     {
         logger.setLevelDebug();
+
         this.sharingInfo = sharingInfo;
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         this.NICK = configuration.getString(NICK_KEY);
         this.connection = connection;
-        this.sharingInfo.setMucJid(conferenceJid);
+        this.sharingInfo.setMucJid(mucJid);
 
         addPacketSendingListener();
         addPacketReceivingListener();
 
+        // Register the packet listener to handle presence packet.
         JireconSessionPacketListener packetListener =
             new JireconSessionPacketListener()
             {
@@ -84,6 +127,9 @@ public class JireconSessionImpl
         addPacketListener(packetListener);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public JingleIQ connect(JireconTransportManager transportManager,
         SrtpControlManager srtpControlManager)
@@ -101,6 +147,9 @@ public class JireconSessionImpl
         return initIq;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void disconnect(Reason reason, String reasonText)
     {
@@ -108,24 +157,37 @@ public class JireconSessionImpl
         leaveMUC();
     }
 
+    /**
+     * Join a specified Multi-User-Chat.
+     * 
+     * @throws XMPPException if failed to join MUC.
+     */
     private void joinMUC() throws XMPPException
     {
         logger.info("joinMUC");
 
-        conference = new MultiUserChat(connection, sharingInfo.getMucJid());
-        conference.join(NICK);
+        muc = new MultiUserChat(connection, sharingInfo.getMucJid());
+        muc.join(NICK);
     }
 
+    /**
+     * Leave the Multi-User-Chat
+     */
     private void leaveMUC()
     {
         logger.info("leaveMUC");
 
-        if (null != conference)
-        {
-            conference.leave();
-        }
+        if (null != muc)
+            muc.leave();
     }
 
+    /**
+     * Send Jingle session-accept packet to the remote peer.
+     * 
+     * @param initIq is the session-init packet that we've gotten.
+     * @param transportManager is used for ICE connectivity establishment.
+     * @param srtpControlManager is used for SRTP transform.
+     */
     private void sendAccpetPacket(JingleIQ initIq,
         JireconTransportManager transportManager,
         SrtpControlManager srtpControlManager)
@@ -137,12 +199,23 @@ public class JireconSessionImpl
         connection.sendPacket(acceptPacket);
     }
 
+    /**
+     * Send Jingle ack packet to remote peer.
+     * 
+     * @param jiq is the Jingle IQ packet that we've got.
+     */
     private void sendAck(JingleIQ jiq)
     {
         logger.info("sendAck");
         connection.sendPacket(IQ.createResultIQ(jiq));
     }
 
+    /**
+     * Send Jingle session-terminate packet.
+     * 
+     * @param reason is the <tt>Reason</tt> type of the termination packet.
+     * @param reasonText is the human-read text.
+     */
     private void sendByePacket(Reason reason, String reasonText)
     {
         logger.info("sendByePacket");
@@ -152,21 +225,38 @@ public class JireconSessionImpl
             sharingInfo.getSid(), reason, reasonText));
     }
 
-    private void recordSessionInfo(JingleIQ jiq)
+    // TODO: This is wired, I should change it.
+    /**
+     * Record some session information according Jingle session-init packet.
+     * 
+     * @param initJiq is the Jingle session-init packet.
+     */
+    private void recordSessionInfo(JingleIQ initJiq)
     {
-        sharingInfo.setLocalJid(jiq.getTo());
-        sharingInfo.setRemoteJid(jiq.getFrom());
-        sharingInfo.setSid(jiq.getSID());
+        sharingInfo.setLocalJid(initJiq.getTo());
+        sharingInfo.setRemoteJid(initJiq.getFrom());
+        sharingInfo.setSid(initJiq.getSID());
         sharingInfo.setFormatAndPayloadTypes(JinglePacketParser
-            .getFormatAndDynamicPTs(jiq));
+            .getFormatAndDynamicPTs(initJiq));
     }
 
+    /**
+     * Wait for Jingle session-init packet after join the MUC.
+     * <p>
+     * <strong>Warning:</strong> This method will block for at most
+     * <tt>MAX_WAIT_TIME</tt> ms if there isn't init packet.
+     * 
+     * @return Jingle session-init packet that we get.
+     * @throws OperationFailedException if the method time out.
+     */
     private JingleIQ waitForInitPacket() throws OperationFailedException
     {
         logger.info("waitForInitPacket");
 
         final List<JingleIQ> resultList = new ArrayList<JingleIQ>();
         final Object waitForInitPacketSyncRoot = new Object();
+
+        // Register a packet listener for handling Jingle session-init packet.
         JireconSessionPacketListener packetListener =
             new JireconSessionPacketListener()
             {
@@ -222,12 +312,22 @@ public class JireconSessionImpl
         return resultList.get(0);
     }
 
+    /**
+     * Wait for ack packet.
+     * <p>
+     * <strong>Warning:</strong> This method will block for at most
+     * <tt>MAX_WAIT_TIME</tt> ms if there isn't ack packet.
+     * 
+     * @throws OperationFailedException if the method time out.
+     */
     private void waitForAckPacket() throws OperationFailedException
     {
         logger.info("waitForAckPacket");
 
         final List<Packet> resultList = new ArrayList<Packet>();
         final Object waitForAckPacketSyncRoot = new Object();
+
+        // Register a packet listener for handling ack packet.
         JireconSessionPacketListener packetListener =
             new JireconSessionPacketListener()
             {
@@ -273,6 +373,12 @@ public class JireconSessionImpl
         }
     }
 
+    /**
+     * Handle the Jingle presence packet, record the partcipant's information
+     * like jid, ssrc.
+     * 
+     * @param p is the presence packet.
+     */
     private void handlePresencePacket(Presence p)
     {
         PacketExtension packetExt = p.getExtension(MediaExtension.NAMESPACE);
@@ -308,6 +414,15 @@ public class JireconSessionImpl
         }
     }
 
+    /**
+     * Create Jingle session-accept packet.
+     * 
+     * @param initIq is the session-init packet, we need it to create
+     *            session-accept packet.
+     * @param transportManager is used for creating transport packet extension.
+     * @param srtpControlManager is used to set fingerprint.
+     * @return Jingle session-accept packet.
+     */
     private JingleIQ createAcceptPacket(JingleIQ initIq,
         JireconTransportManager transportManager,
         SrtpControlManager srtpControlManager)
@@ -319,9 +434,7 @@ public class JireconSessionImpl
         {
             // Make sure that we only handle audio or video type.
             if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
-            {
                 continue;
-            }
 
             ContentPacketExtension initIqContent =
                 JinglePacketParser.getContentPacketExt(initIq, mediaType);
@@ -336,6 +449,16 @@ public class JireconSessionImpl
         return acceptJiq;
     }
 
+    /**
+     * Create content packet extension in Jingle session-accept packet.
+     * 
+     * @param mediaType indicates the media type.
+     * @param initIqContent is the related content packet extension of Jingle
+     *            session-init packet.
+     * @param transportManager is used for creating transport packet extension.
+     * @param srtpControlManager is used for add fingerprint.
+     * @return content packet extension.
+     */
     private ContentPacketExtension createContentPacketExtension(
         MediaType mediaType, ContentPacketExtension initIqContent,
         JireconTransportManager transportManager,
@@ -360,6 +483,7 @@ public class JireconSessionImpl
         fingerprintPE.setFingerprint(fingerprint);
         fingerprintPE.setHash(hash);
 
+        // harvest payload types information.
         List<PayloadTypePacketExtension> payloadTypes =
             new ArrayList<PayloadTypePacketExtension>();
         for (Map.Entry<MediaFormat, Byte> e : sharingInfo
@@ -387,6 +511,7 @@ public class JireconSessionImpl
             payloadTypes.add(payloadType);
         }
 
+        // Description packet extension stuff
         RtpDescriptionPacketExtension description =
             new RtpDescriptionPacketExtension();
         description.setMedia(mediaType.toString());
@@ -419,6 +544,11 @@ public class JireconSessionImpl
         return content;
     }
 
+    /**
+     * Send the XMPP packet to the packet listeners to handle.
+     * 
+     * @param packet is the packet that we've gotten.
+     */
     private void handlePacket(Packet packet)
     {
         for (JireconSessionPacketListener l : packetListeners)
@@ -427,6 +557,10 @@ public class JireconSessionImpl
         }
     }
 
+    /**
+     * Add packet sending listener to connection. This method is used just for
+     * debugging.
+     */
     private void addPacketSendingListener()
     {
         connection.addPacketSendingListener(new PacketListener()
@@ -435,7 +569,7 @@ public class JireconSessionImpl
             public void processPacket(Packet packet)
             {
                 // logger.debug("--->: " + packet.toXML());
-                System.out.println("--->: " + packet.toXML());
+                // System.out.println("--->: " + packet.toXML());
             }
         }, new PacketFilter()
         {
@@ -447,6 +581,12 @@ public class JireconSessionImpl
         });
     }
 
+    /**
+     * Add packet receiving listener to connection.
+     * <p>
+     * <strong>Warning:</strong> Packet will be ignored if its destination jid
+     * is not equal with local jid.
+     */
     private void addPacketReceivingListener()
     {
         connection.addPacketListener(new PacketListener()
@@ -455,9 +595,9 @@ public class JireconSessionImpl
             public void processPacket(Packet packet)
             {
                 // logger.debug(packet.getClass() + "<---: " + packet.toXML());
-                System.out.println(packet.getClass() + "<---: "
-                    + packet.toXML());
-                handlePacket(packet);
+                // System.out.println(packet.getClass() + "<---: "
+                // + packet.toXML());
+                 handlePacket(packet);
             }
         }, new PacketFilter()
         {
@@ -476,16 +616,38 @@ public class JireconSessionImpl
         });
     }
 
+    /**
+     * The packet listener interface in Observer pattern. Anyone who wants to
+     * handle packet need to implement it.
+     * 
+     * @author lishunyang
+     * 
+     */
     private interface JireconSessionPacketListener
     {
+        /**
+         * Handle packet.
+         * 
+         * @param packet is the packet that we've gotten.
+         */
         public void handlePacket(Packet packet);
     }
 
+    /**
+     * Register a packet listener to this <tt>JireconSessionImpl</tt>.
+     * 
+     * @param listener is the one that you want to add.
+     */
     private void addPacketListener(JireconSessionPacketListener listener)
     {
         packetListeners.add(listener);
     }
 
+    /**
+     * Remove a packet listener from this <tt>JireconSessionImpl</tt>.
+     * 
+     * @param listener is the one that you want to remove.
+     */
     private void removePacketListener(JireconSessionPacketListener listener)
     {
         packetListeners.remove(listener);

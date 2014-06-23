@@ -34,6 +34,8 @@ public class DtlsControlManagerImpl
      */
     private String hashFunction;
 
+    // TODO: This should be moved to upper class, add a parameter when creating
+    // DtlsControlManagerImpl.
     /**
      * The hash function item key in configuration file.
      */
@@ -43,8 +45,7 @@ public class DtlsControlManagerImpl
      * Initializes a new <tt>DtlsControlManagerImpl</tt> instance, create
      * <tt>DtlsControl</tt> for both audio and video.
      * <p>
-     * <strong>Warning:</strong> 
-     * <tt>DtlsControlManagerImpl</tt> relies on
+     * <strong>Warning:</strong> <tt>DtlsControlManagerImpl</tt> relies on
      * <tt>LibJitsi</tt> service, so <tt>LibJitsi</tt> must be started before
      * calling this method.
      */

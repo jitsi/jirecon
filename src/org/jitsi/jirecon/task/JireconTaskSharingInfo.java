@@ -8,12 +8,13 @@ import java.util.Map.Entry;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.MediaFormat;
 
+// TODO: The existence of this class is ugly, I should refactor it.
 public class JireconTaskSharingInfo
 {
     private Map<MediaType, Long> localSsrcs = new HashMap<MediaType, Long>();
 
     private String msLabel = UUID.randomUUID().toString();
-    
+
     private String localJid;
 
     // Where we send packet to(actually is mucJid)
@@ -29,7 +30,7 @@ public class JireconTaskSharingInfo
 
     private Map<String, ParticipantInfo> participantsInfo =
         new HashMap<String, ParticipantInfo>();
-    
+
     public synchronized void addLocalSsrc(MediaType mediaType, Long ssrc)
     {
         localSsrcs.put(mediaType, ssrc);
@@ -54,8 +55,9 @@ public class JireconTaskSharingInfo
     {
         return msLabel + " " + getLabel(mediaType);
     }
-    
-    public synchronized void addFormatAndPayloadType(MediaFormat format, byte payloadTypeId)
+
+    public synchronized void addFormatAndPayloadType(MediaFormat format,
+        byte payloadTypeId)
     {
         formatAndPayloadTypes.put(format, payloadTypeId);
     }
@@ -66,7 +68,8 @@ public class JireconTaskSharingInfo
         this.formatAndPayloadTypes = formatAndPayloadTypes;
     }
 
-    public synchronized Map<MediaFormat, Byte> getFormatAndPayloadTypes(MediaType mediaType)
+    public synchronized Map<MediaFormat, Byte> getFormatAndPayloadTypes(
+        MediaType mediaType)
     {
         Map<MediaFormat, Byte> result = new HashMap<MediaFormat, Byte>();
         for (Entry<MediaFormat, Byte> e : formatAndPayloadTypes.entrySet())
@@ -156,7 +159,8 @@ public class JireconTaskSharingInfo
             return null;
     }
 
-    public synchronized Map<MediaType, String> getParticipantSsrcs(String participantJid)
+    public synchronized Map<MediaType, String> getParticipantSsrcs(
+        String participantJid)
     {
         if (participantsInfo.containsKey(participantJid))
             return participantsInfo.get(participantJid).getSsrcs();
@@ -183,7 +187,7 @@ public class JireconTaskSharingInfo
         else
             return null;
     }
-    
+
     public class ParticipantInfo
     {
         private String fingerprint;
