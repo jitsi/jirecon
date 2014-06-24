@@ -35,7 +35,7 @@ public class JireconRecorderImpl
     implements JireconRecorder
 {
     /**
-     * The mapping between <tt>MediaType</tt> and <tt>MediaStream</tt>. Those
+     * The map between <tt>MediaType</tt> and <tt>MediaStream</tt>. Those
      * are used to receiving media streams.
      */
     private Map<MediaType, MediaStream> streams =
@@ -47,14 +47,14 @@ public class JireconRecorderImpl
     private MediaService mediaService;
 
     /**
-     * The mapping between <tt>MediaType</tt> and <tt>RTPTranslator</tt>. Those
+     * The map between <tt>MediaType</tt> and <tt>RTPTranslator</tt>. Those
      * are used to initialize recorder.
      */
     private Map<MediaType, RTPTranslator> rtpTranslators =
         new HashMap<MediaType, RTPTranslator>();
 
     /**
-     * The mapping between <tt>MediaType</tt> and <tt>Recorder</tt>. Those are
+     * The map between <tt>MediaType</tt> and <tt>Recorder</tt>. Those are
      * used to record media streams into local files.
      */
     private Map<MediaType, Recorder> recorders =
@@ -97,7 +97,7 @@ public class JireconRecorderImpl
      *            existed and writable.
      * @param sharingInfo includes some necessary information, it is shared with
      *            other classes.
-     * @param srtpControls is the mapping between <tt>MediaType</tt> and
+     * @param srtpControls is the map between <tt>MediaType</tt> and
      *            <tt>SrtpControl</tt> which is used for SRTP transfer.
      */
     public JireconRecorderImpl(String SAVING_DIR,
@@ -142,13 +142,13 @@ public class JireconRecorderImpl
      * Make all <tt>JireconRecorderImpl</tt> ready to start receiving media
      * streams.
      * 
-     * @param formatAndDynamicPTs is the mapping between <tt>MediaFormat</tt>
+     * @param formatAndDynamicPTs is the map between <tt>MediaFormat</tt>
      *            and dynamic payload type id. <tt>MediaStream</tt> needs those
      *            to distinguish different <tt>MediaFormat</tt>.
-     * @param connectors is the mapping between <tt>MediaType</tt> and
+     * @param connectors is the map between <tt>MediaType</tt> and
      *            <tt>StreamConnector</tt>. Those connectors are used to
      *            transfer stream data.
-     * @param targets is the mapping between <tt>MediaType</tt> and
+     * @param targets is the map between <tt>MediaType</tt> and
      *            <tt>MediaStreamTarget</tt>. The target indicate media stream
      *            source.
      * @throws OperationFailedException if some operation failed and the
@@ -329,7 +329,7 @@ public class JireconRecorderImpl
      * <strong>Warning:</strong> We can only add <tt>SrtpControl</tt> to
      * <tt>MediaStream</tt> at this moment.
      * 
-     * @param srtpControls is the mapping between <tt>MediaType</tt> and
+     * @param srtpControls is the map between <tt>MediaType</tt> and
      *            <tt>SrtpControl</tt>.
      */
     private void createMediaStreams(Map<MediaType, SrtpControl> srtpControls)

@@ -5,29 +5,64 @@
  */
 package org.jitsi.jirecon;
 
+/**
+ * Running event of <tt>Jirecon</tt>, which means some important things
+ * happened.
+ * 
+ * @author lishunyang
+ * 
+ */
 public class JireconEvent
 {
-    private JireconEventId evtId;
+    /**
+     * Event type.
+     */
+    private Type type;
 
+    /**
+     * Source of the event.
+     */
     private Object source;
 
-    public JireconEvent(Object source, JireconEventId evtId)
+    /**
+     * Construction method.
+     * 
+     * @param source indicates where this event comes from.
+     * @param type indicates the event type.
+     */
+    public JireconEvent(Object source, Type type)
     {
         this.source = source;
-        this.evtId = evtId;
+        this.type = type;
     }
 
-    public JireconEventId getEventId()
+    /**
+     * Get event type.
+     * 
+     * @return event type
+     */
+    public Type getType()
     {
-        return evtId;
+        return type;
     }
 
+    /**
+     * Get event source.
+     * 
+     * @return event source
+     */
     public Object getSource()
     {
         return source;
     }
-    
-    public enum JireconEventId
+
+    /**
+     * <tt>JireconEvent</tt> type.
+     * 
+     * @author lishunyang
+     * 
+     */
+    public enum Type
     {
         TASK_ABORTED,
     }

@@ -220,9 +220,9 @@ public class JireconSessionImpl
     {
         logger.info("sendByePacket");
 
-        connection.sendPacket(JinglePacketFactory.createSessionTerminate(
-            sharingInfo.getLocalJid(), sharingInfo.getRemoteJid(),
-            sharingInfo.getSid(), reason, reasonText));
+         connection.sendPacket(JinglePacketFactory.createSessionTerminate(
+         sharingInfo.getLocalJid(), sharingInfo.getRemoteJid(),
+         sharingInfo.getSid(), reason, reasonText));
     }
 
     // TODO: This is wired, I should change it.
@@ -233,8 +233,9 @@ public class JireconSessionImpl
      */
     private void recordSessionInfo(JingleIQ initJiq)
     {
+        // TODO: Loal jid could be gotten from XMPP connection.
         sharingInfo.setLocalJid(initJiq.getTo());
-        sharingInfo.setRemoteJid(initJiq.getFrom());
+         sharingInfo.setRemoteJid(initJiq.getFrom());
         sharingInfo.setSid(initJiq.getSID());
         sharingInfo.setFormatAndPayloadTypes(JinglePacketParser
             .getFormatAndDynamicPTs(initJiq));
@@ -442,9 +443,9 @@ public class JireconSessionImpl
                 transportManager, srtpControlManager));
         }
 
-        JingleIQ acceptJiq =
-            JinglePacketFactory.createSessionAccept(sharingInfo.getLocalJid(),
-                sharingInfo.getRemoteJid(), sharingInfo.getSid(), contents);
+         JingleIQ acceptJiq =
+         JinglePacketFactory.createSessionAccept(sharingInfo.getLocalJid(),
+         sharingInfo.getRemoteJid(), sharingInfo.getSid(), contents);
 
         return acceptJiq;
     }
@@ -569,7 +570,7 @@ public class JireconSessionImpl
             public void processPacket(Packet packet)
             {
                 // logger.debug("--->: " + packet.toXML());
-                // System.out.println("--->: " + packet.toXML());
+                System.out.println("--->: " + packet.toXML());
             }
         }, new PacketFilter()
         {
@@ -595,9 +596,8 @@ public class JireconSessionImpl
             public void processPacket(Packet packet)
             {
                 // logger.debug(packet.getClass() + "<---: " + packet.toXML());
-                // System.out.println(packet.getClass() + "<---: "
-                // + packet.toXML());
-                 handlePacket(packet);
+                System.out.println("<---: " + packet.toXML());
+                handlePacket(packet);
             }
         }, new PacketFilter()
         {

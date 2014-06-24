@@ -24,7 +24,7 @@ public class DtlsControlManagerImpl
     implements SrtpControlManager
 {
     /**
-     * The mapping between <tt>MediaType</tt> and <tt>DtlsControl</tt>.
+     * The map between <tt>MediaType</tt> and <tt>DtlsControl</tt>.
      */
     private Map<MediaType, DtlsControl> dtlsControls =
         new HashMap<MediaType, DtlsControl>();

@@ -29,12 +29,12 @@ public class MediaExtension
     public static final String NAMESPACE = "http://estos.de/ns/mjs";
 
     /**
-     * The mapping between attribute "type" and "ssrc".
+     * The map between attribute "type" and "ssrc".
      */
     private Map<String, String> ssrcs = new HashMap<String, String>();
 
     /**
-     * The mapping between attribute "type" and "direction".
+     * The map between attribute "type" and "direction".
      */
     private Map<String, String> directions = new HashMap<String, String>();
 

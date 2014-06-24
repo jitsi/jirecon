@@ -14,16 +14,45 @@ import org.jitsi.jirecon.Jirecon;
 import org.jitsi.jirecon.JireconImpl;
 import org.jivesoftware.smack.XMPPException;
 
+/**
+ * A launch application which is used to run <tt>Jirecon</tt>.
+ * <p>
+ * Usually there will be a associated Shell script to start this application.
+ * 
+ * @author lishunyang
+ * 
+ */
 public class JireconLauncher
 {
+    /**
+     * Prefix of configuration parameter.
+     */
     private static final String CONF_ARG_NAME = "--conf=";
 
+    /**
+     * Prefix of time parameter.
+     */
     private static final String TIME_ARG_NAME = "--time=";
 
+    /**
+     * Configuration file path.
+     */
     private static String conf;
 
+    /**
+     * How many seconds each recording task will persist.
+     */
     private static long time;
 
+    /**
+     * Application entry.
+     * 
+     * @param args <tt>JireconLauncher</tt> only cares about two arguments:
+     *            <p>
+     *            1. --conf=CONF FILE PATH
+     *            <p>
+     *            2. --time=RECORDING SECONDS
+     */
     public static void main(String[] args)
     {
         conf = null;
@@ -82,7 +111,7 @@ public class JireconLauncher
 
         for (String jid : mucJids)
             jirecon.stopJireconTask(jid);
-        
+
         jirecon.uninit();
     }
 }

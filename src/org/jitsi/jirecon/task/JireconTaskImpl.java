@@ -238,7 +238,7 @@ public class JireconTaskImpl
         {
             e.printStackTrace();
             fireEvent(new JireconEvent(this,
-                JireconEvent.JireconEventId.TASK_ABORTED));
+                JireconEvent.Type.TASK_ABORTED));
         }
     }
 
@@ -308,7 +308,7 @@ public class JireconTaskImpl
             {
                 ((JireconTask) e).stop();
                 fireEvent(new JireconEvent(JireconTaskImpl.this,
-                    JireconEvent.JireconEventId.TASK_ABORTED));
+                    JireconEvent.Type.TASK_ABORTED));
             }
         }
     }

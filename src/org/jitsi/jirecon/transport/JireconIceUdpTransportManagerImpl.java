@@ -22,28 +22,70 @@ import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 
+/**
+ * An implementation of <tt>JireconTransportManager</tt>.
+ * <p>
+ * It mainly used for:
+ * <p>
+ * 1. Establish ICE connectivity.
+ * <p>
+ * 2. Create <tt>IceUdpTransportPacketExtension</tt>
+ * 
+ * @author lishunyang
+ * @see JireconTransportManager
+ * 
+ */
 public class JireconIceUdpTransportManagerImpl
     implements JireconTransportManager
 {
+    /**
+     * Instance of <tt>Agent</tt>.
+     */
     private Agent iceAgent;
 
+    /**
+     * Map between <tt>MediaType</tt> and <tt>StreamConnector</tt>. It is used
+     * for caching <tt>StreamConnector</tt>.
+     */
     private Map<MediaType, StreamConnector> streamConnectors =
         new HashMap<MediaType, StreamConnector>();
 
+    /**
+     * Map between <tt>MediaType</tt> and <tt>MediaStreamTarget</tt>. It is used
+     * for caching <tt>MediaStreamTarget</tt>.
+     */
     private Map<MediaType, MediaStreamTarget> mediaStreamTargets =
         new HashMap<MediaType, MediaStreamTarget>();
 
+    /**
+     * The <tt>Logger</tt>, used to log messages to standard output.
+     */
     private static final Logger logger = Logger
         .getLogger(JireconIceUdpTransportManagerImpl.class);
 
+    /**
+     * The minimum stream port item key in configuration file.
+     */
     private String MIN_STREAM_PORT_KEY = "MIN_STREAM_PORT";
 
+    /**
+     * The maximum stream port item key in configuration file.
+     */
     private String MAX_STREAM_PORT_KEY = "MAX_STREAM_PORT";
 
+    /**
+     * The minimum stream port.
+     */
     private int MIN_STREAM_PORT;
 
+    /**
+     * The maximum stream port.
+     */
     private int MAX_STREAM_PORT;
 
+    /**
+     * The construction method.
+     */
     public JireconIceUdpTransportManagerImpl()
     {
         logger.info("init");
@@ -53,11 +95,18 @@ public class JireconIceUdpTransportManagerImpl
         MAX_STREAM_PORT = configuration.getInt(MAX_STREAM_PORT_KEY, -1);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void free()
     {
         iceAgent.free();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public IceUdpTransportPacketExtension getTransportPacketExt()
     {
@@ -73,11 +122,21 @@ public class JireconIceUdpTransportManagerImpl
         return transportPE;
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * <p>
+     * <strong>Warning:</strong> This method is asynchronous, it will return
+     * immediately while it doesn't means the ICE connectivity has been
+     * established successfully. On the contrary, sometime it will never
+     * finished and it doesn't matter only if at least one selected candidate
+     * pair has been gotten.
+     * 
+     */
     @Override
     public void startConnectivityEstablishment()
     {
         logger.info("startConnectivityEstablishment");
-        iceAgent.startConnectivityEstablishment();
         new Thread(new Runnable()
         {
             @Override
@@ -93,8 +152,15 @@ public class JireconIceUdpTransportManagerImpl
                 }
             }
         }).start();
+        iceAgent.startConnectivityEstablishment();
     }
 
+    /**
+     * Check whether the ICE connectivity has been established successfully.
+     * This method seems meaningless.
+     * 
+     * @throws OperationFailedException if some fatal error occurs.
+     */
     private void startConnectivityCheck() throws OperationFailedException
     {
         logger.info("waitForCheckFinished");
@@ -127,8 +193,6 @@ public class JireconIceUdpTransportManagerImpl
             };
 
         iceAgent.addStateChangeListener(stateChangeListener);
-
-        // startConnectivityEstablishment();
 
         // Wait for the connectivity checks to finish if they have been started.
         boolean interrupted = false;
@@ -165,6 +229,9 @@ public class JireconIceUdpTransportManagerImpl
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void harvestLocalCandidates()
         throws BindException,
@@ -188,6 +255,9 @@ public class JireconIceUdpTransportManagerImpl
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void harvestRemoteCandidates(
         Map<MediaType, IceUdpTransportPacketExtension> transportPEs)
@@ -253,15 +323,13 @@ public class JireconIceUdpTransportManagerImpl
         }
     }
 
-    public CandidatePair getCandidatePairs(MediaType mediaType, int componentId)
-    {
-        logger.info("harvestCandidatePairs, component " + componentId);
-        final IceMediaStream iceStream = getIceMediaStream(mediaType);
-        final Component component = iceStream.getComponent(componentId);
-        return component.getSelectedPair();
-    }
-
-    public IceMediaStream getIceMediaStream(MediaType mediaType)
+    /**
+     * Get <tt>IceMediaStream</tt> of specified <tt>MediaType</tt>.
+     * 
+     * @param mediaType
+     * @return <tt>IceMediaStream</tt>
+     */
+    private IceMediaStream getIceMediaStream(MediaType mediaType)
     {
         if (null == iceAgent.getStream(mediaType.toString()))
         {
@@ -270,6 +338,11 @@ public class JireconIceUdpTransportManagerImpl
         return iceAgent.getStream(mediaType.toString());
     }
 
+    /**
+     * Create list of <tt>CandidatePacketExtension</tt>.
+     * 
+     * @return List of <tt>CandidatePacketExtension</tt>
+     */
     private List<CandidatePacketExtension> getLocalCandidatePacketExts()
     {
         List<CandidatePacketExtension> candidatePEs =
@@ -298,6 +371,11 @@ public class JireconIceUdpTransportManagerImpl
         return candidatePEs;
     }
 
+    /**
+     * Get local candidates
+     * 
+     * @return List of <tt>LocalCandidate</tt>
+     */
     private List<LocalCandidate> getLocalCandidates()
     {
         List<LocalCandidate> candidates = new ArrayList<LocalCandidate>();
@@ -335,6 +413,9 @@ public class JireconIceUdpTransportManagerImpl
     // return null;
     // }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public MediaStreamTarget getStreamTarget(MediaType mediaType)
     {
@@ -383,6 +464,16 @@ public class JireconIceUdpTransportManagerImpl
         return streamTarget;
     }
 
+    // TODO: Add a maximum wait time, if time out, just throw a
+    // OperationFailedException.
+    /**
+     * {@inheritDoc}
+     * <p>
+     * <strong>Warning:</strong> This method will wait for the selected
+     * candidate pair which should be generated during establish ICE
+     * connectivity. However, sometimes selected pair can't be generated
+     * forever, in this case, this method will hang.
+     */
     @Override
     public StreamConnector getStreamConnector(MediaType mediaType)
         throws OperationFailedException
@@ -402,8 +493,7 @@ public class JireconIceUdpTransportManagerImpl
                 OperationFailedException.GENERAL_ERROR);
         }
 
-        List<DatagramSocket> datagramSockets =
-            new ArrayList<DatagramSocket>();
+        List<DatagramSocket> datagramSockets = new ArrayList<DatagramSocket>();
         while (true)
         {
             for (Component component : stream.getComponents())
@@ -428,7 +518,8 @@ public class JireconIceUdpTransportManagerImpl
                 streamConnectors.put(mediaType, streamConnector);
                 break;
             }
-            
+
+            // Sleep for 1 second and try again.
             try
             {
                 Thread.sleep(1000);
@@ -442,6 +533,14 @@ public class JireconIceUdpTransportManagerImpl
         return streamConnector;
     }
 
+    /**
+     * Test whether the remote candidate can reach any local candidate in
+     * <tt>Component</tt>.
+     * 
+     * @param component
+     * @param remoteCandidate
+     * @return
+     */
     private boolean canReach(Component component,
         RemoteCandidate remoteCandidate)
     {

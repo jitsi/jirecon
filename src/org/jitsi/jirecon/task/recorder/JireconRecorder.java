@@ -25,13 +25,13 @@ public interface JireconRecorder
     /**
      * Start recording media streams.
      * 
-     * @param formatAndDynamicPTs is the mapping between <tt>MediaFormat</tt>
+     * @param formatAndDynamicPTs is the map between <tt>MediaFormat</tt>
      *            and dynamic payload type id. <tt>JireconRecorder</tt> needs it
      *            to recognize those dynamic payload types.
-     * @param connectors is the mapping between <tt>MediaType</tt> and
+     * @param connectors is the map between <tt>MediaType</tt> and
      *            <tt>StreamConnector</tt>. <tt>JireconRecorder</tt> needs those
      *            connectors to transfer stream data.
-     * @param targets is the mapping between <tt>MediaType</tt> and
+     * @param targets is the map between <tt>MediaType</tt> and
      *            <tt>MediaStreamTarget</tt>. Every target indicates a media
      *            source.
      * @throws OperationFailedException if some operation failed.

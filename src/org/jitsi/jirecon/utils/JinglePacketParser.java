@@ -16,8 +16,10 @@ import org.jivesoftware.smack.packet.IQ;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 /**
- * This class only has static method. It is used for extract information from
- * Jingle related packet.
+ * A packet parser which is used to extract various information from
+ * <tt>JingleIQ</tt>.
+ * <p>
+ * <strong>Warning:</strong> There are only static methods.
  * 
  * @author lishunyang
  * 
@@ -25,10 +27,10 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 public class JinglePacketParser
 {
     /**
-     * Get who sended this Jingle packet.
+     * Get sender's jid of specified <tt>JingleIQ</tt>.
      * 
-     * @param jiq The Jingle packet.
-     * @return The sender's user name
+     * @param jiq
+     * @return sender's jid.
      */
     public static String getFrom(JingleIQ jiq)
     {
@@ -36,10 +38,10 @@ public class JinglePacketParser
     }
 
     /**
-     * Get who will receive this Jingle packet.
+     * Get receiver's jid of specified <tt>JingleIQ</tt>.
      * 
-     * @param jiq The Jingle packet.
-     * @return The receiver's uer name.
+     * @param jiq
+     * @return The receiver's jid.
      */
     public static String getTo(JingleIQ jiq)
     {
@@ -47,10 +49,10 @@ public class JinglePacketParser
     }
 
     /**
-     * Get the type of a Jingle packet.
+     * Get the type of specified <tt>JingleIQ</tt>.
      * 
-     * @param jiq The Jingle packet.
-     * @return The type of this Jingle packet.
+     * @param jiq
+     * @return packet type.
      */
     public static IQ.Type getType(JingleIQ jiq)
     {
@@ -58,10 +60,10 @@ public class JinglePacketParser
     }
 
     /**
-     * Get the action of a Jingle packet.
+     * Get the action of specified <tt>JingleIQ</tt>.
      * 
-     * @param jiq The jingle packet.
-     * @return The action of this Jingle packet.
+     * @param jiq
+     * @return action
      */
     public static JingleAction getAction(JingleIQ jiq)
     {
@@ -69,12 +71,12 @@ public class JinglePacketParser
     }
 
     /**
-     * Get the content packet extension of a Jingle packet with speficied type
-     * of media.
+     * Get the content packet extension from a <tt>JingleIQ</tt> of specified
+     * <tt>MediaType</tt>.
      * 
-     * @param jiq The Jingle packet.
-     * @param media The media type.
-     * @return Content packet extension.
+     * @param jiq <tt>JingleIQ</tt>
+     * @param media <tt>MediaType</tt>
+     * @return <tt>ContentPacketExtension</tt>
      */
     public static ContentPacketExtension getContentPacketExt(JingleIQ jiq,
         MediaType media)
@@ -89,11 +91,11 @@ public class JinglePacketParser
     }
 
     /**
-     * Get the description packet extension from a content packet packet
-     * extension.
+     * Get the <tt>RtpDescriptionPacketExtension</tt> from a
+     * <tt>ContentPacketExtension</tt>.
      * 
-     * @param content The content packet extension.
-     * @return Description packet extension.
+     * @param content <tt>ContentPacketExtension</tt>
+     * @return <tt>RtpDescriptionPacketExtension</tt>
      */
     public static RtpDescriptionPacketExtension getDescriptionPacketExt(
         ContentPacketExtension content)
@@ -102,8 +104,8 @@ public class JinglePacketParser
     }
 
     /**
-     * Get the description packet extension from a Jingle packet with specified
-     * type of media.
+     * Get the <tt>RtpDescriptionPacketExtension</tt> from a <tt>JingleIQ</tt>
+     * of specified <tt>MediaType</tt>.
      * 
      * @param jiq The Jingle packet.
      * @param media The media type.
@@ -116,8 +118,8 @@ public class JinglePacketParser
     }
 
     /**
-     * Get a list of payloadtype packet extensions from a description packet
-     * extension.
+     * Get a list of <tt>PayloadTypePacketExtension</tt> from a
+     * <tt>RtpDescriptionPacketExtension</tt>.
      * 
      * @param description The description packet extension.
      * @return List of payloadtype packet extensions.
@@ -129,8 +131,8 @@ public class JinglePacketParser
     }
 
     /**
-     * Get a list of payloadtype packet extension from a Jingle packet with
-     * specified type of media.
+     * Get a list of <tt>PayloadTypePacketExtension</tt> from a
+     * <tt>JingleIQ</tt> with specified <tt>MediaType</tt>.
      * 
      * @param jiq The Jingle packet.
      * @param media The media type.
@@ -143,12 +145,12 @@ public class JinglePacketParser
     }
 
     /**
-     * Get transport packet extension from a Jingle packet with specified type
-     * of media.
+     * Get <tt>IceUdpTransportPacketExtension</tt> from a <tt>JingleIQ</tt> of
+     * specified <tt>MediaType</tt>.
      * 
      * @param jiq The Jingle packet.
-     * @param media The type of media.
-     * @return Transport packet extension.
+     * @param media is the specified <tt>MediaType</tt>.
+     * @return <tt>IceUdpTransportPacketExtension</tt>.
      */
     public static IceUdpTransportPacketExtension getTransportPacketExt(
         JingleIQ jiq, MediaType media)
@@ -165,6 +167,13 @@ public class JinglePacketParser
         return null;
     }
 
+    /**
+     * Get all transport packet extensions from a Jingle packet.
+     * 
+     * @param jiq The Jingle packet.
+     * @return Map between <tt>MediaType</tt> and
+     *         <tt>IceUdpTransportPacketExtension</tt>.
+     */
     public static Map<MediaType, IceUdpTransportPacketExtension> getTransportPacketExts(
         JingleIQ jiq)
     {
@@ -183,7 +192,7 @@ public class JinglePacketParser
     }
 
     /**
-     * Get ufrag from an Jingle packet with specified type of media.
+     * Get ufrag from a <tt>JingleIQ</tt> of specified <tt>MediaType</tt>.
      * 
      * @param jiq The Jingle packet.
      * @param media The type of media.
@@ -195,7 +204,7 @@ public class JinglePacketParser
     }
 
     /**
-     * Get ufrag from an transport packet extension.
+     * Get ufrag from a <tt>IceUdpTransportPacketExtension</tt>.
      * 
      * @param transport The transport packet extension.
      * @return Ufrag.
@@ -207,8 +216,8 @@ public class JinglePacketParser
     }
 
     /**
-     * Get a list of candidate packet extension from a transport packet
-     * extension.
+     * Get a list of <tt>CandidatePacketExtension</tt> from a
+     * <tt>IceUdpTransportPacketExtension</tt>.
      * 
      * @param transport The transport packet extension.
      * @return List of candidate packet extensions.
@@ -220,8 +229,8 @@ public class JinglePacketParser
     }
 
     /**
-     * Get a list of candidate packet extension from a Jingle packet with
-     * specified type of media.
+     * Get a list of <tt>CandidatePacketExtension</tt> from a <tt>JingleIQ</tt>
+     * of specified <tt>MediaType</tt>.
      * 
      * @param jiq The Jingle packet.
      * @param media The type of media.
@@ -234,7 +243,7 @@ public class JinglePacketParser
     }
 
     /**
-     * Get password from a transport packet extension.
+     * Get password from a <tt>IceUdpTransportPacketExtension</tt>.
      * 
      * @param transport The transport packet extension.
      * @return Password.
@@ -246,7 +255,7 @@ public class JinglePacketParser
     }
 
     /**
-     * Get password from a Jingle packet with specified type of media.
+     * Get password from a <tt>JingleIQ</tt> of specified <tt>MediaType</tt>.
      * 
      * @param jiq The Jingle packet.
      * @param media The type of media.
@@ -258,13 +267,13 @@ public class JinglePacketParser
     }
 
     /**
-     * Get conference id from a Jingle packet.
+     * Get MUC jid from a <tt>JingleIQ</tt>.
      * 
      * @param jiq The Jingle packet.
-     * @param isReceived Wether this Jingle packet is received.
-     * @return
+     * @param isReceived Whether this Jingle packet is received.
+     * @return MUC jid
      */
-    public static String getConferenceId(JingleIQ jiq, boolean isReceived)
+    public static String getMucJid(JingleIQ jiq, boolean isReceived)
     {
         if (isReceived)
         {
@@ -276,11 +285,24 @@ public class JinglePacketParser
         }
     }
 
+    /**
+     * Get session id of a <tt>JingleIQ</tt>.
+     * 
+     * @param jiq
+     * @return session id
+     */
     public static String getSid(JingleIQ jiq)
     {
         return jiq.getSID();
     }
 
+    /**
+     * Get maps between <tt>MediaFormat</tt> and dynamic payload type id from a
+     * specified <tt>JingleIQ</tt>.
+     * 
+     * @param jiq
+     * @return map between <tt>MediaFormat</tt> and dynamic payload type id.
+     */
     public static Map<MediaFormat, Byte> getFormatAndDynamicPTs(JingleIQ jiq)
     {
         Map<MediaFormat, Byte> formatAndDynamicPTs =
@@ -311,16 +333,17 @@ public class JinglePacketParser
                         (byte) (payloadTypePacketExt.getID()));
                 }
             }
-
-            // TODO Fingerprint stuff, where should it be?
-            // IceUdpTransportPacketExtension transport =
-            // JinglePacketParser.getTransportPacketExt(jiq, mediaType);
-            // info.setRemoteFingerprint(mediaType, transport.getText());
         }
 
         return formatAndDynamicPTs;
     }
 
+    /**
+     * Get fingerprint from a specified <tt>JingleIQ</tt>.
+     * 
+     * @param jiq
+     * @return fingerprint.
+     */
     public static Map<MediaType, String> getFingerprint(JingleIQ jiq)
     {
         Map<MediaType, String> fingerprints = new HashMap<MediaType, String>();

@@ -5,7 +5,6 @@
  */
 package org.jitsi.jirecon;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -20,53 +19,96 @@ import org.jitsi.util.Logger;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.provider.ProviderManager;
 
+/**
+ * An implementation of <tt>Jirecon</tt>. The manager of <tt>JireconTask</tt>,
+ * each <tt>JireconTask</tt> represents a recording task for specified
+ * Jitsi-meeting. <tt>JireconImpl</tt> is responsible for create and stop those
+ * tasks.
+ * 
+ * @author lishunyang
+ * @see Jirecon
+ * @see JireconTask
+ * 
+ */
 public class JireconImpl
     implements Jirecon, JireconEventListener
 {
+    /**
+     * List of <tt>JireconEventListener</tt>, if something important happen,
+     * they will be notified.
+     */
     private List<JireconEventListener> listeners =
         new ArrayList<JireconEventListener>();
 
+    /**
+     * An instance of <tt>XMPPConnection</tt>, it is shared with every
+     * <tt>JireconTask</tt>
+     */
     private XMPPConnection connection;
 
+    // TODO: It seems that I have used too many map structure, some are not
+    // necessary, such as this one.
+    /**
+     * Active <tt>JireconTask</tt>, map between Jitsi-meeting jid and task.
+     */
     private Map<String, JireconTask> jireconTasks =
         new HashMap<String, JireconTask>();
 
+    /**
+     * The <tt>Logger</tt>, used to log messages to standard output.
+     */
     private static final Logger logger = Logger.getLogger(JireconImpl.class);
 
-    // private static final String CONFIGURATION_FILE_PATH =
-    // "jirecon.properties";
-
+    /**
+     * The XMPP server host item key in configuration file.
+     */
     private static final String XMPP_HOST_KEY = "XMPP_HOST";
 
+    /**
+     * The XMPP server port item key in configuration file.
+     */
     private static final String XMPP_PORT_KEY = "XMPP_PORT";
 
+    /**
+     * The saving directory item key in configuration file.
+     */
     private static final String SAVING_DIR_KEY = "OUTPUT_DIR";
 
-    private String SAVING_DIR;
+    /**
+     * The base directory to save recording files. <tt>JireconImpl</tt> will add
+     * date suffix to it as a final output directory.
+     */
+    private String base_output_dir;
 
     public JireconImpl()
     {
         logger.setLevelDebug();
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * Start Libjitsi, load configuration file and create connection with XMPP
+     * server.
+     */
     @Override
-    public void init(String configurationPath)
-        throws IOException,
-        XMPPException
+    public void init(String configurationPath) throws XMPPException
     {
         logger.debug(this.getClass() + "init");
 
         initiatePacketProviders();
 
         LibJitsi.start();
+
         System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_NAME,
             configurationPath);
         ConfigurationService configuration = LibJitsi.getConfigurationService();
-        SAVING_DIR = configuration.getString(SAVING_DIR_KEY);
+        base_output_dir = configuration.getString(SAVING_DIR_KEY);
         // Remove the suffix '/' in SAVE_DIR
-        if ('/' == SAVING_DIR.charAt(SAVING_DIR.length() - 1))
+        if ('/' == base_output_dir.charAt(base_output_dir.length() - 1))
         {
-            SAVING_DIR = SAVING_DIR.substring(0, SAVING_DIR.length() - 1);
+            base_output_dir =
+                base_output_dir.substring(0, base_output_dir.length() - 1);
         }
 
         final String xmppHost = configuration.getString(XMPP_HOST_KEY);
@@ -74,7 +116,7 @@ public class JireconImpl
         try
         {
             connect(xmppHost, xmppPort);
-            login();
+            loginAnonymously();
         }
         catch (XMPPException e)
         {
@@ -84,6 +126,11 @@ public class JireconImpl
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * Stop Libjitsi and close connection with XMPP server.
+     */
     @Override
     public void uninit()
     {
@@ -96,6 +143,9 @@ public class JireconImpl
         closeConnection();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void startJireconTask(String mucJid)
     {
@@ -107,17 +157,22 @@ public class JireconImpl
             {
                 logger.info("Failed to start Jirecon by mucJid: " + mucJid
                     + ". Duplicate mucJid.");
+                // TODO: In this case, I should fire an event to notify those
+                // listeners.
                 return;
             }
             JireconTask j = new JireconTaskImpl();
             jireconTasks.put(mucJid, j);
             j.addEventListener(this);
-            j.init(mucJid, connection, SAVING_DIR + "/" + mucJid
+            j.init(mucJid, connection, base_output_dir + "/" + mucJid
                 + new SimpleDateFormat("-yyMMdd-HHmmss").format(new Date()));
             j.start();
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void stopJireconTask(String mucJid)
     {
@@ -128,6 +183,8 @@ public class JireconImpl
             {
                 logger.info("Failed to stop Jirecon by mucJid: " + mucJid
                     + ". Nonexisted Jid.");
+                // TODO: In this case, I should fire an event to notify those
+                // listeners.
                 return;
             }
             JireconTask j = jireconTasks.remove(mucJid);
@@ -136,6 +193,13 @@ public class JireconImpl
         }
     }
 
+    /**
+     * Build XMPP connection.
+     * 
+     * @param xmppHost is the host name of XMPP server.
+     * @param xmppPort is the port of XMPP server.
+     * @throws XMPPException if failed to build connection.
+     */
     private void connect(String xmppHost, int xmppPort) throws XMPPException
     {
         logger.debug(this.getClass() + "connect");
@@ -145,18 +209,29 @@ public class JireconImpl
         connection.connect();
     }
 
+    /**
+     * Close XMPP connection.
+     */
     private void closeConnection()
     {
         logger.debug(this.getClass() + "closeConnection");
         connection.disconnect();
     }
 
-    private void login() throws XMPPException
+    /**
+     * Login XMPP server anonymously.
+     * 
+     * @throws XMPPException
+     */
+    private void loginAnonymously() throws XMPPException
     {
         logger.debug(this.getClass() + "login");
         connection.loginAnonymously();
     }
 
+    /**
+     * Add packet provider to connection.
+     */
     private void initiatePacketProviders()
     {
         logger.debug(this.getClass() + "initiatePacketProviders");
@@ -168,6 +243,9 @@ public class JireconImpl
             new MediaExtensionProvider());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void addEventListener(JireconEventListener listener)
     {
@@ -175,6 +253,9 @@ public class JireconImpl
         listeners.add(listener);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void removeEventListener(JireconEventListener listener)
     {
@@ -182,10 +263,15 @@ public class JireconImpl
         listeners.remove(listener);
     }
 
+    // TODO: There are other events should be notified, such as TASK_NOT_FOUND,
+    // TASK_FINISED(because everyone left the meeting).
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void handleEvent(JireconEvent evt)
     {
-        switch (evt.getEventId())
+        switch (evt.getType())
         {
         case TASK_ABORTED:
             if (evt.getSource() instanceof JireconTask)
@@ -195,7 +281,7 @@ public class JireconImpl
                 stopJireconTask(mucJid);
                 logger.fatal("Failed to start task of mucJid " + mucJid + ".");
                 fireEvent(new JireconEvent(this,
-                    JireconEvent.JireconEventId.TASK_ABORTED));
+                    JireconEvent.Type.TASK_ABORTED));
             }
             break;
         default:
@@ -203,6 +289,11 @@ public class JireconImpl
         }
     }
 
+    /**
+     * Notify the listeners.
+     * 
+     * @param evt is the event that you want to send.
+     */
     private void fireEvent(JireconEvent evt)
     {
         for (JireconEventListener l : listeners)

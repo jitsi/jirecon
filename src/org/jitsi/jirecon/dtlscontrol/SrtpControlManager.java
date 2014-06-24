@@ -57,7 +57,7 @@ public interface SrtpControlManager
     /**
      * Get all <tt>SrtpControl</tt> of this manager.
      * 
-     * @return The mapping between <tt>MediaType</tt> and <tt>SrtpControl</tt>.
+     * @return The map between <tt>MediaType</tt> and <tt>SrtpControl</tt>.
      */
     public Map<MediaType, SrtpControl> getAllSrtpControl();
 }
