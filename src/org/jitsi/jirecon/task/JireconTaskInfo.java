@@ -22,6 +22,11 @@ public class JireconTaskInfo
     private String mucJid;
 
     /**
+     * The name that will be used in MUC.
+     */
+    private String nickname;
+
+    /**
      * Set Jitsi-meeting jid.
      * 
      * @param mucJid
@@ -39,5 +44,25 @@ public class JireconTaskInfo
     public String getMucJid()
     {
         return mucJid;
+    }
+
+    /**
+     * Set nickname.
+     * 
+     * @param nickname
+     */
+    public void setNickname(String nickname)
+    {
+        this.nickname = nickname;
+    }
+
+    /**
+     * Get nickname.
+     * 
+     * @return
+     */
+    public String getNickname()
+    {
+        return nickname;
     }
 }

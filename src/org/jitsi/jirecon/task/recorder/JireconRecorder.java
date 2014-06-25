@@ -5,7 +5,6 @@
  */
 package org.jitsi.jirecon.task.recorder;
 
-import java.io.IOException;
 import java.util.Map;
 
 import net.java.sip.communicator.service.protocol.OperationFailedException;
@@ -25,27 +24,22 @@ public interface JireconRecorder
     /**
      * Start recording media streams.
      * 
-     * @param formatAndDynamicPTs is the map between <tt>MediaFormat</tt>
-     *            and dynamic payload type id. <tt>JireconRecorder</tt> needs it
-     *            to recognize those dynamic payload types.
+     * @param formatAndDynamicPTs is the map between <tt>MediaFormat</tt> and
+     *            dynamic payload type id. <tt>JireconRecorder</tt> needs it to
+     *            recognize those dynamic payload types.
      * @param connectors is the map between <tt>MediaType</tt> and
      *            <tt>StreamConnector</tt>. <tt>JireconRecorder</tt> needs those
      *            connectors to transfer stream data.
      * @param targets is the map between <tt>MediaType</tt> and
      *            <tt>MediaStreamTarget</tt>. Every target indicates a media
      *            source.
-     * @throws OperationFailedException if some operation failed.
-     * @throws IOException
-     * @throws MediaException
+     * @throws OperationFailedException if some operation failed and the
+     *             recording is aborted.
      */
-    // TODO Merge IOException and MediaException to OperationFailedException, so
-    // that it will look better.
     public void startRecording(Map<MediaFormat, Byte> formatAndDynamicPTs,
         Map<MediaType, StreamConnector> connectors,
         Map<MediaType, MediaStreamTarget> targets)
-        throws OperationFailedException,
-        IOException,
-        MediaException;
+        throws OperationFailedException;
 
     /**
      * Stop the recording.

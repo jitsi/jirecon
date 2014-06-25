@@ -6,7 +6,6 @@
 package org.jitsi.jirecon.transport;
 
 import java.beans.*;
-import java.io.IOException;
 import java.net.*;
 import java.util.*;
 
@@ -82,6 +81,16 @@ public class JireconIceUdpTransportManagerImpl
      * The maximum stream port.
      */
     private int MAX_STREAM_PORT;
+
+    /**
+     * The minimum time (ms) when wait for something.
+     */
+    private int MIN_WAIT_TIME = 1000;
+
+    /**
+     * The maximum time (ms) when wait for something.
+     */
+    private int MAX_WAIT_TIME = 10000;
 
     /**
      * The construction method.
@@ -233,10 +242,7 @@ public class JireconIceUdpTransportManagerImpl
      * {@inheritDoc}
      */
     @Override
-    public void harvestLocalCandidates()
-        throws BindException,
-        IllegalArgumentException,
-        IOException
+    public void harvestLocalCandidates() throws OperationFailedException
     {
         logger.info("harvestLocalCandidates");
         for (MediaType mediaType : MediaType.values())
@@ -248,10 +254,19 @@ public class JireconIceUdpTransportManagerImpl
             }
 
             final IceMediaStream stream = getIceMediaStream(mediaType);
-            iceAgent.createComponent(stream, Transport.UDP, MIN_STREAM_PORT,
-                MIN_STREAM_PORT, MAX_STREAM_PORT);
-            iceAgent.createComponent(stream, Transport.UDP, MIN_STREAM_PORT,
-                MIN_STREAM_PORT, MAX_STREAM_PORT);
+            try
+            {
+                iceAgent.createComponent(stream, Transport.UDP,
+                    MIN_STREAM_PORT, MIN_STREAM_PORT, MAX_STREAM_PORT);
+                iceAgent.createComponent(stream, Transport.UDP,
+                    MIN_STREAM_PORT, MIN_STREAM_PORT, MAX_STREAM_PORT);
+            }
+            catch (Exception e)
+            {
+                throw new OperationFailedException(
+                    "Could not create ICE component, " + e.getMessage(),
+                    OperationFailedException.GENERAL_ERROR);
+            }
         }
     }
 
@@ -464,8 +479,6 @@ public class JireconIceUdpTransportManagerImpl
         return streamTarget;
     }
 
-    // TODO: Add a maximum wait time, if time out, just throw a
-    // OperationFailedException.
     /**
      * {@inheritDoc}
      * <p>
@@ -494,7 +507,8 @@ public class JireconIceUdpTransportManagerImpl
         }
 
         List<DatagramSocket> datagramSockets = new ArrayList<DatagramSocket>();
-        while (true)
+        int sumWaitTime = 0;
+        while (sumWaitTime <= MAX_WAIT_TIME)
         {
             for (Component component : stream.getComponents())
             {
@@ -519,10 +533,13 @@ public class JireconIceUdpTransportManagerImpl
                 break;
             }
 
-            // Sleep for 1 second and try again.
             try
             {
-                Thread.sleep(1000);
+                logger
+                    .info("Could not get stream connector, sleep for a while. Already sleep for "
+                        + sumWaitTime / 1000 + " seconds");
+                sumWaitTime += MIN_WAIT_TIME;
+                Thread.sleep(MIN_WAIT_TIME);
             }
             catch (InterruptedException e)
             {
@@ -530,7 +547,14 @@ public class JireconIceUdpTransportManagerImpl
             }
         }
 
-        return streamConnector;
+        if (null != streamConnector)
+            return streamConnector;
+        else
+        {
+            throw new OperationFailedException(
+                "Could not get stream connector, it seems that ICE connectivity establishment hung",
+                OperationFailedException.GENERAL_ERROR);
+        }
     }
 
     /**

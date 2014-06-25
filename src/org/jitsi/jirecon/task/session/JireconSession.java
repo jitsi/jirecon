@@ -5,14 +5,12 @@
  */
 package org.jitsi.jirecon.task.session;
 
-import java.io.IOException;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.jirecon.dtlscontrol.*;
 import org.jitsi.jirecon.transport.*;
-import org.jivesoftware.smack.*;
 
 /**
  * <tt>JireconSession</tt> is a session manager which is responsible for joining
@@ -28,21 +26,15 @@ public interface JireconSession
      * 
      * @param transportManager which is used for building ICE connectivity.
      * @param srtpControlManager which is used for SRTP support.
+     * @param mucJid The specified MUC jid.
+     * @param nickname which is name used in MUC.
      * @return Jingle session-init packet which can be used by other classes.
-     * @throws XMPPException
      * @throws OperationFailedException if some operations failed and the
      *             connecting is aborted.
-     * @throws IOException
      */
-    // TODO: Unify the exceptions, merge the XMPPException and IOException into
-    // OperationFailedException.
-    // TODO: We should add a paremeter to specify the XMPP server host instead
-    // of reading it from configuration files directly.
     public JingleIQ connect(JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager)
-        throws XMPPException,
-        OperationFailedException,
-        IOException;
+        SrtpControlManager srtpControlManager, String mucJid, String nickname)
+        throws OperationFailedException;
 
     /**
      * Disconnect with XMPP server and terminate the Jingle session.

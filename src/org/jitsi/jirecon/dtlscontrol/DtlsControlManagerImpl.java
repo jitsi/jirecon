@@ -34,13 +34,6 @@ public class DtlsControlManagerImpl
      */
     private String hashFunction;
 
-    // TODO: This should be moved to upper class, add a parameter when creating
-    // DtlsControlManagerImpl.
-    /**
-     * The hash function item key in configuration file.
-     */
-    private final static String HASH_FUNCTION_KEY = "DTLS_HASH_FUNTION";
-
     /**
      * Initializes a new <tt>DtlsControlManagerImpl</tt> instance, create
      * <tt>DtlsControl</tt> for both audio and video.
@@ -51,8 +44,6 @@ public class DtlsControlManagerImpl
      */
     public DtlsControlManagerImpl()
     {
-        ConfigurationService configuration = LibJitsi.getConfigurationService();
-        hashFunction = configuration.getString(HASH_FUNCTION_KEY);
         MediaService mediaService = LibJitsi.getMediaService();
 
         for (MediaType mediaType : MediaType.values())
@@ -119,5 +110,11 @@ public class DtlsControlManagerImpl
             controls.put(e.getKey(), e.getValue());
         }
         return controls;
+    }
+
+    @Override
+    public void setHashFunction(String hash)
+    {
+        this.hashFunction = hash;
     }
 }

@@ -147,50 +147,53 @@ public class JireconImpl
      * {@inheritDoc}
      */
     @Override
-    public void startJireconTask(String mucJid)
+    public boolean startJireconTask(String mucJid)
     {
         logger.debug(this.getClass() + "startJireconTask: " + mucJid);
 
+        JireconTask j = null;
         synchronized (jireconTasks)
         {
             if (jireconTasks.containsKey(mucJid))
             {
                 logger.info("Failed to start Jirecon by mucJid: " + mucJid
                     + ". Duplicate mucJid.");
-                // TODO: In this case, I should fire an event to notify those
-                // listeners.
-                return;
+                return false;
             }
-            JireconTask j = new JireconTaskImpl();
+            j = new JireconTaskImpl();
             jireconTasks.put(mucJid, j);
-            j.addEventListener(this);
-            j.init(mucJid, connection, base_output_dir + "/" + mucJid
-                + new SimpleDateFormat("-yyMMdd-HHmmss").format(new Date()));
-            j.start();
         }
+        j.addEventListener(this);
+        j.init(mucJid, connection, base_output_dir + "/" + mucJid
+            + new SimpleDateFormat("-yyMMdd-HHmmss").format(new Date()));
+        j.start();
+        return true;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void stopJireconTask(String mucJid)
+    public boolean stopJireconTask(String mucJid)
     {
         logger.debug(this.getClass() + "stopJireconTask: " + mucJid);
+        JireconTask j = null;
         synchronized (jireconTasks)
         {
-            if (!jireconTasks.containsKey(mucJid))
-            {
-                logger.info("Failed to stop Jirecon by mucJid: " + mucJid
-                    + ". Nonexisted Jid.");
-                // TODO: In this case, I should fire an event to notify those
-                // listeners.
-                return;
-            }
-            JireconTask j = jireconTasks.remove(mucJid);
+            j = jireconTasks.remove(mucJid);
+        }
+        if (null == j)
+        {
+            logger.info("Failed to stop Jirecon by mucJid: " + mucJid
+                + ". Nonexisted Jid.");
+            return false;
+        }
+        else
+        {
             j.stop();
             j.uninit();
         }
+        return true;
     }
 
     /**
@@ -263,8 +266,6 @@ public class JireconImpl
         listeners.remove(listener);
     }
 
-    // TODO: There are other events should be notified, such as TASK_NOT_FOUND,
-    // TASK_FINISED(because everyone left the meeting).
     /**
      * {@inheritDoc}
      */
@@ -280,9 +281,10 @@ public class JireconImpl
                     ((JireconTask) evt.getSource()).getTaskInfo().getMucJid();
                 stopJireconTask(mucJid);
                 logger.fatal("Failed to start task of mucJid " + mucJid + ".");
-                fireEvent(new JireconEvent(this,
-                    JireconEvent.Type.TASK_ABORTED));
+                fireEvent(new JireconEvent(this, JireconEvent.Type.TASK_ABORTED));
             }
+        case TASK_FINISED:
+            // TODO:
             break;
         default:
             break;

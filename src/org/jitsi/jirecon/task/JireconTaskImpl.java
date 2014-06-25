@@ -19,6 +19,8 @@ import org.jitsi.jirecon.task.recorder.*;
 import org.jitsi.jirecon.task.session.*;
 import org.jitsi.jirecon.transport.*;
 import org.jitsi.jirecon.utils.*;
+import org.jitsi.service.configuration.ConfigurationService;
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jitsi.util.Logger;
@@ -80,10 +82,9 @@ public class JireconTaskImpl
      */
     private boolean isStopped = false;
 
-    // TODO: JireconTaskInfo doesn't have much content to record, so I should
-    // delete it.
     /**
-     * Record the task info.
+     * Record the task info. <tt>JireconTaskInfo</tt> can be accessed by outside
+     * system.
      */
     private JireconTaskInfo info = new JireconTaskInfo();
 
@@ -101,7 +102,13 @@ public class JireconTaskImpl
     {
         logger.setLevelAll();
         logger.debug(this.getClass() + " init");
+
+        ConfigurationService configuration = LibJitsi.getConfigurationService();
+
         info.setMucJid(mucJid);
+        info.setNickname(configuration
+            .getString(JireconConfigurationKey.NICK_KEY));
+
         executorService =
             Executors.newSingleThreadExecutor(new HandlerThreadFactory());
 
@@ -112,9 +119,14 @@ public class JireconTaskImpl
         }
 
         transport = new JireconIceUdpTransportManagerImpl();
+
         srtpControl = new DtlsControlManagerImpl();
+        srtpControl.setHashFunction(configuration
+            .getString(JireconConfigurationKey.HASH_FUNCTION_KEY));
+
         sharingInfo = new JireconTaskSharingInfo();
-        session = new JireconSessionImpl(connection, mucJid, sharingInfo);
+        session = new JireconSessionImpl(connection, sharingInfo);
+
         recorder =
             new JireconRecorderImpl(savingDir, sharingInfo,
                 srtpControl.getAllSrtpControl());
@@ -182,7 +194,9 @@ public class JireconTaskImpl
             transport.harvestLocalCandidates();
 
             // Build the Jingle session with specified MUC.
-            JingleIQ initIq = session.connect(transport, srtpControl);
+            JingleIQ initIq =
+                session.connect(transport, srtpControl, info.getMucJid(),
+                    info.getNickname());
 
             // Parse remote fingerprint from Jingle session-init packet and
             // setup srtp control manager.
@@ -205,10 +219,8 @@ public class JireconTaskImpl
 
             // Once transport manager has selected candidates pairs, get stream
             // connectors. Notice that we have to wait for at least one
-            // candidate pair being selected.
-            // TODO: At present, if ICE connectivity establishment hangs, then
-            // the task will hang at here. So maybe I should set a max wait
-            // time, if time out, just break the task.
+            // candidate pair being selected. If ICE connectivity establishment
+            // doesn't get selected pairs for a long time, break the task.
             Map<MediaType, StreamConnector> streamConnectors =
                 new HashMap<MediaType, StreamConnector>();
             Map<MediaType, MediaStreamTarget> mediaStreamTargets =
@@ -237,8 +249,7 @@ public class JireconTaskImpl
         catch (Exception e)
         {
             e.printStackTrace();
-            fireEvent(new JireconEvent(this,
-                JireconEvent.Type.TASK_ABORTED));
+            fireEvent(new JireconEvent(this, JireconEvent.Type.TASK_ABORTED));
         }
     }
 
@@ -275,7 +286,10 @@ public class JireconTaskImpl
     @Override
     public void handleEvent(JireconEvent evt)
     {
-        // TODO Auto-generated method stub
+        for (JireconEventListener l : listeners)
+        {
+            l.handleEvent(evt);
+        }
     }
 
     /**

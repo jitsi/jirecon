@@ -5,8 +5,6 @@
  */
 package org.jitsi.jirecon.transport;
 
-import java.io.IOException;
-import java.net.BindException;
 import java.util.Map;
 
 import org.jitsi.service.neomedia.*;
@@ -27,19 +25,12 @@ public interface JireconTransportManager
      */
     public void free();
 
-    // TODO: Simplify the Exception, merge them into one
-    // OperationFailedException.
     /**
      * Harvest local candidates.
      * 
-     * @throws BindException
-     * @throws IllegalArgumentException
-     * @throws IOException
+     * @exception OperationFailedException if some thing failed.
      */
-    public void harvestLocalCandidates()
-        throws BindException,
-        IllegalArgumentException,
-        IOException;
+    public void harvestLocalCandidates() throws OperationFailedException;
 
     /**
      * Parse and harvest remote candidates from a

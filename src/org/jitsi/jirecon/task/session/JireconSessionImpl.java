@@ -5,7 +5,6 @@
  */
 package org.jitsi.jirecon.task.session;
 
-import java.io.IOException;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.SourcePacketExtension;
@@ -19,7 +18,6 @@ import org.jitsi.jirecon.extension.MediaExtension;
 import org.jitsi.jirecon.task.JireconTaskSharingInfo;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JinglePacketParser;
-import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -61,18 +59,6 @@ public class JireconSessionImpl
     private static final Logger logger = Logger
         .getLogger(JireconSessionImpl.class);
 
-    // TODO: This should be moved to upper class, add a parameter when
-    // creating JireconSessionImpl
-    /**
-     * The hash nick name item key in configuration file.
-     */
-    private final static String NICK_KEY = "JIRECON_NICKNAME";
-
-    /**
-     * The nick name which will be showed up when joining a muc.
-     */
-    private String NICK = "default";
-
     /**
      * The list of <tt>JireconSessionPacketListener</tt> which is used for
      * handling kinds of XMPP packet.
@@ -84,9 +70,8 @@ public class JireconSessionImpl
      * Indicate how many ms <tt>JireconSessionImpl</tt> will wait for a XMPP
      * packet. For instance, wait for a session-init packet after joining muc.
      */
-    private final long MAX_WAIT_TIME = 20000;
+    private final long MAX_WAIT_TIME = 5000;
 
-    // TODO: I think mucJid should be moved into connect method.
     /**
      * Construction method of <tt>JireconSessionImpl</tt>.
      * <p>
@@ -94,20 +79,16 @@ public class JireconSessionImpl
      * method.
      * 
      * @param connection is used for send/receive XMPP packet.
-     * @param mucJid indicate which MUC we will connect.
      * @param sharingInfo includes some necessary information, it is shared with
      *            other classes.
      */
-    public JireconSessionImpl(XMPPConnection connection, String mucJid,
+    public JireconSessionImpl(XMPPConnection connection,
         JireconTaskSharingInfo sharingInfo)
     {
         logger.setLevelDebug();
 
         this.sharingInfo = sharingInfo;
-        ConfigurationService configuration = LibJitsi.getConfigurationService();
-        this.NICK = configuration.getString(NICK_KEY);
         this.connection = connection;
-        this.sharingInfo.setMucJid(mucJid);
 
         addPacketSendingListener();
         addPacketReceivingListener();
@@ -132,12 +113,10 @@ public class JireconSessionImpl
      */
     @Override
     public JingleIQ connect(JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager)
-        throws XMPPException,
-        OperationFailedException,
-        IOException
+        SrtpControlManager srtpControlManager, String mucJid, String nickname)
+        throws OperationFailedException
     {
-        joinMUC();
+        joinMUC(mucJid, nickname);
         JingleIQ initIq = waitForInitPacket();
         recordSessionInfo(initIq);
         sendAck(initIq);
@@ -158,16 +137,27 @@ public class JireconSessionImpl
     }
 
     /**
-     * Join a specified Multi-User-Chat.
+     * Join a Multi-User-Chat of specified MUC jid.
      * 
-     * @throws XMPPException if failed to join MUC.
+     * @param mucJid The specified MUC jid.
+     * @param nickname The name in MUC.
+     * @throws OperationFailedException if failed to join MUC.
      */
-    private void joinMUC() throws XMPPException
+    private void joinMUC(String mucJid, String nickname)
+        throws OperationFailedException
     {
         logger.info("joinMUC");
 
-        muc = new MultiUserChat(connection, sharingInfo.getMucJid());
-        muc.join(NICK);
+        muc = new MultiUserChat(connection, mucJid);
+        try
+        {
+            muc.join(nickname);
+        }
+        catch (XMPPException e)
+        {
+            throw new OperationFailedException("Could not join MUC, "
+                + e.getMessage(), OperationFailedException.GENERAL_ERROR);
+        }
     }
 
     /**
@@ -220,22 +210,22 @@ public class JireconSessionImpl
     {
         logger.info("sendByePacket");
 
-         connection.sendPacket(JinglePacketFactory.createSessionTerminate(
-         sharingInfo.getLocalJid(), sharingInfo.getRemoteJid(),
-         sharingInfo.getSid(), reason, reasonText));
+        connection.sendPacket(JinglePacketFactory.createSessionTerminate(
+            sharingInfo.getLocalJid(), sharingInfo.getRemoteJid(),
+            sharingInfo.getSid(), reason, reasonText));
     }
 
-    // TODO: This is wired, I should change it.
     /**
      * Record some session information according Jingle session-init packet.
+     * It's convenient to parse local jid, remote jid, sid, and so on, thouth
+     * this may seems weird.
      * 
      * @param initJiq is the Jingle session-init packet.
      */
     private void recordSessionInfo(JingleIQ initJiq)
     {
-        // TODO: Loal jid could be gotten from XMPP connection.
         sharingInfo.setLocalJid(initJiq.getTo());
-         sharingInfo.setRemoteJid(initJiq.getFrom());
+        sharingInfo.setRemoteJid(initJiq.getFrom());
         sharingInfo.setSid(initJiq.getSID());
         sharingInfo.setFormatAndPayloadTypes(JinglePacketParser
             .getFormatAndDynamicPTs(initJiq));
@@ -292,6 +282,7 @@ public class JireconSessionImpl
                 try
                 {
                     waitForInitPacketSyncRoot.wait(MAX_WAIT_TIME);
+                    break;
                 }
                 catch (InterruptedException ie)
                 {
@@ -306,7 +297,7 @@ public class JireconSessionImpl
         if (resultList.isEmpty())
         {
             throw new OperationFailedException(
-                "Could not get session-init packet",
+                "Could not get session-init packet, maybe the MUC has locked.",
                 OperationFailedException.GENERAL_ERROR);
         }
 
@@ -443,9 +434,9 @@ public class JireconSessionImpl
                 transportManager, srtpControlManager));
         }
 
-         JingleIQ acceptJiq =
-         JinglePacketFactory.createSessionAccept(sharingInfo.getLocalJid(),
-         sharingInfo.getRemoteJid(), sharingInfo.getSid(), contents);
+        JingleIQ acceptJiq =
+            JinglePacketFactory.createSessionAccept(sharingInfo.getLocalJid(),
+                sharingInfo.getRemoteJid(), sharingInfo.getSid(), contents);
 
         return acceptJiq;
     }

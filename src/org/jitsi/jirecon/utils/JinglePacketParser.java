@@ -5,7 +5,6 @@
  */
 package org.jitsi.jirecon.utils;
 
-// TODO: Rewrite those import statements to package import statement.
 import java.util.*;
 
 import org.jitsi.impl.neomedia.format.MediaFormatFactoryImpl;
@@ -317,8 +316,7 @@ public class JinglePacketParser
                 continue;
             }
 
-            // TODO: Video format has some problem, RED only
-            // FIXME: There, it only choose the first payloadtype
+            // TODO: Video format only support RED only at present.
             for (PayloadTypePacketExtension payloadTypePacketExt : getPayloadTypePacketExts(
                 jiq, mediaType))
             {

@@ -35,8 +35,8 @@ public class JireconRecorderImpl
     implements JireconRecorder
 {
     /**
-     * The map between <tt>MediaType</tt> and <tt>MediaStream</tt>. Those
-     * are used to receiving media streams.
+     * The map between <tt>MediaType</tt> and <tt>MediaStream</tt>. Those are
+     * used to receiving media streams.
      */
     private Map<MediaType, MediaStream> streams =
         new HashMap<MediaType, MediaStream>();
@@ -47,15 +47,15 @@ public class JireconRecorderImpl
     private MediaService mediaService;
 
     /**
-     * The map between <tt>MediaType</tt> and <tt>RTPTranslator</tt>. Those
-     * are used to initialize recorder.
+     * The map between <tt>MediaType</tt> and <tt>RTPTranslator</tt>. Those are
+     * used to initialize recorder.
      */
     private Map<MediaType, RTPTranslator> rtpTranslators =
         new HashMap<MediaType, RTPTranslator>();
 
     /**
-     * The map between <tt>MediaType</tt> and <tt>Recorder</tt>. Those are
-     * used to record media streams into local files.
+     * The map between <tt>MediaType</tt> and <tt>Recorder</tt>. Those are used
+     * to record media streams into local files.
      */
     private Map<MediaType, Recorder> recorders =
         new HashMap<MediaType, Recorder>();
@@ -117,9 +117,7 @@ public class JireconRecorderImpl
     public void startRecording(Map<MediaFormat, Byte> formatAndDynamicPTs,
         Map<MediaType, StreamConnector> connectors,
         Map<MediaType, MediaStreamTarget> targets)
-        throws OperationFailedException,
-        IOException,
-        MediaException
+        throws OperationFailedException
     {
         prepareMediaStreams(formatAndDynamicPTs, connectors, targets);
         startReceivingStreams();
@@ -142,9 +140,9 @@ public class JireconRecorderImpl
      * Make all <tt>JireconRecorderImpl</tt> ready to start receiving media
      * streams.
      * 
-     * @param formatAndDynamicPTs is the map between <tt>MediaFormat</tt>
-     *            and dynamic payload type id. <tt>MediaStream</tt> needs those
-     *            to distinguish different <tt>MediaFormat</tt>.
+     * @param formatAndDynamicPTs is the map between <tt>MediaFormat</tt> and
+     *            dynamic payload type id. <tt>MediaStream</tt> needs those to
+     *            distinguish different <tt>MediaFormat</tt>.
      * @param connectors is the map between <tt>MediaType</tt> and
      *            <tt>StreamConnector</tt>. Those connectors are used to
      *            transfer stream data.
@@ -238,17 +236,10 @@ public class JireconRecorderImpl
     /**
      * Start recording media streams.
      * 
-     * @throws IOException
-     * @throws MediaException
      * @throws OperationFailedException if some operation failed and the
      *             recording is aborted.
      */
-    // TODO Unify the exceptions, merge IOException and MediaException into
-    // OperationFailedException so that it looks better.
-    private void startRecordingStreams()
-        throws IOException,
-        MediaException,
-        OperationFailedException
+    private void startRecordingStreams() throws OperationFailedException
     {
         logger.info("startRecording");
         if (!isReceiving)
@@ -266,10 +257,20 @@ public class JireconRecorderImpl
 
         RecorderEventHandler eventHandler =
             new JireconRecorderEventHandler(SAVING_DIR + "/metadata.json");
-        for (Entry<MediaType, Recorder> e : recorders.entrySet())
+        for (Entry<MediaType, Recorder> entry : recorders.entrySet())
         {
-            e.getValue().setEventHandler(eventHandler);
-            e.getValue().start(e.getKey().toString(), SAVING_DIR);
+            entry.getValue().setEventHandler(eventHandler);
+            try
+            {
+                // Start recording
+                entry.getValue().start(entry.getKey().toString(), SAVING_DIR);
+            }
+            catch (Exception e)
+            {
+                throw new OperationFailedException(
+                    "Could not start recording streams, " + e.getMessage(),
+                    OperationFailedException.GENERAL_ERROR);
+            }
         }
         isRecording = true;
     }
@@ -435,8 +436,10 @@ public class JireconRecorderImpl
          * <tt>JireconRecorderEventHandler</tt>.
          * 
          * @param filename the meta data file's name.
+         * @throws OperationFailedException if failed to create handler
          */
         public JireconRecorderEventHandler(String filename)
+            throws OperationFailedException
         {
             // If there is an existed file with "filename", add suffix to
             // "filename". For instance, from "metadata.json" to
@@ -451,15 +454,15 @@ public class JireconRecorderImpl
                 else
                     break;
             }
-            // TODO: If we failed to create RecorderEventHandlerJSONImpl, maybe
-            // it better to thrown the exception instead of catching it.
             try
             {
                 handler = new RecorderEventHandlerJSONImpl(filenameAvailable);
             }
             catch (IOException e)
             {
-                e.printStackTrace();
+                throw new OperationFailedException(
+                    "Could not create event handler, " + e.getMessage(),
+                    OperationFailedException.GENERAL_ERROR);
             }
         }
 
@@ -481,8 +484,7 @@ public class JireconRecorderImpl
             System.out.println(event + " ssrc:" + event.getSsrc());
             RecorderEvent.Type type = event.getType();
 
-            // TODO: I think here we should handle the STARTED event and ENDED
-            // event too.
+            // TODO: It seems that there is no STARTED event.
             if (RecorderEvent.Type.SPEAKER_CHANGED.equals(type))
             {
                 System.out.println("SPEAKER_CHANGED audio ssrc: "

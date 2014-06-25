@@ -30,6 +30,13 @@ public interface SrtpControlManager
     public void addRemoteFingerprint(MediaType mediaType, String fingerprint);
 
     /**
+     * Specify hash function of <tt>SrtpControl</tt>
+     * 
+     * @param hash The hash function
+     */
+    public void setHashFunction(String hash);
+
+    /**
      * Get the specified <tt>MediaType</tt> local finger print.
      * 
      * @param mediaType The <tt>MediaType</tt> of the finger print.

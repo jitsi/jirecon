@@ -64,6 +64,27 @@ public class JireconEvent
      */
     public enum Type
     {
-        TASK_ABORTED,
+        /**
+         * Task failed
+         */
+        TASK_ABORTED("TASK_ABORTED"),
+
+        /**
+         * Operation
+         */
+        TASK_FINISED("TASK_FINISHED");
+
+        private String name;
+
+        private Type(String name)
+        {
+            this.name = name;
+        }
+
+        @Override
+        public String toString()
+        {
+            return name;
+        }
     }
 }

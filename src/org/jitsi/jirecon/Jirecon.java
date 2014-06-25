@@ -41,15 +41,19 @@ public interface Jirecon
      * If the task failed, it will notify event listeners.
      * 
      * @param mucJid indicates which Jitsi-meeting you want to record.
+     * @return true if the task has been started successfully, otherwise false.
+     *         Notice that the task may fail during the execution.
      */
-    public void startJireconTask(String mucJid);
+    public boolean startJireconTask(String mucJid);
 
     /**
      * Stop a recording task for a specified Jitsi-meeting.
      * 
      * @param mucJid indicates which Jitsi-meeting you want to record.
+     * @return true if the task has been stopped successfully, otherwise false,
+     *         such as task is not found.
      */
-    public void stopJireconTask(String mucJid);
+    public boolean stopJireconTask(String mucJid);
 
     /**
      * Register an event listener, if some important things happen, they'll be
