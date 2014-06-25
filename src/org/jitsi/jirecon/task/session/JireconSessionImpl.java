@@ -15,7 +15,8 @@ import net.java.sip.communicator.util.Logger;
 
 import org.jitsi.jirecon.dtlscontrol.SrtpControlManager;
 import org.jitsi.jirecon.extension.MediaExtension;
-import org.jitsi.jirecon.task.JireconTaskSharingInfo;
+import org.jitsi.jirecon.task.JireconTaskEvent;
+import org.jitsi.jirecon.task.JireconTaskEventListener;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.service.libjitsi.LibJitsi;
@@ -42,16 +43,58 @@ public class JireconSessionImpl
     private XMPPConnection connection;
 
     /**
+     * The <tt>JireconTaskEventListener</tt>, if <tt>JireconRecorder</tt> has
+     * something important, it will notify them.
+     */
+    private List<JireconTaskEventListener> listeners =
+        new ArrayList<JireconTaskEventListener>();
+
+    /**
      * The instance of a <tt>MultiUserChat</tt>. <tt>JireconSessionImpl</tt>
      * will join it as the first step.
      */
     private MultiUserChat muc;
 
     /**
-     * The <tt>JireconTaskSharingInfo</tt> is used to share some necessary
-     * information between <tt>JireconSessionImpl</tt> and other classes.
+     * Local node full jid which is used for making <tt>JingleIQ</tt>.
      */
-    private JireconTaskSharingInfo sharingInfo;
+    private String localFullJid;
+
+    /**
+     * Remote node full jid which is used for making <tt>JingleIq</tt>.
+     */
+    private String remoteFullJid;
+
+    /**
+     * Jingle sessoin id which is used for making <tt>JingleIq</tt>.
+     */
+    private String sid;
+
+    /**
+     * Map between <tt>MediaFormat</tt> and dynamic payload type id which is
+     * used for making <tt>JingleIQ</tt>.
+     */
+    private Map<MediaFormat, Byte> formatAndPayloadTypes;
+
+    /**
+     * Map between <tt>MediaType</tt> and local ssrc which is used for making
+     * <tt>JingleIQ</tt>.
+     */
+    private Map<MediaType, Long> localSsrcs = new HashMap<MediaType, Long>();
+
+    /**
+     * Attribute "mslable" in source packet extension.
+     */
+    private String msLabel = UUID.randomUUID().toString();
+
+    /**
+     * Map between participant's jid and their associated ssrcs.
+     * <p>
+     * Every participant usually has two ssrc(one for audio and one for video),
+     * these two ssrc are associated.
+     */
+    private Map<String, List<String>> associatedSsrcs =
+        new HashMap<String, List<String>>();
 
     /**
      * The <tt>Logger</tt>, used to log messages to standard output.
@@ -67,27 +110,23 @@ public class JireconSessionImpl
         new ArrayList<JireconSessionPacketListener>();
 
     /**
-     * Indicate how many ms <tt>JireconSessionImpl</tt> will wait for a XMPP
-     * packet. For instance, wait for a session-init packet after joining muc.
+     * Maximum wait time(microsecond).
      */
-    private final long MAX_WAIT_TIME = 5000;
+    private final int MAX_WAIT_TIME = 5000;
 
     /**
-     * Construction method of <tt>JireconSessionImpl</tt>.
-     * <p>
-     * <strong>Warning:</strong> LibJitsi must be started before calling this
-     * method.
-     * 
-     * @param connection is used for send/receive XMPP packet.
-     * @param sharingInfo includes some necessary information, it is shared with
-     *            other classes.
+     * Minimum wait time(microsecond).
      */
-    public JireconSessionImpl(XMPPConnection connection,
-        JireconTaskSharingInfo sharingInfo)
+    private final int MIN_WAIT_TIME = 1000;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void init(XMPPConnection connection)
     {
         logger.setLevelDebug();
 
-        this.sharingInfo = sharingInfo;
         this.connection = connection;
 
         addPacketSendingListener();
@@ -137,6 +176,15 @@ public class JireconSessionImpl
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<MediaFormat, Byte> getFormatAndPayloadType()
+    {
+        return formatAndPayloadTypes;
+    }
+
+    /**
      * Join a Multi-User-Chat of specified MUC jid.
      * 
      * @param mucJid The specified MUC jid.
@@ -177,10 +225,12 @@ public class JireconSessionImpl
      * @param initIq is the session-init packet that we've gotten.
      * @param transportManager is used for ICE connectivity establishment.
      * @param srtpControlManager is used for SRTP transform.
+     * @throws OperationFailedException if something failed and session-accept
+     *             packet can't be sent.
      */
     private void sendAccpetPacket(JingleIQ initIq,
         JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager)
+        SrtpControlManager srtpControlManager) throws OperationFailedException
     {
         logger.info("sendAcceptPacket");
 
@@ -211,8 +261,7 @@ public class JireconSessionImpl
         logger.info("sendByePacket");
 
         connection.sendPacket(JinglePacketFactory.createSessionTerminate(
-            sharingInfo.getLocalJid(), sharingInfo.getRemoteJid(),
-            sharingInfo.getSid(), reason, reasonText));
+            localFullJid, remoteFullJid, sid, reason, reasonText));
     }
 
     /**
@@ -224,11 +273,11 @@ public class JireconSessionImpl
      */
     private void recordSessionInfo(JingleIQ initJiq)
     {
-        sharingInfo.setLocalJid(initJiq.getTo());
-        sharingInfo.setRemoteJid(initJiq.getFrom());
-        sharingInfo.setSid(initJiq.getSID());
-        sharingInfo.setFormatAndPayloadTypes(JinglePacketParser
-            .getFormatAndDynamicPTs(initJiq));
+        localFullJid = initJiq.getTo();
+        remoteFullJid = initJiq.getFrom();
+        sid = initJiq.getSID();
+        formatAndPayloadTypes =
+            JinglePacketParser.getFormatAndDynamicPTs(initJiq);
     }
 
     /**
@@ -381,8 +430,7 @@ public class JireconSessionImpl
         if (null != participantJid && null != packetExt)
         {
             MediaExtension mediaExt = (MediaExtension) packetExt;
-            Map<MediaType, String> participantSsrcs =
-                new HashMap<MediaType, String>();
+            List<String> ssrcs = new ArrayList<String>();
             for (MediaType mediaType : MediaType.values())
             {
                 // Make sure that we only handle audio or video type.
@@ -399,10 +447,13 @@ public class JireconSessionImpl
                 if (direction == MediaDirection.SENDONLY
                     || direction == MediaDirection.SENDRECV)
                 {
-                    participantSsrcs.put(mediaType, ssrc);
+                    ssrcs.add(ssrc);
                 }
             }
-            sharingInfo.setParticipantSsrcs(participantJid, participantSsrcs);
+            addAssociatedSsrc(participantJid, ssrcs);
+
+            fireEvent(new JireconTaskEvent(
+                JireconTaskEvent.Type.PARTICIPANT_CAME));
         }
     }
 
@@ -414,10 +465,12 @@ public class JireconSessionImpl
      * @param transportManager is used for creating transport packet extension.
      * @param srtpControlManager is used to set fingerprint.
      * @return Jingle session-accept packet.
+     * @throws OperationFailedException if something failed and session-accept
+     *             packet can not be created.
      */
     private JingleIQ createAcceptPacket(JingleIQ initIq,
         JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager)
+        SrtpControlManager srtpControlManager) throws OperationFailedException
     {
         logger.info("createSessionAcceptPacket");
         final List<ContentPacketExtension> contents =
@@ -435,8 +488,8 @@ public class JireconSessionImpl
         }
 
         JingleIQ acceptJiq =
-            JinglePacketFactory.createSessionAccept(sharingInfo.getLocalJid(),
-                sharingInfo.getRemoteJid(), sharingInfo.getSid(), contents);
+            JinglePacketFactory.createSessionAccept(localFullJid,
+                remoteFullJid, sid, contents);
 
         return acceptJiq;
     }
@@ -450,11 +503,13 @@ public class JireconSessionImpl
      * @param transportManager is used for creating transport packet extension.
      * @param srtpControlManager is used for add fingerprint.
      * @return content packet extension.
+     * @throws OperationFailedException if something failed, and the content
+     *             packet extension can not be created.
      */
     private ContentPacketExtension createContentPacketExtension(
         MediaType mediaType, ContentPacketExtension initIqContent,
         JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager)
+        SrtpControlManager srtpControlManager) throws OperationFailedException
     {
         logger.debug(this.getClass() + " createContentPacketExtension");
         IceUdpTransportPacketExtension transportPE =
@@ -478,8 +533,7 @@ public class JireconSessionImpl
         // harvest payload types information.
         List<PayloadTypePacketExtension> payloadTypes =
             new ArrayList<PayloadTypePacketExtension>();
-        for (Map.Entry<MediaFormat, Byte> e : sharingInfo
-            .getFormatAndPayloadTypes(mediaType).entrySet())
+        for (Map.Entry<MediaFormat, Byte> e : formatAndPayloadTypes.entrySet())
         {
             PayloadTypePacketExtension payloadType =
                 new PayloadTypePacketExtension();
@@ -513,17 +567,47 @@ public class JireconSessionImpl
         }
         SourcePacketExtension sourcePacketExtension =
             new SourcePacketExtension();
-        description.setSsrc(sharingInfo.getLocalSsrc(mediaType).toString());
 
-        sourcePacketExtension.setSSRC(sharingInfo.getLocalSsrc(mediaType));
+        int sumWaitTime = 0;
+        while (sumWaitTime <= MAX_WAIT_TIME)
+        {
+            try
+            {
+                synchronized (localSsrcs)
+                {
+                    if (localSsrcs.containsKey(mediaType))
+                        break;
+                }
+                logger
+                    .info("Local ssrcs not found, wait for a while. Already sleep for "
+                        + sumWaitTime / 1000 + " s.");
+                sumWaitTime += MIN_WAIT_TIME;
+                Thread.sleep(MIN_WAIT_TIME);
+            }
+            catch (InterruptedException e1)
+            {
+                e1.printStackTrace();
+            }
+        }
+        if (!localSsrcs.containsKey(mediaType))
+        {
+            throw new OperationFailedException(
+                "Failed to create content packet extension, local ssrc unknown.",
+                OperationFailedException.GENERAL_ERROR);
+        }
+
+        description.setSsrc(localSsrcs.get(mediaType).toString());
+
+        final String label = mediaType.toString();
+        sourcePacketExtension.setSSRC(localSsrcs.get(mediaType));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
             "cname", LibJitsi.getMediaService().getRtpCname()));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
-            "msid", sharingInfo.getMsid(mediaType)));
+            "msid", msLabel + " " + label));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
-            "mslabel", sharingInfo.getMsLabel()));
+            "mslabel", msLabel));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
-            "label", sharingInfo.getLabel(mediaType)));
+            "label", label));
         description.addChildExtension(sourcePacketExtension);
 
         ContentPacketExtension content = new ContentPacketExtension();
@@ -534,6 +618,57 @@ public class JireconSessionImpl
         content.addChildExtension(transportPE);
 
         return content;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addTaskEventListener(JireconTaskEventListener listener)
+    {
+        synchronized (listeners)
+        {
+            listeners.add(listener);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void removeTaskEventListener(JireconTaskEventListener listener)
+    {
+        synchronized (listeners)
+        {
+            listeners.remove(listener);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setLocalSsrcs(Map<MediaType, Long> ssrcs)
+    {
+        synchronized (localSsrcs)
+        {
+            localSsrcs = ssrcs;
+        }
+    }
+
+    /**
+     * Fire a <tt>JireconTaskEvent</tt>, notify listeners we've made new
+     * progress which they may interest in.
+     * 
+     * @param event
+     */
+    private void fireEvent(JireconTaskEvent event)
+    {
+        synchronized (listeners)
+        {
+            for (JireconTaskEventListener l : listeners)
+                l.handleTaskEvent(event);
+        }
     }
 
     /**
@@ -573,6 +708,7 @@ public class JireconSessionImpl
         });
     }
 
+    // TODO: What if a participant leave the MUC, is there any terminate packet?
     /**
      * Add packet receiving listener to connection.
      * <p>
@@ -595,11 +731,11 @@ public class JireconSessionImpl
             @Override
             public boolean accept(Packet packet)
             {
-                if (null != sharingInfo.getLocalJid()
-                    && !packet.getTo().equals(sharingInfo.getLocalJid()))
+                if (null != localFullJid
+                    && !packet.getTo().equals(localFullJid))
                 {
                     logger.fatal("packet failed: to " + packet.getTo()
-                        + ", but we are " + sharingInfo.getLocalJid());
+                        + ", but we are " + localFullJid);
                     return false;
                 }
                 return true;
@@ -642,5 +778,27 @@ public class JireconSessionImpl
     private void removePacketListener(JireconSessionPacketListener listener)
     {
         packetListeners.remove(listener);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<String, List<String>> getAssociatedSsrcs()
+    {
+        return associatedSsrcs;
+    }
+
+    /**
+     * Add new participant's associated ssrc. If this participant's record has
+     * existed, it will override it.
+     */
+    private void addAssociatedSsrc(String jid, List<String> ssrcs)
+    {
+        synchronized (associatedSsrcs)
+        {
+            associatedSsrcs.remove(jid);
+            associatedSsrcs.put(jid, ssrcs);
+        }
     }
 }

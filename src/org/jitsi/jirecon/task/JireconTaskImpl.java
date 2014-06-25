@@ -36,7 +36,8 @@ import org.jivesoftware.smack.*;
  * 
  */
 public class JireconTaskImpl
-    implements JireconTask, JireconEventListener, Runnable
+    implements JireconTask, JireconEventListener, JireconTaskEventListener,
+    Runnable
 {
     /**
      * The <tt>JireconEvent</tt> listeners, they will be notified when some
@@ -64,13 +65,6 @@ public class JireconTaskImpl
      * The instance of <tt>JireconRecorder</tt>.
      */
     private JireconRecorder recorder;
-
-    /**
-     * The sharing information of this task, it is used for simplifying the
-     * information exchange between <tt>JireconSession</tt> and
-     * <tt>JireconRecorder</tt>.
-     */
-    private JireconTaskSharingInfo sharingInfo;
 
     /**
      * The thread pool to make the method "start" to be asynchronous.
@@ -124,12 +118,13 @@ public class JireconTaskImpl
         srtpControl.setHashFunction(configuration
             .getString(JireconConfigurationKey.HASH_FUNCTION_KEY));
 
-        sharingInfo = new JireconTaskSharingInfo();
-        session = new JireconSessionImpl(connection, sharingInfo);
+        session = new JireconSessionImpl();
+        session.addTaskEventListener(this);
+        session.init(connection);
 
-        recorder =
-            new JireconRecorderImpl(savingDir, sharingInfo,
-                srtpControl.getAllSrtpControl());
+        recorder = new JireconRecorderImpl();
+        recorder.addTaskEventListener(this);
+        recorder.init(savingDir, srtpControl.getAllSrtpControl());
     }
 
     /**
@@ -193,6 +188,9 @@ public class JireconTaskImpl
             // need those information when build Jingle session.
             transport.harvestLocalCandidates();
 
+            // Prepare the local ssrcs to create Jingle packet.
+            session.setLocalSsrcs(recorder.getLocalSsrcs());
+
             // Build the Jingle session with specified MUC.
             JingleIQ initIq =
                 session.connect(transport, srtpControl, info.getMucJid(),
@@ -242,7 +240,7 @@ public class JireconTaskImpl
 
             // Gather some information and start recording.
             Map<MediaFormat, Byte> formatAndDynamicPTs =
-                sharingInfo.getFormatAndPayloadTypes();
+                session.getFormatAndPayloadType();
             recorder.startRecording(formatAndDynamicPTs, streamConnectors,
                 mediaStreamTargets);
         }
@@ -289,6 +287,30 @@ public class JireconTaskImpl
         for (JireconEventListener l : listeners)
         {
             l.handleEvent(evt);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void handleTaskEvent(JireconTaskEvent event)
+    {
+        System.out.println(event);
+
+        if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_CAME)
+        {
+            Map<String, List<String>> associatedSsrcs =
+                session.getAssociatedSsrcs();
+            recorder.setAssociatedSsrcs(associatedSsrcs);
+            return;
+        }
+
+        if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_LEFT)
+        {
+            // TODO: I should do something in case of any participant left the
+            // MUC.
+            return;
         }
     }
 

@@ -5,10 +5,12 @@
  */
 package org.jitsi.jirecon.task.recorder;
 
+import java.util.List;
 import java.util.Map;
 
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
+import org.jitsi.jirecon.task.JireconTaskEventListener;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 
@@ -21,6 +23,19 @@ import org.jitsi.service.neomedia.format.*;
  */
 public interface JireconRecorder
 {
+    /**
+     * Initialize <tt>JireconRecorder</tt>.
+     * <p>
+     * <strong>Warning:</strong> LibJitsi must be started before calling this
+     * method.
+     * 
+     * @param outputDir decide where to output the files. The directory must be
+     *            existed and writable.
+     * @param srtpControls is the map between <tt>MediaType</tt> and
+     *            <tt>SrtpControl</tt> which is used for SRTP transfer.
+     */
+    public void init(String outputDir, Map<MediaType, SrtpControl> srtpControls);
+
     /**
      * Start recording media streams.
      * 
@@ -45,4 +60,32 @@ public interface JireconRecorder
      * Stop the recording.
      */
     public void stopRecording();
+
+    /**
+     * Add <tt>JireconTaskEvent</tt> listener.
+     * 
+     * @param listener
+     */
+    public void addTaskEventListener(JireconTaskEventListener listener);
+
+    /**
+     * Remove <tt>JireconTaskEvent</tt> listener.
+     * 
+     * @param listener
+     */
+    public void removeTaskEventListener(JireconTaskEventListener listener);
+
+    /**
+     * Get local ssrcs of each <tt>MediaType</tt>.
+     * 
+     * @return Map between <tt>MediaType</tt> and ssrc.
+     */
+    public Map<MediaType, Long> getLocalSsrcs();
+
+    /**
+     * Set associated ssrcs. It will override the old data.
+     * 
+     * @param associatedSsrcs Map between participant jid and associated ssrc.
+     */
+    public void setAssociatedSsrcs(Map<String, List<String>> associatedSsrcs);
 }

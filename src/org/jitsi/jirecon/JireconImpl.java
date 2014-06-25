@@ -46,8 +46,6 @@ public class JireconImpl
      */
     private XMPPConnection connection;
 
-    // TODO: It seems that I have used too many map structure, some are not
-    // necessary, such as this one.
     /**
      * Active <tt>JireconTask</tt>, map between Jitsi-meeting jid and task.
      */

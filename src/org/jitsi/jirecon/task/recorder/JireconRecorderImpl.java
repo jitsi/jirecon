@@ -13,7 +13,8 @@ import java.util.Map.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
-import org.jitsi.jirecon.task.JireconTaskSharingInfo;
+import org.jitsi.jirecon.task.JireconTaskEvent;
+import org.jitsi.jirecon.task.JireconTaskEventListener;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -61,10 +62,20 @@ public class JireconRecorderImpl
         new HashMap<MediaType, Recorder>();
 
     /**
-     * The <tt>JireconTaskSharingInfo</tt> is used to share some necessary
-     * information between <tt>JireconRecorderImpl</tt> and other classes.
+     * The <tt>JireconTaskEventListener</tt>, if <tt>JireconRecorder</tt> has
+     * something important, it will notify them.
      */
-    private JireconTaskSharingInfo sharingInfo;
+    private List<JireconTaskEventListener> listeners =
+        new ArrayList<JireconTaskEventListener>();
+
+    /**
+     * Map between participant's jid and their associated ssrcs.
+     * <p>
+     * Every participant usually has two ssrc(one for audio and one for video),
+     * these two ssrc are associated.
+     */
+    private Map<String, List<String>> associatedSsrcs =
+        new HashMap<String, List<String>>();
 
     /**
      * Whether the <tt>JireconRecorderImpl</tt> is receiving streams.
@@ -85,28 +96,16 @@ public class JireconRecorderImpl
     /**
      * Indicate where <tt>JireconRecorderImpl</tt> will put the local files.
      */
-    private final String SAVING_DIR;
+    private String outputDir;
 
     /**
-     * Construct method of <tt>JireconRecorderImpl</tt>.
-     * <p>
-     * <strong>Warning:</strong> LibJitsi must be started before calling this
-     * construnction method.
-     * 
-     * @param SAVING_DIR decide where to output the files. The directory must be
-     *            existed and writable.
-     * @param sharingInfo includes some necessary information, it is shared with
-     *            other classes.
-     * @param srtpControls is the map between <tt>MediaType</tt> and
-     *            <tt>SrtpControl</tt> which is used for SRTP transfer.
+     * {@inheritDoc}
      */
-    public JireconRecorderImpl(String SAVING_DIR,
-        JireconTaskSharingInfo sharingInfo,
-        Map<MediaType, SrtpControl> srtpControls)
+    @Override
+    public void init(String outputDir, Map<MediaType, SrtpControl> srtpControls)
     {
         this.mediaService = LibJitsi.getMediaService();
-        this.SAVING_DIR = SAVING_DIR;
-        this.sharingInfo = sharingInfo;
+        this.outputDir = outputDir;
         createMediaStreams(srtpControls);
     }
 
@@ -256,14 +255,14 @@ public class JireconRecorderImpl
         }
 
         RecorderEventHandler eventHandler =
-            new JireconRecorderEventHandler(SAVING_DIR + "/metadata.json");
+            new JireconRecorderEventHandler(outputDir + "/metadata.json");
         for (Entry<MediaType, Recorder> entry : recorders.entrySet())
         {
             entry.getValue().setEventHandler(eventHandler);
             try
             {
                 // Start recording
-                entry.getValue().start(entry.getKey().toString(), SAVING_DIR);
+                entry.getValue().start(entry.getKey().toString(), outputDir);
             }
             catch (Exception e)
             {
@@ -350,11 +349,6 @@ public class JireconRecorderImpl
 
             stream.setName(mediaType.toString());
             stream.setDirection(MediaDirection.RECVONLY);
-
-            // Once the media streams are created, we put the ssrc into shared
-            // info, so that other classes could use them.
-            sharingInfo.addLocalSsrc(mediaType,
-                stream.getLocalSourceID() & 0xFFFFFFFFL);
         }
     }
 
@@ -391,28 +385,93 @@ public class JireconRecorderImpl
      */
     private long getAssociatedSsrc(long ssrc, MediaType mediaType)
     {
-        Map<String, Map<MediaType, String>> participants =
-            sharingInfo.getParticipantsSsrcs();
-
-        if (null == participants)
-            return -1;
-
-        for (Entry<String, Map<MediaType, String>> e : participants.entrySet())
+        for (Entry<String, List<String>> e : associatedSsrcs.entrySet())
         {
-            logger.info(e.getKey() + " audio "
-                + e.getValue().get(MediaType.AUDIO));
-            logger.info(e.getKey() + " video "
-                + e.getValue().get(MediaType.VIDEO));
-            for (String s : e.getValue().values())
-            {
-                if (ssrc == Long.valueOf(s))
-                {
-                    return Long.valueOf(e.getValue().get(mediaType));
-                }
-            }
+            // Associated ssrc should be 2(one for audio and one for video), but
+            // we need to check it again in
+            // case
+            // of something weird happened.
+            if (e.getValue().size() < 2)
+                continue;
+
+            String first = e.getValue().get(0);
+            String second = e.getValue().get(1);
+            if (ssrc == Long.valueOf(first))
+                return Long.valueOf(second);
+            if (ssrc == Long.valueOf(second))
+                return Long.valueOf(first);
         }
 
         return -1;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setAssociatedSsrcs(Map<String, List<String>> ssrcs)
+    {
+        synchronized (associatedSsrcs)
+        {
+            associatedSsrcs = ssrcs;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addTaskEventListener(JireconTaskEventListener listener)
+    {
+        synchronized (listeners)
+        {
+            listeners.add(listener);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void removeTaskEventListener(JireconTaskEventListener listener)
+    {
+        synchronized (listeners)
+        {
+            listeners.remove(listener);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<MediaType, Long> getLocalSsrcs()
+    {
+        Map<MediaType, Long> localSsrcs = new HashMap<MediaType, Long>();
+        synchronized (streams)
+        {
+            for (Entry<MediaType, MediaStream> entry : streams.entrySet())
+            {
+                localSsrcs.put(entry.getKey(), entry.getValue()
+                    .getLocalSourceID() & 0xFFFFFFFFL);
+            }
+        }
+        return localSsrcs;
+    }
+
+    /**
+     * Fire a <tt>JireconTaskEvent</tt>, notify listeners we've made new
+     * progress which they may interest in.
+     * 
+     * @param event
+     */
+    private void fireEvent(JireconTaskEvent event)
+    {
+        synchronized (listeners)
+        {
+            for (JireconTaskEventListener l : listeners)
+                l.handleTaskEvent(event);
+        }
     }
 
     /**
@@ -476,7 +535,7 @@ public class JireconRecorderImpl
         }
 
         /**
-         * Handle event, only focusing on SPEAKER_CHANGED event.
+         * Handle event.
          */
         @Override
         public synchronized boolean handleEvent(RecorderEvent event)
