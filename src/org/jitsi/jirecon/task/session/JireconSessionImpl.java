@@ -429,31 +429,44 @@ public class JireconSessionImpl
             (MUCUser) p
                 .getExtension("x", "http://jabber.org/protocol/muc#user");
         String participantJid = userExt.getItem().getJid();
-        if (null != participantJid && null != packetExt)
+
+        // Jitsi-meeting presence packet should contain participant jid and
+        // media packet extension
+        if (null == participantJid || null == packetExt)
+            return;
+        
+        MediaExtension mediaExt = (MediaExtension) packetExt;
+        List<String> ssrcs = new ArrayList<String>();
+        for (MediaType mediaType : MediaType.values())
         {
-            MediaExtension mediaExt = (MediaExtension) packetExt;
-            List<String> ssrcs = new ArrayList<String>();
-            for (MediaType mediaType : MediaType.values())
+            // Make sure that we only handle audio or video type.
+            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
             {
-                // Make sure that we only handle audio or video type.
-                if (MediaType.AUDIO != mediaType
-                    && MediaType.VIDEO != mediaType)
-                {
-                    continue;
-                }
-
-                MediaDirection direction =
-                    MediaDirection.parseString(mediaExt.getDirection(mediaType
-                        .toString()));
-                String ssrc = mediaExt.getSsrc(mediaType.toString());
-                if (direction == MediaDirection.SENDONLY
-                    || direction == MediaDirection.SENDRECV)
-                {
-                    ssrcs.add(ssrc);
-                }
+                continue;
             }
-            addAssociatedSsrc(participantJid, ssrcs);
 
+            MediaDirection direction =
+                MediaDirection.parseString(mediaExt.getDirection(mediaType
+                    .toString()));
+            String ssrc = mediaExt.getSsrc(mediaType.toString());
+            if (direction == MediaDirection.SENDONLY
+                || direction == MediaDirection.SENDRECV)
+            {
+                ssrcs.add(ssrc);
+            }
+        }
+        
+        // Oh, it seems that some participant has left the MUC.
+        if (p.getType() == Presence.Type.unavailable)
+        {
+            removeAssociatedSsrc(participantJid);
+            fireEvent(new JireconTaskEvent(
+                JireconTaskEvent.Type.PARTICIPANT_LEFT));
+        }
+        // Otherwise we think that some new participant has joined the MUC.
+        else
+        {
+            addAssociatedSsrc(participantJid, ssrcs);
             fireEvent(new JireconTaskEvent(
                 JireconTaskEvent.Type.PARTICIPANT_CAME));
         }
@@ -712,7 +725,6 @@ public class JireconSessionImpl
         });
     }
 
-    // TODO: What if a participant leave the MUC, is there any terminate packet?
     /**
      * Add packet receiving listener to connection.
      * <p>
@@ -794,8 +806,11 @@ public class JireconSessionImpl
     }
 
     /**
-     * Add new participant's associated ssrc. If this participant's record has
+     * Add new participant's associated ssrc, if this participant's record has
      * existed, it will override it.
+     * 
+     * @param jid
+     * @param ssrcs
      */
     private void addAssociatedSsrc(String jid, List<String> ssrcs)
     {
@@ -803,6 +818,20 @@ public class JireconSessionImpl
         {
             associatedSsrcs.remove(jid);
             associatedSsrcs.put(jid, ssrcs);
+        }
+    }
+
+    /**
+     * Remove a participant's associated ssrc, if this participant's record
+     * hasn't existed, it will ignore it.
+     * 
+     * @param jid
+     */
+    private void removeAssociatedSsrc(String jid)
+    {
+        synchronized (associatedSsrcs)
+        {
+            associatedSsrcs.remove(jid);
         }
     }
 }

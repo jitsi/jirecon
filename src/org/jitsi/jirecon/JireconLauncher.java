@@ -107,7 +107,7 @@ public class JireconLauncher
         }
 
         for (String jid : mucJids)
-            jirecon.stopJireconTask(jid);
+            jirecon.stopJireconTask(jid, true);
 
         jirecon.uninit();
     }

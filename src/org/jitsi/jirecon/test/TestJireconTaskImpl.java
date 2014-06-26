@@ -101,7 +101,7 @@ public class TestJireconTaskImpl
     @Override
     protected void tearDown()
     {
-        task.uninit();
+        task.uninit(true);
         LibJitsi.stop();
         connection.disconnect();
     }

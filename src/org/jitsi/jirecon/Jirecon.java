@@ -50,10 +50,12 @@ public interface Jirecon
      * Stop a recording task for a specified Jitsi-meeting.
      * 
      * @param mucJid indicates which Jitsi-meeting you want to record.
+     * @param keepData Whether keeping the data. Keep the output files if it is
+     *            true, otherwise remove them.
      * @return true if the task has been stopped successfully, otherwise false,
      *         such as task is not found.
      */
-    public boolean stopJireconTask(String mucJid);
+    public boolean stopJireconTask(String mucJid, boolean keepData);
 
     /**
      * Register an event listener, if some important things happen, they'll be

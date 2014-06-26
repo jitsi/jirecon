@@ -6,6 +6,7 @@
 package org.jitsi.jirecon.task;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.*;
@@ -76,7 +77,7 @@ public class JireconTaskImpl
      * Indicate whether this task has stopped or not.
      */
     private boolean isStopped = false;
-
+    
     /**
      * Record the task info. <tt>JireconTaskInfo</tt> can be accessed by outside
      * system.
@@ -97,6 +98,11 @@ public class JireconTaskImpl
     {
         logger.setLevelAll();
         logger.debug(this.getClass() + " init");
+        
+        info.setOutputDir(savingDir);
+        File dir = new File(savingDir);
+        if (!dir.exists())
+            dir.mkdirs();
 
         ConfigurationService configuration = LibJitsi.getConfigurationService();
 
@@ -106,12 +112,6 @@ public class JireconTaskImpl
 
         executorService =
             Executors.newSingleThreadExecutor(new HandlerThreadFactory());
-
-        File dir = new File(savingDir);
-        if (!dir.exists())
-        {
-            dir.mkdirs();
-        }
 
         transport = new JireconIceUdpTransportManagerImpl();
 
@@ -132,13 +132,28 @@ public class JireconTaskImpl
      * {@inheritDoc}
      */
     @Override
-    public void uninit()
+    public void uninit(boolean keepData)
     {
         // Stop the task in case of something hasn't been released correctly.
         stop();
-        info = new JireconTaskInfo();
+        
         listeners.clear();
         transport.free();
+
+        if (!keepData)
+        {
+            System.out.println("Delete! " + info.getOutputDir());
+            try
+            {
+                Runtime.getRuntime().exec("rm -fr " + info.getOutputDir());
+            }
+            catch (IOException e)
+            {
+                logger.info("Failed to remove output files, " + e.getMessage());
+            }
+        }
+        
+        info = new JireconTaskInfo();
     }
 
     /**
@@ -216,10 +231,10 @@ public class JireconTaskImpl
             // asynchronous method.
             transport.startConnectivityEstablishment();
 
-            // Once transport manager has selected candidates pairs, get stream
-            // connectors. Notice that we have to wait for at least one
-            // candidate pair being selected. If ICE connectivity establishment
-            // doesn't get selected pairs for a long time, break the task.
+            // Once transport manager has selected candidates pairs, we can get
+            // stream connectors from it, otherwise we have to wait. Notice that
+            // if ICE connectivity establishment doesn't get selected pairs for
+            // a specified time(MAX_WAIT_TIME), we must break the task.
             Map<MediaType, StreamConnector> streamConnectors =
                 new HashMap<MediaType, StreamConnector>();
             Map<MediaType, MediaStreamTarget> mediaStreamTargets =
@@ -248,7 +263,7 @@ public class JireconTaskImpl
         catch (Exception e)
         {
             e.printStackTrace();
-            fireEvent(new JireconEvent(this, JireconEvent.Type.TASK_ABORTED));
+            fireEvent(new JireconEvent(info.getMucJid(), JireconEvent.Type.TASK_ABORTED));
         }
     }
 
@@ -304,14 +319,24 @@ public class JireconTaskImpl
             Map<String, List<String>> associatedSsrcs =
                 session.getAssociatedSsrcs();
             recorder.setAssociatedSsrcs(associatedSsrcs);
-            return;
         }
 
-        if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_LEFT)
+        else if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_LEFT)
         {
-            // TODO: I should do something in case of any participant left the
-            // MUC.
-            return;
+            Map<String, List<String>> associatedSsrcs =
+                session.getAssociatedSsrcs();
+            // It seems that all participants have left the MUC(except Jirecon
+            // or other participants which only receive data). It's time to
+            // finish the recording.
+            if (associatedSsrcs.isEmpty())
+            {
+                stop();
+                fireEvent(new JireconEvent(info.getMucJid(), JireconEvent.Type.TASK_FINISED));
+            }
+            else
+            {
+                recorder.setAssociatedSsrcs(associatedSsrcs);
+            }
         }
     }
 
@@ -344,7 +369,7 @@ public class JireconTaskImpl
             if (t instanceof JireconTask)
             {
                 ((JireconTask) e).stop();
-                fireEvent(new JireconEvent(JireconTaskImpl.this,
+                fireEvent(new JireconEvent(info.getMucJid(),
                     JireconEvent.Type.TASK_ABORTED));
             }
         }
@@ -363,7 +388,6 @@ public class JireconTaskImpl
         @Override
         public Thread newThread(Runnable r)
         {
-            System.out.println(this + " creating new Thread");
             Thread t = new Thread(r);
             t.setUncaughtExceptionHandler(new ThreadExceptionHandler());
             return t;

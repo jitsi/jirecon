@@ -27,6 +27,11 @@ public class JireconTaskInfo
     private String nickname;
 
     /**
+     * Where does JireconTask output files.
+     */
+    private String outputDir;
+
+    /**
      * Set Jitsi-meeting jid.
      * 
      * @param mucJid
@@ -64,5 +69,25 @@ public class JireconTaskInfo
     public String getNickname()
     {
         return nickname;
+    }
+
+    /**
+     * Set output directory.
+     * 
+     * @param outputDir
+     */
+    public void setOutputDir(String outputDir)
+    {
+        this.outputDir = outputDir;
+    }
+
+    /**
+     * Get output directory.
+     * 
+     * @return
+     */
+    public String getOutputDir()
+    {
+        return outputDir;
     }
 }

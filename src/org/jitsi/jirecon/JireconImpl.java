@@ -125,7 +125,7 @@ public class JireconImpl
         logger.debug(this.getClass() + "uninit");
         for (JireconTask task : jireconTasks.values())
         {
-            task.uninit();
+            task.uninit(true);
         }
         LibJitsi.stop();
         closeConnection();
@@ -151,9 +151,14 @@ public class JireconImpl
             j = new JireconTaskImpl();
             jireconTasks.put(mucJid, j);
         }
+
+        String outputDir =
+            base_output_dir + "/" + mucJid
+                + new SimpleDateFormat("-yyMMdd-HHmmss").format(new Date());
+        
         j.addEventListener(this);
-        j.init(mucJid, connection, base_output_dir + "/" + mucJid
-            + new SimpleDateFormat("-yyMMdd-HHmmss").format(new Date()));
+        j.init(mucJid, connection, outputDir);
+
         j.start();
         return true;
     }
@@ -162,7 +167,7 @@ public class JireconImpl
      * {@inheritDoc}
      */
     @Override
-    public boolean stopJireconTask(String mucJid)
+    public boolean stopJireconTask(String mucJid, boolean keepData)
     {
         logger.debug(this.getClass() + "stopJireconTask: " + mucJid);
         JireconTask j = null;
@@ -173,13 +178,13 @@ public class JireconImpl
         if (null == j)
         {
             logger.info("Failed to stop Jirecon by mucJid: " + mucJid
-                + ". Nonexisted Jid.");
+                + ". Jid was not found.");
             return false;
         }
         else
         {
             j.stop();
-            j.uninit();
+            j.uninit(keepData);
         }
         return true;
     }
@@ -262,19 +267,20 @@ public class JireconImpl
     @Override
     public void handleEvent(JireconEvent evt)
     {
+        String mucJid = evt.getMucJid();
+
         switch (evt.getType())
         {
         case TASK_ABORTED:
-            if (evt.getSource() instanceof JireconTask)
-            {
-                String mucJid =
-                    ((JireconTask) evt.getSource()).getTaskInfo().getMucJid();
-                stopJireconTask(mucJid);
-                logger.fatal("Failed to start task of mucJid " + mucJid + ".");
-                fireEvent(new JireconEvent(this, JireconEvent.Type.TASK_ABORTED));
-            }
+            stopJireconTask(mucJid, false);
+            logger.fatal("Recording task of MUC " + mucJid + " failed.");
+            fireEvent(evt);
+            break;
         case TASK_FINISED:
-            // TODO:
+            stopJireconTask(mucJid, true);
+            logger.info("Recording task of MUC: " + mucJid
+                + " finished successfully.");
+            fireEvent(evt);
             break;
         default:
             break;

@@ -29,8 +29,11 @@ public interface JireconTask
 
     /**
      * Uninitialize the <tt>JireconTask</tt> and get ready to be recycled by GC.
+     * 
+     * @param keepData Whether we should keep data. Keep the data if it is true,
+     *            other wise remove them.
      */
-    public void uninit();
+    public void uninit(boolean keepData);
 
     // TODO: At present, once the task has been started successfully, it will
     // not terminate even if everyone has left the meeting. So I should add the

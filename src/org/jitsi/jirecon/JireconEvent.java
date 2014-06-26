@@ -20,9 +20,9 @@ public class JireconEvent
     private Type type;
 
     /**
-     * Source of the event.
+     * MUC jid, represents a JireconTask.
      */
-    private Object source;
+    private String mucJid;
 
     /**
      * Construction method.
@@ -30,9 +30,9 @@ public class JireconEvent
      * @param source indicates where this event comes from.
      * @param type indicates the event type.
      */
-    public JireconEvent(Object source, Type type)
+    public JireconEvent(String mucJid, Type type)
     {
-        this.source = source;
+        this.mucJid = mucJid;
         this.type = type;
     }
 
@@ -47,13 +47,13 @@ public class JireconEvent
     }
 
     /**
-     * Get event source.
+     * Get MUC jid.
      * 
-     * @return event source
+     * @return jid of MUC.
      */
-    public Object getSource()
+    public String getMucJid()
     {
-        return source;
+        return mucJid;
     }
 
     /**
