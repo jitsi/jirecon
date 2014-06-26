@@ -10,9 +10,7 @@ import java.util.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
-import org.jitsi.jirecon.dtlscontrol.*;
 import org.jitsi.jirecon.task.JireconTaskEventListener;
-import org.jitsi.jirecon.transport.*;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jivesoftware.smack.XMPPConnection;
@@ -36,21 +34,68 @@ public interface JireconSession
      */
     public void init(XMPPConnection connection);
 
+//    /**
+//     * Connect with XMPP server and build a Jingle session.
+//     * 
+//     * @param transportManager which is used for building ICE connectivity.
+//     * @param srtpControlManager which is used for SRTP support.
+//     * @param mucJid The specified MUC jid.
+//     * @param nickname which is name used in MUC.
+//     * @return Jingle session-init packet which can be used by other classes.
+//     * @throws OperationFailedException if some operations failed and the
+//     *             connecting is aborted.
+//     */
+//    public JingleIQ connect(JireconTransportManager transportManager,
+//        SrtpControlManager srtpControlManager, String mucJid, String nickname)
+//        throws OperationFailedException;
+    
     /**
-     * Connect with XMPP server and build a Jingle session.
+     * Join a Multi-User-Chat of specified MUC jid.
      * 
-     * @param transportManager which is used for building ICE connectivity.
-     * @param srtpControlManager which is used for SRTP support.
      * @param mucJid The specified MUC jid.
-     * @param nickname which is name used in MUC.
-     * @return Jingle session-init packet which can be used by other classes.
-     * @throws OperationFailedException if some operations failed and the
-     *             connecting is aborted.
+     * @param nickname The name in MUC.
+     * @throws OperationFailedException if failed to join MUC.
      */
-    public JingleIQ connect(JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager, String mucJid, String nickname)
+    public void joinMUC(String mucJid, String nickname)
+        throws OperationFailedException;
+    
+    /**
+     * Wait for Jingle session-init packet after join the MUC.
+     * <p>
+     * <strong>Warning:</strong> This method will block for at most
+     * <tt>MAX_WAIT_TIME</tt> ms if there isn't init packet.
+     * 
+     * @return Jingle session-init packet that we get.
+     * @throws OperationFailedException if the method time out.
+     */
+    public JingleIQ waitForInitPacket() 
         throws OperationFailedException;
 
+    /**
+     * Send Jingle session-accept packet to the remote peer.
+     * 
+     * @param formatAndPTs
+     * @param localSsrcs
+     * @param transportPEs
+     * @param fingerprintPEs
+     */
+    public void sendAccpetPacket(
+        Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
+        Map<MediaType, Long> localSsrcs,
+        Map<MediaType, IceUdpTransportPacketExtension> transportPEs,
+        Map<MediaType, DtlsFingerprintPacketExtension> fingerprintPEs);
+
+    /**
+     * Wait for ack packet.
+     * <p>
+     * <strong>Warning:</strong> This method will block for at most
+     * <tt>MAX_WAIT_TIME</tt> ms if there isn't ack packet.
+     * 
+     * @throws OperationFailedException if the method time out.
+     */
+    public void waitForAckPacket() 
+        throws OperationFailedException;
+        
     /**
      * Disconnect with XMPP server and terminate the Jingle session.
      * 
@@ -74,13 +119,6 @@ public interface JireconSession
     public void removeTaskEventListener(JireconTaskEventListener listener);
 
     /**
-     * Tell <tt>JireconSession</tt> what local ssrcs are.
-     * 
-     * @param ssrcs Map between <tt>MediaType</tt> and ssrc.
-     */
-    public void setLocalSsrcs(Map<MediaType, Long> ssrcs);
-
-    /**
      * Get associated ssrc list.
      * <p>
      * Every participant usually has two ssrc(one for audio and one for video),
@@ -89,11 +127,4 @@ public interface JireconSession
      * @return Map between participant's jid and its associated ssrc.
      */
     public Map<String, List<String>> getAssociatedSsrcs();
-
-    /**
-     * Get map between <tt>MediaFormat</tt> and dynamic payload type.
-     * 
-     * @return Map between <tt>MediaFormat</tt> and dynamic payload type.
-     */
-    public Map<MediaFormat, Byte> getFormatAndPayloadType();
 }

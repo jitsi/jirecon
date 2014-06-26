@@ -111,7 +111,7 @@ public class JireconRecorderImpl
      * {@inheritDoc}
      */
     @Override
-    public void startRecording(Map<MediaFormat, Byte> formatAndDynamicPTs,
+    public void startRecording(Map<MediaType, Map<MediaFormat, Byte>> formatAndDynamicPTs,
         Map<MediaType, StreamConnector> connectors,
         Map<MediaType, MediaStreamTarget> targets)
         throws OperationFailedException
@@ -137,9 +137,7 @@ public class JireconRecorderImpl
      * Make all <tt>JireconRecorderImpl</tt> ready to start receiving media
      * streams.
      * 
-     * @param formatAndDynamicPTs is the map between <tt>MediaFormat</tt> and
-     *            dynamic payload type id. <tt>MediaStream</tt> needs those to
-     *            distinguish different <tt>MediaFormat</tt>.
+     * @param formatAndPTs
      * @param connectors is the map between <tt>MediaType</tt> and
      *            <tt>StreamConnector</tt>. Those connectors are used to
      *            transfer stream data.
@@ -150,7 +148,7 @@ public class JireconRecorderImpl
      *             preparation is aborted.
      */
     private void prepareMediaStreams(
-        Map<MediaFormat, Byte> formatAndDynamicPTs,
+        Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
         Map<MediaType, StreamConnector> connectors,
         Map<MediaType, MediaStreamTarget> targets)
         throws OperationFailedException
@@ -164,16 +162,12 @@ public class JireconRecorderImpl
 
             stream.setConnector(connectors.get(mediaType));
             stream.setTarget(targets.get(mediaType));
-            for (Entry<MediaFormat, Byte> f : formatAndDynamicPTs.entrySet())
+            for (Entry<MediaFormat, Byte> f : formatAndPTs.get(mediaType)
+                .entrySet())
             {
-                if (mediaType == f.getKey().getMediaType())
-                {
-                    stream.addDynamicRTPPayloadType(f.getValue(), f.getKey());
-                    if (null == stream.getFormat())
-                    {
-                        stream.setFormat(f.getKey());
-                    }
-                }
+                stream.addDynamicRTPPayloadType(f.getValue(), f.getKey());
+                if (null == stream.getFormat())
+                    stream.setFormat(f.getKey());
             }
 
             stream.setRTPTranslator(getTranslator(mediaType));

@@ -8,7 +8,6 @@ package org.jitsi.jirecon.task;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
@@ -200,37 +199,67 @@ public class JireconTaskImpl
     {
         try
         {
-            // Harvest local candidates. This should be done first because we
-            // need those information when build Jingle session.
+            // 1. Join MUC.
+            session.joinMUC(info.getMucJid(), info.getNickname());
+            
+            // 2. Wait for session-init packet.
+            JingleIQ initIq = session.waitForInitPacket();
+
+            // 3. Harvest local candidates.
             transport.harvestLocalCandidates();
 
-            // Prepare the local ssrcs to create Jingle packet.
-            session.setLocalSsrcs(recorder.getLocalSsrcs());
+            // 4.1 Prepare for sending session-accept packet.
+            // Media format and dynamic payload type id.
+            Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs =
+                JinglePacketParser.getFormatAndDynamicPTs(initIq);
 
-            // Build the Jingle session with specified MUC.
-            JingleIQ initIq =
-                session.connect(transport, srtpControl, info.getMucJid(),
-                    info.getNickname());
-
-            // Parse remote fingerprint from Jingle session-init packet and
-            // setup srtp control manager.
-            Map<MediaType, String> fingerprints =
-                JinglePacketParser.getFingerprint(initIq);
-            for (Entry<MediaType, String> f : fingerprints.entrySet())
+            // Local ssrc.
+            Map<MediaType, Long> localSsrcs = recorder.getLocalSsrcs();
+            
+            // Transport packet extension.
+            Map<MediaType, IceUdpTransportPacketExtension> transportPEs =
+                new HashMap<MediaType, IceUdpTransportPacketExtension>();
+            transportPEs.put(MediaType.AUDIO, transport.getTransportPacketExt());
+            transportPEs.put(MediaType.VIDEO, transport.getTransportPacketExt());
+            
+            // Fingerprint packet extension.
+            Map<MediaType, DtlsFingerprintPacketExtension> fingerprintPEs =
+                new HashMap<MediaType, DtlsFingerprintPacketExtension>();
+            for (MediaType mediaType : MediaType.values())
             {
-                srtpControl.addRemoteFingerprint(f.getKey(), f.getValue());
+                if (mediaType != MediaType.AUDIO
+                    && mediaType != MediaType.VIDEO)
+                    continue;
+
+                DtlsFingerprintPacketExtension fingerprintPE =
+                    new DtlsFingerprintPacketExtension();
+                fingerprintPE.setHash(srtpControl
+                    .getLocalFingerprintHashFunction(mediaType));
+                fingerprintPE.setFingerprint(srtpControl
+                    .getLocalFingerprintHashFunction(mediaType));
+                fingerprintPE.setText(srtpControl
+                    .getLocalFingerprintHashFunction(mediaType));
+                fingerprintPEs.put(mediaType, fingerprintPE);
             }
 
-            // Parse remote candidates information from Jingle session-init
-            // packet and setup transport manager.
-            Map<MediaType, IceUdpTransportPacketExtension> transportPEs =
-                JinglePacketParser.getTransportPacketExts(initIq);
-            transport.harvestRemoteCandidates(transportPEs);
+            // 4.2 Send session-accept packet.
+            session.sendAccpetPacket(formatAndPTs, localSsrcs, transportPEs,
+                fingerprintPEs);
 
-            // Start establishing ICE connectivity. Notice that this method is
-            // asynchronous method.
+            // 4.3 Wait for session-ack packet.
+            session.waitForAckPacket();
+
+            // 5.1 Prepare for ICE connectivity establishment.
+            // Harvest remote candidates.
+            Map<MediaType, IceUdpTransportPacketExtension> remoteTransportPEs =
+                JinglePacketParser.getTransportPacketExts(initIq);
+            transport.harvestRemoteCandidates(remoteTransportPEs);
+
+            // 5.2 Start establishing ICE connectivity. 
+            // Warning: that this method is asynchronous method.
             transport.startConnectivityEstablishment();
 
+            // 6.1 Prepare for recording.
             // Once transport manager has selected candidates pairs, we can get
             // stream connectors from it, otherwise we have to wait. Notice that
             // if ICE connectivity establishment doesn't get selected pairs for
@@ -254,16 +283,15 @@ public class JireconTaskImpl
                 mediaStreamTargets.put(mediaType, mediaStreamTarget);
             }
 
-            // Gather some information and start recording.
-            Map<MediaFormat, Byte> formatAndDynamicPTs =
-                session.getFormatAndPayloadType();
-            recorder.startRecording(formatAndDynamicPTs, streamConnectors,
+            // 6.2 Start recording.
+            recorder.startRecording(formatAndPTs, streamConnectors,
                 mediaStreamTargets);
         }
         catch (Exception e)
         {
             e.printStackTrace();
-            fireEvent(new JireconEvent(info.getMucJid(), JireconEvent.Type.TASK_ABORTED));
+            fireEvent(new JireconEvent(info.getMucJid(),
+                JireconEvent.Type.TASK_ABORTED));
         }
     }
 
@@ -331,7 +359,8 @@ public class JireconTaskImpl
             if (associatedSsrcs.isEmpty())
             {
                 stop();
-                fireEvent(new JireconEvent(info.getMucJid(), JireconEvent.Type.TASK_FINISED));
+                fireEvent(new JireconEvent(info.getMucJid(),
+                    JireconEvent.Type.TASK_FINISED));
             }
             else
             {
@@ -339,7 +368,7 @@ public class JireconTaskImpl
             }
         }
     }
-
+    
     /**
      * Fire the event if the task has finished or break.
      * 

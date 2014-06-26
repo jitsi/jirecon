@@ -13,11 +13,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentP
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 import net.java.sip.communicator.util.Logger;
 
-import org.jitsi.jirecon.dtlscontrol.SrtpControlManager;
 import org.jitsi.jirecon.extension.MediaExtension;
 import org.jitsi.jirecon.task.*;
-import org.jitsi.jirecon.transport.JireconTransportManager;
-import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -68,18 +65,6 @@ public class JireconSessionImpl
      * Jingle sessoin id which is used for making <tt>JingleIq</tt>.
      */
     private String sid;
-
-    /**
-     * Map between <tt>MediaFormat</tt> and dynamic payload type id which is
-     * used for making <tt>JingleIQ</tt>.
-     */
-    private Map<MediaFormat, Byte> formatAndPayloadTypes;
-
-    /**
-     * Map between <tt>MediaType</tt> and local ssrc which is used for making
-     * <tt>JingleIQ</tt>.
-     */
-    private Map<MediaType, Long> localSsrcs = new HashMap<MediaType, Long>();
 
     /**
      * Attribute "mslable" in source packet extension.
@@ -150,24 +135,6 @@ public class JireconSessionImpl
      * {@inheritDoc}
      */
     @Override
-    public JingleIQ connect(JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager, String mucJid, String nickname)
-        throws OperationFailedException
-    {
-        joinMUC(mucJid, nickname);
-        JingleIQ initIq = waitForInitPacket();
-        recordSessionInfo(initIq);
-        sendAck(initIq);
-        sendAccpetPacket(initIq, transportManager, srtpControlManager);
-        waitForAckPacket();
-
-        return initIq;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public void disconnect(Reason reason, String reasonText)
     {
         sendByePacket(reason, reasonText);
@@ -178,19 +145,7 @@ public class JireconSessionImpl
      * {@inheritDoc}
      */
     @Override
-    public Map<MediaFormat, Byte> getFormatAndPayloadType()
-    {
-        return formatAndPayloadTypes;
-    }
-
-    /**
-     * Join a Multi-User-Chat of specified MUC jid.
-     * 
-     * @param mucJid The specified MUC jid.
-     * @param nickname The name in MUC.
-     * @throws OperationFailedException if failed to join MUC.
-     */
-    private void joinMUC(String mucJid, String nickname)
+    public void joinMUC(String mucJid, String nickname)
         throws OperationFailedException
     {
         logger.info("joinMUC");
@@ -219,24 +174,19 @@ public class JireconSessionImpl
     }
 
     /**
-     * Send Jingle session-accept packet to the remote peer.
-     * 
-     * @param initIq is the session-init packet that we've gotten.
-     * @param transportManager is used for ICE connectivity establishment.
-     * @param srtpControlManager is used for SRTP transform.
-     * @throws OperationFailedException if something failed and session-accept
-     *             packet can't be sent.
+     * {@inheritDoc}
+     * @throws OperationFailedException 
      */
-    private void sendAccpetPacket(JingleIQ initIq,
-        JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager) 
-            throws OperationFailedException
+    @Override
+    public void sendAccpetPacket(
+        Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
+        Map<MediaType, Long> localSsrcs,
+        Map<MediaType, IceUdpTransportPacketExtension> transportPEs,
+        Map<MediaType, DtlsFingerprintPacketExtension> fingerprintPEs)
     {
         logger.info("sendAcceptPacket");
-
-        JingleIQ acceptPacket =
-            createAcceptPacket(initIq, transportManager, srtpControlManager);
-        connection.sendPacket(acceptPacket);
+        JingleIQ acceptIq = createAcceptPacket(formatAndPTs, localSsrcs, transportPEs, fingerprintPEs);
+        connection.sendPacket(acceptIq);
     }
 
     /**
@@ -276,20 +226,15 @@ public class JireconSessionImpl
         localFullJid = initJiq.getTo();
         remoteFullJid = initJiq.getFrom();
         sid = initJiq.getSID();
-        formatAndPayloadTypes =
-            JinglePacketParser.getFormatAndDynamicPTs(initJiq);
     }
 
     /**
-     * Wait for Jingle session-init packet after join the MUC.
+     * {@inheritDoc}
      * <p>
-     * <strong>Warning:</strong> This method will block for at most
-     * <tt>MAX_WAIT_TIME</tt> ms if there isn't init packet.
-     * 
-     * @return Jingle session-init packet that we get.
-     * @throws OperationFailedException if the method time out.
+     * Once We got session-init packet, send back ack packet.
      */
-    private JingleIQ waitForInitPacket() 
+    @Override
+    public JingleIQ waitForInitPacket() 
         throws OperationFailedException
     {
         logger.info("waitForInitPacket");
@@ -351,18 +296,18 @@ public class JireconSessionImpl
                 OperationFailedException.GENERAL_ERROR);
         }
 
-        return resultList.get(0);
+        final JingleIQ initIq = resultList.get(0);
+        recordSessionInfo(initIq);
+        sendAck(initIq);
+
+        return initIq;
     }
 
     /**
-     * Wait for ack packet.
-     * <p>
-     * <strong>Warning:</strong> This method will block for at most
-     * <tt>MAX_WAIT_TIME</tt> ms if there isn't ack packet.
-     * 
-     * @throws OperationFailedException if the method time out.
+     * {@inheritDoc}
      */
-    private void waitForAckPacket() 
+    @Override
+    public void waitForAckPacket() 
         throws OperationFailedException
     {
         logger.info("waitForAckPacket");
@@ -471,7 +416,7 @@ public class JireconSessionImpl
                 JireconTaskEvent.Type.PARTICIPANT_CAME));
         }
     }
-
+    
     /**
      * Create Jingle session-accept packet.
      * 
@@ -483,33 +428,51 @@ public class JireconSessionImpl
      * @throws OperationFailedException if something failed and session-accept
      *             packet can not be created.
      */
-    private JingleIQ createAcceptPacket(JingleIQ initIq,
-        JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager) 
-            throws OperationFailedException
+    private JingleIQ createAcceptPacket(
+        Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
+        Map<MediaType, Long> localSsrcs,
+        Map<MediaType, IceUdpTransportPacketExtension> transportPEs,
+        Map<MediaType, DtlsFingerprintPacketExtension> fingerprintPEs)
     {
+        // TODO: Don't forget to create formatAndPTs in JireconTask
         logger.info("createSessionAcceptPacket");
-        final List<ContentPacketExtension> contents =
+        List<ContentPacketExtension> contentPEs =
             new ArrayList<ContentPacketExtension>();
+
         for (MediaType mediaType : MediaType.values())
         {
             // Make sure that we only handle audio or video type.
             if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
                 continue;
 
-            ContentPacketExtension initIqContent =
-                JinglePacketParser.getContentPacketExt(initIq, mediaType);
-            contents.add(createContentPacketExtension(mediaType, initIqContent,
-                transportManager, srtpControlManager));
+            // 1. Create DescriptionPE.
+            RtpDescriptionPacketExtension descriptionPE =
+                createDescriptionPacketExt(mediaType,
+                    formatAndPTs.get(mediaType), localSsrcs.get(mediaType));
+
+            // 2. Create TransportPE, put FingerprintPE into it.
+            IceUdpTransportPacketExtension transportPE =
+                transportPEs.get(mediaType);
+            DtlsFingerprintPacketExtension fingerprintPE =
+                fingerprintPEs.get(mediaType);
+            transportPE.addChildExtension(fingerprintPE);
+
+            // 3. Create Content packet extension with DescriptionPE and
+            // TransportPE above.
+            ContentPacketExtension contentPE =
+                createContentPacketExtension(mediaType.toString(),
+                    descriptionPE, transportPE);
+
+            contentPEs.add(contentPE);
         }
 
         JingleIQ acceptJiq =
             JinglePacketFactory.createSessionAccept(localFullJid,
-                remoteFullJid, sid, contents);
+                remoteFullJid, sid, contentPEs);
 
         return acceptJiq;
     }
-
+    
     /**
      * Create content packet extension in Jingle session-accept packet.
      * 
@@ -523,33 +486,35 @@ public class JireconSessionImpl
      *             packet extension can not be created.
      */
     private ContentPacketExtension createContentPacketExtension(
-        MediaType mediaType, ContentPacketExtension initIqContent,
-        JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager) 
-            throws OperationFailedException
+        String name,
+        RtpDescriptionPacketExtension descriptionPE,
+        IceUdpTransportPacketExtension transportPE)
     {
         logger.debug(this.getClass() + " createContentPacketExtension");
-        IceUdpTransportPacketExtension transportPE =
-            transportManager.getTransportPacketExt();
+        
+        ContentPacketExtension content = new ContentPacketExtension();
+        content.setCreator(CreatorEnum.responder);
+        content.setName(name);
+        content.setSenders(SendersEnum.initiator);
+        content.addChildExtension(descriptionPE);
+        content.addChildExtension(transportPE);
 
-        // DTLS stuff, fingerprint packet extension
-        String fingerprint = srtpControlManager.getLocalFingerprint(mediaType);
-        String hash =
-            srtpControlManager.getLocalFingerprintHashFunction(mediaType);
-        DtlsFingerprintPacketExtension fingerprintPE =
-            transportPE
-                .getFirstChildOfType(DtlsFingerprintPacketExtension.class);
-        if (fingerprintPE == null)
-        {
-            fingerprintPE = new DtlsFingerprintPacketExtension();
-            transportPE.addChildExtension(fingerprintPE);
-        }
-        fingerprintPE.setFingerprint(fingerprint);
-        fingerprintPE.setHash(hash);
+        return content;
+    }
 
-        // harvest payload types information.
-        List<PayloadTypePacketExtension> payloadTypes =
-            new ArrayList<PayloadTypePacketExtension>();
+    private RtpDescriptionPacketExtension createDescriptionPacketExt(
+        MediaType mediaType, Map<MediaFormat, Byte> formatAndPayloadTypes,
+        Long localSsrc)
+    {
+        RtpDescriptionPacketExtension description =
+            new RtpDescriptionPacketExtension();
+        
+        // 1. Set media type.
+        description.setMedia(mediaType.toString());
+        // 2. Set local ssrc.
+        description.setSsrc(localSsrc.toString());
+
+        // 3. Set payload type id.
         for (Map.Entry<MediaFormat, Byte> e : formatAndPayloadTypes.entrySet())
         {
             PayloadTypePacketExtension payloadType =
@@ -571,52 +536,14 @@ public class JireconSessionImpl
                 parameter.setValue(en.getValue());
                 payloadType.addParameter(parameter);
             }
-            payloadTypes.add(payloadType);
+            description.addPayloadType(payloadType);
         }
 
-        // Description packet extension stuff
-        RtpDescriptionPacketExtension description =
-            new RtpDescriptionPacketExtension();
-        description.setMedia(mediaType.toString());
-        for (PayloadTypePacketExtension p : payloadTypes)
-        {
-            description.addPayloadType(p);
-        }
+        // 4. Set source information.
         SourcePacketExtension sourcePacketExtension =
             new SourcePacketExtension();
-
-        int sumWaitTime = 0;
-        while (sumWaitTime <= MAX_WAIT_TIME)
-        {
-            try
-            {
-                synchronized (localSsrcs)
-                {
-                    if (localSsrcs.containsKey(mediaType))
-                        break;
-                }
-                logger
-                    .info("Local ssrcs not found, wait for a while. Already sleep for "
-                        + sumWaitTime / 1000 + " s.");
-                sumWaitTime += MIN_WAIT_TIME;
-                Thread.sleep(MIN_WAIT_TIME);
-            }
-            catch (InterruptedException e1)
-            {
-                e1.printStackTrace();
-            }
-        }
-        if (!localSsrcs.containsKey(mediaType))
-        {
-            throw new OperationFailedException(
-                "Failed to create content packet extension, local ssrc unknown.",
-                OperationFailedException.GENERAL_ERROR);
-        }
-
-        description.setSsrc(localSsrcs.get(mediaType).toString());
-
         final String label = mediaType.toString();
-        sourcePacketExtension.setSSRC(localSsrcs.get(mediaType));
+        sourcePacketExtension.setSSRC(localSsrc);
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
             "cname", LibJitsi.getMediaService().getRtpCname()));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
@@ -626,17 +553,10 @@ public class JireconSessionImpl
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
             "label", label));
         description.addChildExtension(sourcePacketExtension);
-
-        ContentPacketExtension content = new ContentPacketExtension();
-        content.setCreator(CreatorEnum.responder);
-        content.setName(initIqContent.getName());
-        content.setSenders(SendersEnum.initiator);
-        content.addChildExtension(description);
-        content.addChildExtension(transportPE);
-
-        return content;
+        
+        return description;
     }
-
+    
     /**
      * {@inheritDoc}
      */
@@ -658,18 +578,6 @@ public class JireconSessionImpl
         synchronized (listeners)
         {
             listeners.remove(listener);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setLocalSsrcs(Map<MediaType, Long> ssrcs)
-    {
-        synchronized (localSsrcs)
-        {
-            localSsrcs = ssrcs;
         }
     }
 

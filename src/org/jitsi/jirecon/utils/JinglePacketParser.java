@@ -302,10 +302,10 @@ public class JinglePacketParser
      * @param jiq
      * @return map between <tt>MediaFormat</tt> and dynamic payload type id.
      */
-    public static Map<MediaFormat, Byte> getFormatAndDynamicPTs(JingleIQ jiq)
+    public static Map<MediaType, Map<MediaFormat, Byte>> getFormatAndDynamicPTs(JingleIQ jiq)
     {
-        Map<MediaFormat, Byte> formatAndDynamicPTs =
-            new HashMap<MediaFormat, Byte>();
+        Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs =
+            new HashMap<MediaType, Map<MediaFormat, Byte>>();
         final MediaFormatFactoryImpl fmtFactory = new MediaFormatFactoryImpl();
 
         for (MediaType mediaType : MediaType.values())
@@ -316,6 +316,7 @@ public class JinglePacketParser
                 continue;
             }
 
+            Map<MediaFormat, Byte> formatAndPT = new HashMap<MediaFormat, Byte>();
             // TODO: Video format only support RED only at present.
             for (PayloadTypePacketExtension payloadTypePacketExt : getPayloadTypePacketExts(
                 jiq, mediaType))
@@ -326,14 +327,13 @@ public class JinglePacketParser
                         payloadTypePacketExt.getClockrate(),
                         payloadTypePacketExt.getChannels());
                 if (format != null)
-                {
-                    formatAndDynamicPTs.put(format,
-                        (byte) (payloadTypePacketExt.getID()));
-                }
+                    formatAndPT.put(format, (byte) (payloadTypePacketExt.getID()));
             }
+            
+            formatAndPTs.put(mediaType, formatAndPT);
         }
 
-        return formatAndDynamicPTs;
+        return formatAndPTs;
     }
 
     /**
