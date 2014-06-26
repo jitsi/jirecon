@@ -12,8 +12,7 @@ import java.util.concurrent.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
-import org.jitsi.jirecon.JireconEvent;
-import org.jitsi.jirecon.JireconEventListener;
+import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.dtlscontrol.*;
 import org.jitsi.jirecon.task.recorder.*;
 import org.jitsi.jirecon.task.session.*;
@@ -36,7 +35,9 @@ import org.jivesoftware.smack.*;
  * 
  */
 public class JireconTaskImpl
-    implements JireconTask, JireconEventListener, JireconTaskEventListener,
+    implements JireconTask, 
+    JireconEventListener, 
+    JireconTaskEventListener,
     Runnable
 {
     /**

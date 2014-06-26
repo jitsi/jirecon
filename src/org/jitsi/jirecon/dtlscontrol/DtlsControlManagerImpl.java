@@ -9,7 +9,6 @@ package org.jitsi.jirecon.dtlscontrol;
 import java.util.*;
 import java.util.Map.Entry;
 
-import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 

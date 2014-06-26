@@ -11,8 +11,8 @@ import java.util.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
-import org.jitsi.jirecon.task.JireconTask;
-import org.jitsi.jirecon.task.JireconTaskImpl;
+import org.jitsi.jirecon.task.*;
+import org.jitsi.jirecon.utils.JireconConfigurationKey;
 import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.util.Logger;
@@ -31,7 +31,8 @@ import org.jivesoftware.smack.provider.ProviderManager;
  * 
  */
 public class JireconImpl
-    implements Jirecon, JireconEventListener
+    implements Jirecon, 
+    JireconEventListener
 {
     /**
      * List of <tt>JireconEventListener</tt>, if something important happen,
@@ -58,21 +59,6 @@ public class JireconImpl
     private static final Logger logger = Logger.getLogger(JireconImpl.class);
 
     /**
-     * The XMPP server host item key in configuration file.
-     */
-    private static final String XMPP_HOST_KEY = "XMPP_HOST";
-
-    /**
-     * The XMPP server port item key in configuration file.
-     */
-    private static final String XMPP_PORT_KEY = "XMPP_PORT";
-
-    /**
-     * The saving directory item key in configuration file.
-     */
-    private static final String SAVING_DIR_KEY = "OUTPUT_DIR";
-
-    /**
      * The base directory to save recording files. <tt>JireconImpl</tt> will add
      * date suffix to it as a final output directory.
      */
@@ -90,7 +76,8 @@ public class JireconImpl
      * server.
      */
     @Override
-    public void init(String configurationPath) throws XMPPException
+    public void init(String configurationPath) 
+        throws XMPPException
     {
         logger.debug(this.getClass() + "init");
 
@@ -101,7 +88,8 @@ public class JireconImpl
         System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_NAME,
             configurationPath);
         ConfigurationService configuration = LibJitsi.getConfigurationService();
-        base_output_dir = configuration.getString(SAVING_DIR_KEY);
+        base_output_dir =
+            configuration.getString(JireconConfigurationKey.SAVING_DIR_KEY);
         // Remove the suffix '/' in SAVE_DIR
         if ('/' == base_output_dir.charAt(base_output_dir.length() - 1))
         {
@@ -109,8 +97,10 @@ public class JireconImpl
                 base_output_dir.substring(0, base_output_dir.length() - 1);
         }
 
-        final String xmppHost = configuration.getString(XMPP_HOST_KEY);
-        final int xmppPort = configuration.getInt(XMPP_PORT_KEY, -1);
+        final String xmppHost =
+            configuration.getString(JireconConfigurationKey.XMPP_HOST_KEY);
+        final int xmppPort =
+            configuration.getInt(JireconConfigurationKey.XMPP_PORT_KEY, -1);
         try
         {
             connect(xmppHost, xmppPort);
@@ -201,7 +191,8 @@ public class JireconImpl
      * @param xmppPort is the port of XMPP server.
      * @throws XMPPException if failed to build connection.
      */
-    private void connect(String xmppHost, int xmppPort) throws XMPPException
+    private void connect(String xmppHost, int xmppPort) 
+        throws XMPPException
     {
         logger.debug(this.getClass() + "connect");
         ConnectionConfiguration conf =
@@ -224,7 +215,8 @@ public class JireconImpl
      * 
      * @throws XMPPException
      */
-    private void loginAnonymously() throws XMPPException
+    private void loginAnonymously() 
+        throws XMPPException
     {
         logger.debug(this.getClass() + "login");
         connection.loginAnonymously();

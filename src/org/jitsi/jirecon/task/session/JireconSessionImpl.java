@@ -15,8 +15,7 @@ import net.java.sip.communicator.util.Logger;
 
 import org.jitsi.jirecon.dtlscontrol.SrtpControlManager;
 import org.jitsi.jirecon.extension.MediaExtension;
-import org.jitsi.jirecon.task.JireconTaskEvent;
-import org.jitsi.jirecon.task.JireconTaskEventListener;
+import org.jitsi.jirecon.task.*;
 import org.jitsi.jirecon.transport.JireconTransportManager;
 import org.jitsi.jirecon.utils.JinglePacketParser;
 import org.jitsi.service.libjitsi.LibJitsi;
@@ -230,7 +229,8 @@ public class JireconSessionImpl
      */
     private void sendAccpetPacket(JingleIQ initIq,
         JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager) throws OperationFailedException
+        SrtpControlManager srtpControlManager) 
+            throws OperationFailedException
     {
         logger.info("sendAcceptPacket");
 
@@ -289,7 +289,8 @@ public class JireconSessionImpl
      * @return Jingle session-init packet that we get.
      * @throws OperationFailedException if the method time out.
      */
-    private JingleIQ waitForInitPacket() throws OperationFailedException
+    private JingleIQ waitForInitPacket() 
+        throws OperationFailedException
     {
         logger.info("waitForInitPacket");
 
@@ -361,7 +362,8 @@ public class JireconSessionImpl
      * 
      * @throws OperationFailedException if the method time out.
      */
-    private void waitForAckPacket() throws OperationFailedException
+    private void waitForAckPacket() 
+        throws OperationFailedException
     {
         logger.info("waitForAckPacket");
 
@@ -470,7 +472,8 @@ public class JireconSessionImpl
      */
     private JingleIQ createAcceptPacket(JingleIQ initIq,
         JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager) throws OperationFailedException
+        SrtpControlManager srtpControlManager) 
+            throws OperationFailedException
     {
         logger.info("createSessionAcceptPacket");
         final List<ContentPacketExtension> contents =
@@ -509,7 +512,8 @@ public class JireconSessionImpl
     private ContentPacketExtension createContentPacketExtension(
         MediaType mediaType, ContentPacketExtension initIqContent,
         JireconTransportManager transportManager,
-        SrtpControlManager srtpControlManager) throws OperationFailedException
+        SrtpControlManager srtpControlManager) 
+            throws OperationFailedException
     {
         logger.debug(this.getClass() + " createContentPacketExtension");
         IceUdpTransportPacketExtension transportPE =

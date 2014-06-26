@@ -5,8 +5,7 @@
  */
 package org.jitsi.jirecon.task.session;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;

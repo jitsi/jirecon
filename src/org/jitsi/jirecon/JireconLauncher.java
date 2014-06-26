@@ -4,14 +4,11 @@
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
 
-package org.jitsi.jirecon.test;
+package org.jitsi.jirecon;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-import org.jitsi.jirecon.Jirecon;
-import org.jitsi.jirecon.JireconImpl;
 import org.jivesoftware.smack.XMPPException;
 
 /**

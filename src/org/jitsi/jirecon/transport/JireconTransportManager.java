@@ -30,7 +30,8 @@ public interface JireconTransportManager
      * 
      * @exception OperationFailedException if some thing failed.
      */
-    public void harvestLocalCandidates() throws OperationFailedException;
+    public void harvestLocalCandidates() 
+        throws OperationFailedException;
 
     /**
      * Parse and harvest remote candidates from a

@@ -63,16 +63,6 @@ public class JireconIceUdpTransportManagerImpl
         .getLogger(JireconIceUdpTransportManagerImpl.class);
 
     /**
-     * The minimum stream port item key in configuration file.
-     */
-    private String MIN_STREAM_PORT_KEY = "MIN_STREAM_PORT";
-
-    /**
-     * The maximum stream port item key in configuration file.
-     */
-    private String MAX_STREAM_PORT_KEY = "MAX_STREAM_PORT";
-
-    /**
      * The minimum stream port.
      */
     private int MIN_STREAM_PORT;
@@ -100,8 +90,12 @@ public class JireconIceUdpTransportManagerImpl
         logger.info("init");
         iceAgent = new Agent();
         ConfigurationService configuration = LibJitsi.getConfigurationService();
-        MIN_STREAM_PORT = configuration.getInt(MIN_STREAM_PORT_KEY, -1);
-        MAX_STREAM_PORT = configuration.getInt(MAX_STREAM_PORT_KEY, -1);
+        MIN_STREAM_PORT =
+            configuration.getInt(JireconConfigurationKey.MIN_STREAM_PORT_KEY,
+                -1);
+        MAX_STREAM_PORT =
+            configuration.getInt(JireconConfigurationKey.MAX_STREAM_PORT_KEY,
+                -1);
     }
 
     /**
@@ -170,7 +164,8 @@ public class JireconIceUdpTransportManagerImpl
      * 
      * @throws OperationFailedException if some fatal error occurs.
      */
-    private void startConnectivityCheck() throws OperationFailedException
+    private void startConnectivityCheck() 
+        throws OperationFailedException
     {
         logger.info("waitForCheckFinished");
 
@@ -242,7 +237,8 @@ public class JireconIceUdpTransportManagerImpl
      * {@inheritDoc}
      */
     @Override
-    public void harvestLocalCandidates() throws OperationFailedException
+    public void harvestLocalCandidates() 
+        throws OperationFailedException
     {
         logger.info("harvestLocalCandidates");
         for (MediaType mediaType : MediaType.values())

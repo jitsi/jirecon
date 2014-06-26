@@ -5,16 +5,14 @@
  */
 package org.jitsi.jirecon.task.recorder;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import java.util.Map.*;
 
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
-import org.jitsi.jirecon.task.JireconTaskEvent;
-import org.jitsi.jirecon.task.JireconTaskEventListener;
+import org.jitsi.jirecon.task.*;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -189,7 +187,8 @@ public class JireconRecorderImpl
      * @throws OperationFailedException if some operation failed and the
      *             preparation is aborted.
      */
-    private void prepareRecorders() throws OperationFailedException
+    private void prepareRecorders() 
+        throws OperationFailedException
     {
         logger.info("prepareRecorders");
 
@@ -206,7 +205,8 @@ public class JireconRecorderImpl
      * @throws OperationFailedException if some operation failed and the
      *             receiving is aborted.
      */
-    private void startReceivingStreams() throws OperationFailedException
+    private void startReceivingStreams() 
+        throws OperationFailedException
     {
         logger.info("startReceiving");
 
@@ -238,7 +238,8 @@ public class JireconRecorderImpl
      * @throws OperationFailedException if some operation failed and the
      *             recording is aborted.
      */
-    private void startRecordingStreams() throws OperationFailedException
+    private void startRecordingStreams() 
+        throws OperationFailedException
     {
         logger.info("startRecording");
         if (!isReceiving)
