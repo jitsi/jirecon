@@ -6,10 +6,10 @@
 
 package org.jitsi.jirecon;
 
-import java.io.IOException;
 import java.util.*;
 
-import org.jivesoftware.smack.XMPPException;
+import net.java.sip.communicator.service.protocol.OperationFailedException;
+
 
 /**
  * A launch application which is used to run <tt>Jirecon</tt>.
@@ -83,16 +83,12 @@ public class JireconLauncher
         {
             jirecon.init(conf);
         }
-        catch (IOException e)
+        catch (OperationFailedException e)
         {
             e.printStackTrace();
             return;
         }
-        catch (XMPPException e)
-        {
-            e.printStackTrace();
-            return;
-        }
+        
 
         for (String jid : mucJids)
             jirecon.startJireconTask(jid);

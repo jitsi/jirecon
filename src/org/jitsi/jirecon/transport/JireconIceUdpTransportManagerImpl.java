@@ -298,34 +298,41 @@ public class JireconIceUdpTransportManagerImpl
             // candidates and thus be able to set the relative-candidate
             // matching the rel-addr/rel-port attribute.
             Collections.sort(candidates);
-            for (CandidatePacketExtension c : candidates)
+            for (CandidatePacketExtension candidate : candidates)
             {
-                if (c.getGeneration() != iceAgent.getGeneration())
+                if (candidate.getGeneration() != iceAgent.getGeneration())
                     continue;
+                
                 final Component component =
-                    stream.getComponent(c.getComponent());
+                    stream.getComponent(candidate.getComponent());
 
-                String relAddr;
-                int relPort;
+                final String relAddr = candidate.getRelAddr();
+                final int relPort = candidate.getRelPort();
                 TransportAddress relatedAddress = null;
 
-                if (((relAddr = c.getRelAddr()) != null)
-                    && ((relPort = c.getRelPort()) != -1))
+                if ((relAddr != null) && (relPort > 0))
                 {
                     relatedAddress =
                         new TransportAddress(relAddr, relPort,
-                            Transport.parse(c.getProtocol()));
+                            Transport.parse(candidate.getProtocol()));
                 }
 
-                RemoteCandidate relatedCandidate =
+                final RemoteCandidate relatedCandidate =
                     component.findRemoteCandidate(relatedAddress);
 
-                RemoteCandidate remoteCandidate =
-                    new RemoteCandidate(new TransportAddress(c.getIP(),
-                        c.getPort(), Transport.parse(c.getProtocol())),
-                        component, org.ice4j.ice.CandidateType.parse(c
-                            .getType().toString()), c.getFoundation(),
-                        c.getPriority(), relatedCandidate);
+                final TransportAddress mainAddress =
+                    new TransportAddress(candidate.getIP(),
+                        candidate.getPort(), Transport.parse(candidate
+                            .getProtocol()));
+
+                final RemoteCandidate remoteCandidate =
+                    new RemoteCandidate(
+                        mainAddress, 
+                        component,
+                        org.ice4j.ice.CandidateType.parse(candidate.getType().toString()), 
+                        candidate.getFoundation(),
+                        candidate.getPriority(), 
+                        relatedCandidate);
 
                 if (!canReach(component, remoteCandidate))
                     continue;

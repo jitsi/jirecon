@@ -49,7 +49,8 @@ public interface JireconRecorder
      * @throws OperationFailedException if some operation failed and the
      *             recording is aborted.
      */
-    public void startRecording(Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
+    public void startRecording(
+        Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
         Map<MediaType, StreamConnector> connectors,
         Map<MediaType, MediaStreamTarget> targets)
         throws OperationFailedException;

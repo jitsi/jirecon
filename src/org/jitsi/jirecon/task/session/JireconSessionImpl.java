@@ -23,6 +23,7 @@ import org.jivesoftware.smack.filter.PacketFilter;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smackx.muc.MultiUserChat;
 import org.jivesoftware.smackx.packet.MUCUser;
+import org.jivesoftware.smackx.packet.Nick;
 
 /**
  * An implementation of <tt>JireconSessoin</tt>.
@@ -151,15 +152,31 @@ public class JireconSessionImpl
         logger.info("joinMUC");
 
         muc = new MultiUserChat(connection, mucJid);
-        try
+        int suffix = 1;
+        String finalNickname = nickname;
+        while (true)
         {
-            muc.join(nickname);
+            try
+            {
+                muc.join(finalNickname);
+                break;
+            }
+            catch (XMPPException e)
+            {
+                if (409 == e.getXMPPError().getCode() && suffix < 10)
+                {
+                    finalNickname = nickname + "_" + suffix++;
+                    continue;
+                }
+                throw new OperationFailedException("Could not join MUC, "
+                    + e.getMessage(), OperationFailedException.GENERAL_ERROR);
+            }
         }
-        catch (XMPPException e)
-        {
-            throw new OperationFailedException("Could not join MUC, "
-                + e.getMessage(), OperationFailedException.GENERAL_ERROR);
-        }
+
+        Packet presence = new Presence(Presence.Type.available);
+        presence.setTo(mucJid);
+        presence.addExtension(new Nick(finalNickname));
+        connection.sendPacket(presence);
     }
 
     /**
@@ -434,7 +451,6 @@ public class JireconSessionImpl
         Map<MediaType, IceUdpTransportPacketExtension> transportPEs,
         Map<MediaType, DtlsFingerprintPacketExtension> fingerprintPEs)
     {
-        // TODO: Don't forget to create formatAndPTs in JireconTask
         logger.info("createSessionAcceptPacket");
         List<ContentPacketExtension> contentPEs =
             new ArrayList<ContentPacketExtension>();

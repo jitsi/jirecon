@@ -5,9 +5,8 @@
  */
 package org.jitsi.jirecon;
 
-import java.io.IOException;
+import net.java.sip.communicator.service.protocol.OperationFailedException;
 
-import org.jivesoftware.smack.XMPPException;
 
 /**
  * Jirecon, the Jitsi recorder container, is responsible for recording specified
@@ -22,11 +21,10 @@ public interface Jirecon
      * Initialize <tt>Jirecon</tt>.
      * 
      * @param configurationPath is the configuration file path.
-     * @throws XMPPException if failed to create a XMPP connection.
+     * @throws OperationFailedException if failed to initialize Jirecon.
      */
-    public void init(String configurationPath)
-        throws IOException,
-        XMPPException;
+    public void init(String configurationPath) 
+        throws OperationFailedException;
 
     /**
      * Uninitialize <tt>Jirecon</tt>, prepare for GC.

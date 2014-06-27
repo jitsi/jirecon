@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.jirecon.extension.MediaExtensionProvider;
 import org.jitsi.jirecon.task.*;
@@ -31,8 +32,7 @@ import org.jivesoftware.smack.provider.ProviderManager;
  * 
  */
 public class JireconImpl
-    implements Jirecon, 
-    JireconEventListener
+    implements Jirecon, JireconEventListener
 {
     /**
      * List of <tt>JireconEventListener</tt>, if something important happen,
@@ -77,7 +77,7 @@ public class JireconImpl
      */
     @Override
     public void init(String configurationPath) 
-        throws XMPPException
+        throws OperationFailedException
     {
         logger.debug(this.getClass() + "init");
 
@@ -90,6 +90,13 @@ public class JireconImpl
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         base_output_dir =
             configuration.getString(JireconConfigurationKey.SAVING_DIR_KEY);
+        if (base_output_dir.isEmpty())
+        {
+            logger.fatal("Failed to initialize Jirecon, output directory was not set.");
+            throw new OperationFailedException(
+                "Failed to initialize Jirecon, ouput directory was not set.",
+                OperationFailedException.GENERAL_ERROR);
+        }
         // Remove the suffix '/' in SAVE_DIR
         if ('/' == base_output_dir.charAt(base_output_dir.length() - 1))
         {
@@ -108,9 +115,11 @@ public class JireconImpl
         }
         catch (XMPPException e)
         {
-            logger.fatal(e.getXMPPError() + "\nDisconnect XMPP connection.");
+            logger.fatal("Failed to initialize Jirecon, " + e.getXMPPError());
             uninit();
-            throw e;
+            throw new OperationFailedException(
+                "Failed to initialize Jirecon, " + e.getMessage(),
+                OperationFailedException.GENERAL_ERROR);
         }
     }
 
@@ -155,7 +164,7 @@ public class JireconImpl
         String outputDir =
             base_output_dir + "/" + mucJid
                 + new SimpleDateFormat("-yyMMdd-HHmmss").format(new Date());
-        
+
         j.addEventListener(this);
         j.init(mucJid, connection, outputDir);
 
@@ -196,8 +205,7 @@ public class JireconImpl
      * @param xmppPort is the port of XMPP server.
      * @throws XMPPException if failed to build connection.
      */
-    private void connect(String xmppHost, int xmppPort) 
-        throws XMPPException
+    private void connect(String xmppHost, int xmppPort) throws XMPPException
     {
         logger.debug(this.getClass() + "connect");
         ConnectionConfiguration conf =
@@ -220,8 +228,7 @@ public class JireconImpl
      * 
      * @throws XMPPException
      */
-    private void loginAnonymously() 
-        throws XMPPException
+    private void loginAnonymously() throws XMPPException
     {
         logger.debug(this.getClass() + "login");
         connection.loginAnonymously();

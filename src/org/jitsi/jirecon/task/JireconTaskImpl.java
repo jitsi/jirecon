@@ -182,17 +182,6 @@ public class JireconTaskImpl
     /**
      * This is actually the main part of method "start", in order to make the
      * method "start" to be asynchronous.
-     * <p>
-     * 1. Harvest local candidates.
-     * <p>
-     * 2. Connect with MUC.
-     * <p>
-     * 3. Build ICE connectivity.
-     * <p>
-     * 4. Start recording.
-     * <p>
-     * <strong>Warning:</strong> In execution flow above, step 2, 3, 4 are
-     * actually overlapped instead of sequential.
      */
     @Override
     public void run()
@@ -213,6 +202,7 @@ public class JireconTaskImpl
             Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs =
                 JinglePacketParser.getFormatAndDynamicPTs(initIq);
 
+            // 4.2 Send session-accept packet.
             // Local ssrc.
             Map<MediaType, Long> localSsrcs = recorder.getLocalSsrcs();
             
@@ -242,7 +232,6 @@ public class JireconTaskImpl
                 fingerprintPEs.put(mediaType, fingerprintPE);
             }
 
-            // 4.2 Send session-accept packet.
             session.sendAccpetPacket(formatAndPTs, localSsrcs, transportPEs,
                 fingerprintPEs);
 

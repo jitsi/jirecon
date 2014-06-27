@@ -34,21 +34,6 @@ public interface JireconSession
      */
     public void init(XMPPConnection connection);
 
-//    /**
-//     * Connect with XMPP server and build a Jingle session.
-//     * 
-//     * @param transportManager which is used for building ICE connectivity.
-//     * @param srtpControlManager which is used for SRTP support.
-//     * @param mucJid The specified MUC jid.
-//     * @param nickname which is name used in MUC.
-//     * @return Jingle session-init packet which can be used by other classes.
-//     * @throws OperationFailedException if some operations failed and the
-//     *             connecting is aborted.
-//     */
-//    public JingleIQ connect(JireconTransportManager transportManager,
-//        SrtpControlManager srtpControlManager, String mucJid, String nickname)
-//        throws OperationFailedException;
-    
     /**
      * Join a Multi-User-Chat of specified MUC jid.
      * 

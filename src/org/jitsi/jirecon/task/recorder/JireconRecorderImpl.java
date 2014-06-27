@@ -111,7 +111,8 @@ public class JireconRecorderImpl
      * {@inheritDoc}
      */
     @Override
-    public void startRecording(Map<MediaType, Map<MediaFormat, Byte>> formatAndDynamicPTs,
+    public void startRecording(
+        Map<MediaType, Map<MediaFormat, Byte>> formatAndDynamicPTs,
         Map<MediaType, StreamConnector> connectors,
         Map<MediaType, MediaStreamTarget> targets)
         throws OperationFailedException
@@ -281,7 +282,6 @@ public class JireconRecorderImpl
         for (Entry<MediaType, Recorder> e : recorders.entrySet())
         {
             e.getValue().stop();
-            System.out.println("Stop " + e.getKey() + " Over");
         }
         recorders.clear();
         isRecording = false;
@@ -383,9 +383,7 @@ public class JireconRecorderImpl
         for (Entry<String, List<String>> e : associatedSsrcs.entrySet())
         {
             // Associated ssrc should be 2(one for audio and one for video), but
-            // we need to check it again in
-            // case
-            // of something weird happened.
+            // we need to check it again in case of something weird happened.
             if (e.getValue().size() < 2)
                 continue;
 
@@ -543,8 +541,8 @@ public class JireconRecorderImpl
             {
                 System.out.println("SPEAKER_CHANGED audio ssrc: "
                     + event.getAudioSsrc());
-                long audioSsrc = event.getAudioSsrc();
-                long videoSsrc = getAssociatedSsrc(audioSsrc, MediaType.VIDEO);
+                final long audioSsrc = event.getAudioSsrc();
+                final long videoSsrc = getAssociatedSsrc(audioSsrc, MediaType.VIDEO);
                 if (videoSsrc < 0)
                 {
                     logger

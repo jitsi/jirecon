@@ -35,9 +35,6 @@ public interface JireconTask
      */
     public void uninit(boolean keepData);
 
-    // TODO: At present, once the task has been started successfully, it will
-    // not terminate even if everyone has left the meeting. So I should add the
-    // terminate part.
     /**
      * Start the <tt>JireconTask</tt>.
      * <p>

@@ -5,10 +5,10 @@
  */
 package org.jitsi.jirecon.test;
 
-import java.io.IOException;
+
+import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.jirecon.*;
-import org.jivesoftware.smack.XMPPException;
 
 import junit.framework.TestCase;
 
@@ -25,18 +25,14 @@ public class TestJireconImpl
         {
             j.init("jirecon.properties");
         }
-        catch (IOException e1)
+        catch (OperationFailedException e)
         {
-            e1.printStackTrace();
+            // TODO Auto-generated catch block
+            e.printStackTrace();
             result = false;
         }
-        catch (XMPPException e1)
-        {
-            e1.printStackTrace();
-            result = false;
-        }
-        
-        String mucJid = "x7fahfq6o0bmlsor@conference.example.com";
+
+        String mucJid = "ia74os7qoc5cow29@conference.example.com";
         j.startJireconTask(mucJid);
 
         try
