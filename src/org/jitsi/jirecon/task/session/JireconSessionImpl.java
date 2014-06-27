@@ -78,8 +78,8 @@ public class JireconSessionImpl
      * Every participant usually has two ssrc(one for audio and one for video),
      * these two ssrc are associated.
      */
-    private Map<String, List<String>> associatedSsrcs =
-        new HashMap<String, List<String>>();
+    private Map<String, Map<MediaType, Long>> associatedSsrcs =
+        new HashMap<String, Map<MediaType, Long>>();
 
     /**
      * The <tt>Logger</tt>, used to log messages to standard output.
@@ -398,7 +398,7 @@ public class JireconSessionImpl
             return;
         
         MediaExtension mediaExt = (MediaExtension) packetExt;
-        List<String> ssrcs = new ArrayList<String>();
+        Map<MediaType, Long> ssrcs = new HashMap<MediaType, Long>();
         for (MediaType mediaType : MediaType.values())
         {
             // Make sure that we only handle audio or video type.
@@ -407,15 +407,18 @@ public class JireconSessionImpl
                 continue;
             }
 
+            // TODO: If someone only sends audio, this could be changed. 
             MediaDirection direction =
                 MediaDirection.parseString(mediaExt.getDirection(mediaType
                     .toString()));
-            String ssrc = mediaExt.getSsrc(mediaType.toString());
+            
             if (direction == MediaDirection.SENDONLY
                 || direction == MediaDirection.SENDRECV)
             {
-                ssrcs.add(ssrc);
+                ssrcs.put(mediaType,
+                    Long.valueOf(mediaExt.getSsrc(mediaType.toString())));
             }
+            
         }
         
         // Oh, it seems that some participant has left the MUC.
@@ -724,7 +727,7 @@ public class JireconSessionImpl
      * {@inheritDoc}
      */
     @Override
-    public Map<String, List<String>> getAssociatedSsrcs()
+    public Map<String, Map<MediaType, Long>> getAssociatedSsrcs()
     {
         return associatedSsrcs;
     }
@@ -736,7 +739,7 @@ public class JireconSessionImpl
      * @param jid
      * @param ssrcs
      */
-    private void addAssociatedSsrc(String jid, List<String> ssrcs)
+    private void addAssociatedSsrc(String jid, Map<MediaType, Long> ssrcs)
     {
         synchronized (associatedSsrcs)
         {

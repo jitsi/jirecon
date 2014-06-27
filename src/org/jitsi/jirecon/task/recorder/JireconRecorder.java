@@ -5,7 +5,6 @@
  */
 package org.jitsi.jirecon.task.recorder;
 
-import java.util.List;
 import java.util.Map;
 
 import net.java.sip.communicator.service.protocol.OperationFailedException;
@@ -86,5 +85,5 @@ public interface JireconRecorder
      * 
      * @param associatedSsrcs Map between participant jid and associated ssrc.
      */
-    public void setAssociatedSsrcs(Map<String, List<String>> associatedSsrcs);
+    public void setAssociatedSsrcs(Map<String, Map<MediaType, Long>> associatedSsrcs);
 }

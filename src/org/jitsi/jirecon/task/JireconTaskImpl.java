@@ -333,14 +333,14 @@ public class JireconTaskImpl
 
         if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_CAME)
         {
-            Map<String, List<String>> associatedSsrcs =
+            Map<String, Map<MediaType, Long>> associatedSsrcs =
                 session.getAssociatedSsrcs();
             recorder.setAssociatedSsrcs(associatedSsrcs);
         }
 
         else if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_LEFT)
         {
-            Map<String, List<String>> associatedSsrcs =
+            Map<String, Map<MediaType, Long>> associatedSsrcs =
                 session.getAssociatedSsrcs();
             // It seems that all participants have left the MUC(except Jirecon
             // or other participants which only receive data). It's time to

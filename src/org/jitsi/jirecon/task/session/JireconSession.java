@@ -111,5 +111,5 @@ public interface JireconSession
      * 
      * @return Map between participant's jid and its associated ssrc.
      */
-    public Map<String, List<String>> getAssociatedSsrcs();
+    public Map<String, Map<MediaType, Long>> getAssociatedSsrcs();
 }

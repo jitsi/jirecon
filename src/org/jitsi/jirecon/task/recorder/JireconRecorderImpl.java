@@ -72,8 +72,8 @@ public class JireconRecorderImpl
      * Every participant usually has two ssrc(one for audio and one for video),
      * these two ssrc are associated.
      */
-    private Map<String, List<String>> associatedSsrcs =
-        new HashMap<String, List<String>>();
+    private Map<String, Map<MediaType, Long>> associatedSsrcs =
+        new HashMap<String, Map<MediaType, Long>>();
 
     /**
      * Whether the <tt>JireconRecorderImpl</tt> is receiving streams.
@@ -254,11 +254,11 @@ public class JireconRecorderImpl
             new JireconRecorderEventHandler(outputDir + "/metadata.json");
         for (Entry<MediaType, Recorder> entry : recorders.entrySet())
         {
-            entry.getValue().setEventHandler(eventHandler);
+            final Recorder recorder = entry.getValue();
+            recorder.setEventHandler(eventHandler);
             try
             {
-                // Start recording
-                entry.getValue().start(entry.getKey().toString(), outputDir);
+                recorder.start(entry.getKey().toString(), outputDir);
             }
             catch (Exception e)
             {
@@ -380,19 +380,17 @@ public class JireconRecorderImpl
      */
     private long getAssociatedSsrc(long ssrc, MediaType mediaType)
     {
-        for (Entry<String, List<String>> e : associatedSsrcs.entrySet())
+        for (Entry<String, Map<MediaType, Long>> e : associatedSsrcs.entrySet())
         {
             // Associated ssrc should be 2(one for audio and one for video), but
             // we need to check it again in case of something weird happened.
             if (e.getValue().size() < 2)
                 continue;
 
-            String first = e.getValue().get(0);
-            String second = e.getValue().get(1);
-            if (ssrc == Long.valueOf(first))
-                return Long.valueOf(second);
-            if (ssrc == Long.valueOf(second))
-                return Long.valueOf(first);
+            if (e.getValue().values().contains(ssrc))
+            {
+                return e.getValue().get(mediaType);
+            }
         }
 
         return -1;
@@ -402,11 +400,23 @@ public class JireconRecorderImpl
      * {@inheritDoc}
      */
     @Override
-    public void setAssociatedSsrcs(Map<String, List<String>> ssrcs)
+    public void setAssociatedSsrcs(Map<String, Map<MediaType, Long>> ssrcs)
     {
         synchronized (associatedSsrcs)
         {
             associatedSsrcs = ssrcs;
+            for (Entry<String, Map<MediaType, Long>> participant : associatedSsrcs
+                .entrySet())
+            {
+                final String endpointId = participant.getKey();
+                for (Entry<MediaType, Long> ssrc : participant.getValue()
+                    .entrySet())
+                {
+                    Recorder recorder = recorders.get(ssrc.getKey());
+                    Synchronizer synchronizer = recorder.getSynchronizer();
+                    synchronizer.setEndpoint(ssrc.getValue(), endpointId);
+                }
+            }
         }
     }
 
