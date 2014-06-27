@@ -40,7 +40,12 @@ public class JireconLauncher
      * How many seconds each recording task will persist.
      */
     private static long time;
-
+    
+    /**
+     * The number of recording task.
+     */
+    private static int taskCount;
+    
     /**
      * Application entry.
      * 
@@ -55,6 +60,7 @@ public class JireconLauncher
         conf = null;
         time = -1;
         List<String> mucJids = new ArrayList<String>();
+        final Object syncRoot = new Object();
 
         for (String arg : args)
         {
@@ -66,7 +72,8 @@ public class JireconLauncher
                 mucJids.add(arg);
         }
 
-        if (mucJids.size() == 0)
+        taskCount = mucJids.size();
+        if (0 == taskCount)
         {
             System.out
                 .println("You have to specify at least one conference jid to record, exit.");
@@ -74,10 +81,32 @@ public class JireconLauncher
         }
         if (null == conf)
             conf = "jirecon.properties";
-        if (time < 0)
-            time = 20;
 
-        Jirecon jirecon = new JireconImpl();
+        final Jirecon jirecon = new JireconImpl();
+        
+        jirecon.addEventListener(new JireconEventListener()
+        {
+
+            @Override
+            public void handleEvent(JireconEvent evt)
+            {
+                if (evt.getType() == JireconEvent.Type.TASK_ABORTED
+                    || evt.getType() == JireconEvent.Type.TASK_FINISED)
+                {
+                    taskCount--;
+                    System.out.println("Task: " + evt.getMucJid() + " " + evt.getType());
+                    
+                    if (0 == taskCount)
+                    {
+                        synchronized (syncRoot)
+                        {
+                            syncRoot.notifyAll();
+                        }
+                    }
+                }
+            }
+            
+        });
 
         try
         {
@@ -92,10 +121,38 @@ public class JireconLauncher
 
         for (String jid : mucJids)
             jirecon.startJireconTask(jid);
+        
+        new Thread(new Runnable()
+        {
+
+            @Override
+            public void run()
+            {
+                if (time > 0)
+                {
+                    try
+                    {
+                        Thread.sleep(time * 1000);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        e.printStackTrace();
+                    }
+                    synchronized (syncRoot)
+                    {
+                        syncRoot.notifyAll();
+                    }
+                }
+            }
+            
+        }).start();
 
         try
         {
-            Thread.sleep(time * 1000);
+            synchronized (syncRoot)
+            {
+                syncRoot.wait();
+            }
         }
         catch (InterruptedException e)
         {

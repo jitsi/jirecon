@@ -80,7 +80,7 @@ public class JireconIceUdpTransportManagerImpl
     /**
      * The maximum time (ms) when wait for something.
      */
-    private int MAX_WAIT_TIME = 10000;
+    private int MAX_WAIT_TIME = 5000;
 
     /**
      * The construction method.

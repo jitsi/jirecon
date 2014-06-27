@@ -17,7 +17,33 @@ public class TestJireconImpl
 {
     public void testStart()
     {
+        final Object syncRoot = new Object();
+        
         Jirecon j = new JireconImpl();
+        j.addEventListener(new JireconEventListener()
+        {
+
+            @Override
+            public void handleEvent(JireconEvent evt)
+            {
+                if (evt.getType() == JireconEvent.Type.TASK_ABORTED)
+                {
+                    synchronized (syncRoot)
+                    {
+                        syncRoot.notifyAll();
+                    }
+                }
+                
+                else if (evt.getType() == JireconEvent.Type.TASK_FINISED)
+                {
+                    synchronized (syncRoot)
+                    {
+                        syncRoot.notifyAll();
+                    }
+                }
+            }
+            
+        });
 
         boolean result = true;
 
@@ -32,12 +58,15 @@ public class TestJireconImpl
             result = false;
         }
 
-        String mucJid = "t9dkt44h68e3766r@conference.example.com";
+        String mucJid = "7zs1d3kdauac3di@conference.example.com";
         j.startJireconTask(mucJid);
 
         try
         {
-            Thread.sleep(20000);
+            synchronized (syncRoot)
+            {
+                syncRoot.wait();
+            }
         }
         catch (InterruptedException e)
         {

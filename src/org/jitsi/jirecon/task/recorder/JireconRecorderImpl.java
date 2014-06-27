@@ -415,6 +415,8 @@ public class JireconRecorderImpl
                     Recorder recorder = recorders.get(ssrc.getKey());
                     Synchronizer synchronizer = recorder.getSynchronizer();
                     synchronizer.setEndpoint(ssrc.getValue(), endpointId);
+                    
+                    System.out.println("endpoint: " + endpointId + " " + ssrc.getKey() + " " + ssrc.getValue());
                 }
             }
         }

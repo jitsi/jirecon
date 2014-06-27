@@ -17,7 +17,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-mainClass="org.jitsi.jirecon.test.JireconLauncher"
+mainClass="org.jitsi.jirecon.JireconLauncher"
 cp=$(JARS=(src/ $SCRIPT_DIR/jirecon.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo "${JARS[*]}")
 libs="$SCRIPT_DIR/lib/native/macosx"
 
