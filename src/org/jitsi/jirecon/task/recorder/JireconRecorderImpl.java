@@ -194,7 +194,7 @@ public class JireconRecorderImpl
 
         for (Entry<MediaType, RTPTranslator> e : rtpTranslators.entrySet())
         {
-            Recorder recorder = new RecorderRtpImpl(e.getValue());
+            Recorder recorder = mediaService.createRecorder(e.getValue());
             recorders.put(e.getKey(), recorder);
         }
     }
@@ -332,7 +332,7 @@ public class JireconRecorderImpl
      */
     private void createMediaStreams(Map<MediaType, SrtpControl> srtpControls)
     {
-        logger.info("prepareMediaStreams");
+        logger.info("createMediaStreams");
         for (MediaType mediaType : MediaType.values())
         {
             // Make sure we are focusing on right media type, because MediaType
