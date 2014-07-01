@@ -7,6 +7,7 @@
 package org.jitsi.jirecon;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
@@ -132,7 +133,7 @@ public class JireconLauncher
                 {
                     try
                     {
-                        Thread.sleep(time * 1000);
+                        TimeUnit.SECONDS.sleep(time);
                     }
                     catch (InterruptedException e)
                     {

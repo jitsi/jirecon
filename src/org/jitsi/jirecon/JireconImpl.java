@@ -62,7 +62,7 @@ public class JireconImpl
      * The base directory to save recording files. <tt>JireconImpl</tt> will add
      * date suffix to it as a final output directory.
      */
-    private String base_output_dir;
+    private String baseOutputDir;
 
     public JireconImpl()
     {
@@ -88,9 +88,9 @@ public class JireconImpl
         System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_NAME,
             configurationPath);
         ConfigurationService configuration = LibJitsi.getConfigurationService();
-        base_output_dir =
+        baseOutputDir =
             configuration.getString(JireconConfigurationKey.SAVING_DIR_KEY);
-        if (base_output_dir.isEmpty())
+        if (baseOutputDir.isEmpty())
         {
             logger.fatal("Failed to initialize Jirecon, output directory was not set.");
             throw new OperationFailedException(
@@ -98,10 +98,10 @@ public class JireconImpl
                 OperationFailedException.GENERAL_ERROR);
         }
         // Remove the suffix '/' in SAVE_DIR
-        if ('/' == base_output_dir.charAt(base_output_dir.length() - 1))
+        if ('/' == baseOutputDir.charAt(baseOutputDir.length() - 1))
         {
-            base_output_dir =
-                base_output_dir.substring(0, base_output_dir.length() - 1);
+            baseOutputDir =
+                baseOutputDir.substring(0, baseOutputDir.length() - 1);
         }
 
         final String xmppHost =
@@ -132,9 +132,12 @@ public class JireconImpl
     public void uninit()
     {
         logger.debug(this.getClass() + "uninit");
-        for (JireconTask task : jireconTasks.values())
+        synchronized (jireconTasks)
         {
-            task.uninit(true);
+            for (JireconTask task : jireconTasks.values())
+            {
+                task.uninit(true);
+            }
         }
         LibJitsi.stop();
         closeConnection();
@@ -162,7 +165,7 @@ public class JireconImpl
         }
 
         String outputDir =
-            base_output_dir + "/" + mucJid
+            baseOutputDir + "/" + mucJid
                 + new SimpleDateFormat("-yyMMdd-HHmmss").format(new Date());
 
         j.addEventListener(this);

@@ -488,6 +488,7 @@ public class JireconSessionImpl
         JingleIQ acceptJiq =
             JinglePacketFactory.createSessionAccept(localFullJid,
                 remoteFullJid, sid, contentPEs);
+//        acceptJiq.setInitiator(remoteFullJid);
 
         return acceptJiq;
     }

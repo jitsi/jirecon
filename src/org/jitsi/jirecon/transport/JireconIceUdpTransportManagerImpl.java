@@ -8,6 +8,7 @@ package org.jitsi.jirecon.transport;
 import java.beans.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
@@ -73,14 +74,14 @@ public class JireconIceUdpTransportManagerImpl
     private int MAX_STREAM_PORT;
 
     /**
-     * The minimum time (ms) when wait for something.
+     * The minimum time (second) when wait for something.
      */
-    private int MIN_WAIT_TIME = 1000;
+    private int MIN_WAIT_TIME = 1;
 
     /**
-     * The maximum time (ms) when wait for something.
+     * The maximum time (second) when wait for something.
      */
-    private int MAX_WAIT_TIME = 5000;
+    private int MAX_WAIT_TIME = 10;
 
     /**
      * The construction method.
@@ -89,6 +90,7 @@ public class JireconIceUdpTransportManagerImpl
     {
         logger.info("init");
         iceAgent = new Agent();
+        iceAgent.setControlling(false);
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         MIN_STREAM_PORT =
             configuration.getInt(JireconConfigurationKey.MIN_STREAM_PORT_KEY,
@@ -540,9 +542,9 @@ public class JireconIceUdpTransportManagerImpl
             {
                 logger
                     .info("Could not get stream connector, sleep for a while. Already sleep for "
-                        + sumWaitTime / 1000 + " seconds");
+                        + sumWaitTime + " seconds");
                 sumWaitTime += MIN_WAIT_TIME;
-                Thread.sleep(MIN_WAIT_TIME);
+                TimeUnit.SECONDS.sleep(MIN_WAIT_TIME);
             }
             catch (InterruptedException e)
             {

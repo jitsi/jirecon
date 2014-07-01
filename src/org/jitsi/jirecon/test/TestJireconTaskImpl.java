@@ -5,6 +5,8 @@
  */
 package org.jitsi.jirecon.test;
 
+import java.util.concurrent.TimeUnit;
+
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.jirecon.extension.*;
@@ -89,7 +91,7 @@ public class TestJireconTaskImpl
         task.start();
         try
         {
-            Thread.sleep(20000);
+            TimeUnit.SECONDS.sleep(20);
         }
         catch (InterruptedException e)
         {

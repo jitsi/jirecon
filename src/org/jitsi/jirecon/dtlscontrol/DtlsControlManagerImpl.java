@@ -25,7 +25,7 @@ public class DtlsControlManagerImpl
     /**
      * The map between <tt>MediaType</tt> and <tt>DtlsControl</tt>.
      */
-    private Map<MediaType, DtlsControl> dtlsControls =
+    private final Map<MediaType, DtlsControl> dtlsControls =
         new HashMap<MediaType, DtlsControl>();
 
     /**

@@ -12,6 +12,7 @@ import java.util.Map.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.impl.neomedia.recording.*;
+import org.jitsi.impl.neomedia.rtp.translator.RTPTranslatorImpl;
 import org.jitsi.jirecon.task.*;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
@@ -74,6 +75,11 @@ public class JireconRecorderImpl
      */
     private Map<String, Map<MediaType, Long>> associatedSsrcs =
         new HashMap<String, Map<MediaType, Long>>();
+
+    /**
+     * Map between <tt>MediaType</tt> and local recorder's ssrc.
+     */
+    private Map<MediaType, Long> localSsrcs = new HashMap<MediaType, Long>();
 
     /**
      * Whether the <tt>JireconRecorderImpl</tt> is receiving streams.
@@ -182,8 +188,7 @@ public class JireconRecorderImpl
      * @throws OperationFailedException if some operation failed and the
      *             preparation is aborted.
      */
-    private void prepareRecorders() 
-        throws OperationFailedException
+    private void prepareRecorders() throws OperationFailedException
     {
         logger.info("prepareRecorders");
 
@@ -200,8 +205,7 @@ public class JireconRecorderImpl
      * @throws OperationFailedException if some operation failed and the
      *             receiving is aborted.
      */
-    private void startReceivingStreams() 
-        throws OperationFailedException
+    private void startReceivingStreams() throws OperationFailedException
     {
         logger.info("startReceiving");
 
@@ -233,8 +237,7 @@ public class JireconRecorderImpl
      * @throws OperationFailedException if some operation failed and the
      *             recording is aborted.
      */
-    private void startRecordingStreams() 
-        throws OperationFailedException
+    private void startRecordingStreams() throws OperationFailedException
     {
         logger.info("startRecording");
         if (!isReceiving)
@@ -362,6 +365,10 @@ public class JireconRecorderImpl
         else
         {
             translator = mediaService.createRTPTranslator();
+            // I have to do the casting, because RTPTranslator interface doesn't
+            // have that method.
+            ((RTPTranslatorImpl) translator).setLocalSSRC(localSsrcs
+                .get(mediaType));
             rtpTranslators.put(mediaType, translator);
         }
         return translator;
@@ -380,16 +387,22 @@ public class JireconRecorderImpl
      */
     private long getAssociatedSsrc(long ssrc, MediaType mediaType)
     {
-        for (Entry<String, Map<MediaType, Long>> e : associatedSsrcs.entrySet())
+        synchronized (associatedSsrcs)
         {
-            // Associated ssrc should be 2(one for audio and one for video), but
-            // we need to check it again in case of something weird happened.
-            if (e.getValue().size() < 2)
-                continue;
-
-            if (e.getValue().values().contains(ssrc))
+            for (Entry<String, Map<MediaType, Long>> e : associatedSsrcs
+                .entrySet())
             {
-                return e.getValue().get(mediaType);
+                // Associated ssrc should be 2(one for audio and one for video),
+                // but
+                // we need to check it again in case of something weird
+                // happened.
+                if (e.getValue().size() < 2)
+                    continue;
+
+                if (e.getValue().values().contains(ssrc))
+                {
+                    return e.getValue().get(mediaType);
+                }
             }
         }
 
@@ -415,8 +428,9 @@ public class JireconRecorderImpl
                     Recorder recorder = recorders.get(ssrc.getKey());
                     Synchronizer synchronizer = recorder.getSynchronizer();
                     synchronizer.setEndpoint(ssrc.getValue(), endpointId);
-                    
-                    System.out.println("endpoint: " + endpointId + " " + ssrc.getKey() + " " + ssrc.getValue());
+
+                    System.out.println("endpoint: " + endpointId + " "
+                        + ssrc.getKey() + " " + ssrc.getValue());
                 }
             }
         }
@@ -452,7 +466,9 @@ public class JireconRecorderImpl
     @Override
     public Map<MediaType, Long> getLocalSsrcs()
     {
-        Map<MediaType, Long> localSsrcs = new HashMap<MediaType, Long>();
+        if (!localSsrcs.isEmpty())
+            return localSsrcs;
+
         synchronized (streams)
         {
             for (Entry<MediaType, MediaStream> entry : streams.entrySet())
@@ -554,7 +570,8 @@ public class JireconRecorderImpl
                 System.out.println("SPEAKER_CHANGED audio ssrc: "
                     + event.getAudioSsrc());
                 final long audioSsrc = event.getAudioSsrc();
-                final long videoSsrc = getAssociatedSsrc(audioSsrc, MediaType.VIDEO);
+                final long videoSsrc =
+                    getAssociatedSsrc(audioSsrc, MediaType.VIDEO);
                 if (videoSsrc < 0)
                 {
                     logger
