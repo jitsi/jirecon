@@ -76,12 +76,12 @@ public class JireconIceUdpTransportManagerImpl
     /**
      * The minimum stream port.
      */
-    private int MIN_STREAM_PORT;
+    private final int MIN_STREAM_PORT;
 
     /**
      * The maximum stream port.
      */
-    private int MAX_STREAM_PORT;
+    private final int MAX_STREAM_PORT;
 
     /**
      * The construction method.
