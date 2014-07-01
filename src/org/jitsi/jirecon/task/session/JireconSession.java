@@ -64,7 +64,7 @@ public interface JireconSession
      * @param transportPEs
      * @param fingerprintPEs
      */
-    public void sendAccpetPacket(
+    public void sendAcceptPacket(
         Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
         Map<MediaType, Long> localSsrcs,
         Map<MediaType, IceUdpTransportPacketExtension> transportPEs,
@@ -75,11 +75,8 @@ public interface JireconSession
      * <p>
      * <strong>Warning:</strong> This method will block for at most
      * <tt>MAX_WAIT_TIME</tt> ms if there isn't ack packet.
-     * 
-     * @throws OperationFailedException if the method time out.
      */
-    public void waitForAckPacket() 
-        throws OperationFailedException;
+    public void waitForResultPacket();
         
     /**
      * Disconnect with XMPP server and terminate the Jingle session.

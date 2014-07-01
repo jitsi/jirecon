@@ -164,5 +164,6 @@ public class JireconLauncher
             jirecon.stopJireconTask(jid, true);
 
         jirecon.uninit();
+        System.out.println("JireconLauncher exit.");
     }
 }

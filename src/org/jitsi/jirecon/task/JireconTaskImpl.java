@@ -41,6 +41,12 @@ public class JireconTaskImpl
     Runnable
 {
     /**
+     * The <tt>Logger</tt>, used to log messages to standard output.
+     */
+    private static final Logger logger = Logger
+        .getLogger(JireconTaskImpl.class);
+    
+    /**
      * The <tt>JireconEvent</tt> listeners, they will be notified when some
      * important things happen.
      */
@@ -82,12 +88,6 @@ public class JireconTaskImpl
      * system.
      */
     private JireconTaskInfo info = new JireconTaskInfo();
-
-    /**
-     * The <tt>Logger</tt>, used to log messages to standard output.
-     */
-    private static final Logger logger = Logger
-        .getLogger(JireconTaskImpl.class);
 
     /**
      * {@inheritDoc}
@@ -141,7 +141,7 @@ public class JireconTaskImpl
 
         if (!keepData)
         {
-            System.out.println("Delete! " + info.getOutputDir());
+            logger.info("Delete output files " + info.getOutputDir());
             try
             {
                 Runtime.getRuntime().exec("rm -fr " + info.getOutputDir());
@@ -234,11 +234,11 @@ public class JireconTaskImpl
                 fingerprintPEs.put(mediaType, fingerprintPE);
             }
 
-            session.sendAccpetPacket(formatAndPTs, localSsrcs, transportPEs,
+            session.sendAcceptPacket(formatAndPTs, localSsrcs, transportPEs,
                 fingerprintPEs);
 
             // 4.3 Wait for session-ack packet.
-            session.waitForAckPacket();
+            session.waitForResultPacket();
 
             // 5.1 Prepare for ICE connectivity establishment.
             // Harvest remote candidates.
@@ -331,7 +331,7 @@ public class JireconTaskImpl
     @Override
     public void handleTaskEvent(JireconTaskEvent event)
     {
-        System.out.println(event);
+        logger.info(event);
 
         if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_CAME)
         {

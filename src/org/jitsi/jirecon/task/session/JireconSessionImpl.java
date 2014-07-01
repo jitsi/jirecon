@@ -35,6 +35,17 @@ public class JireconSessionImpl
     implements JireconSession
 {
     /**
+     * The <tt>Logger</tt>, used to log messages to standard output.
+     */
+    private static final Logger logger = Logger
+        .getLogger(JireconSessionImpl.class);
+    
+    /**
+     * Maximum wait time(microsecond).
+     */
+    private static final int MAX_WAIT_TIME = 5000;
+
+    /**
      * The <tt>XMPPConnection</tt> is used to send/receive XMPP packet.
      */
     private XMPPConnection connection;
@@ -82,27 +93,11 @@ public class JireconSessionImpl
         new HashMap<String, Map<MediaType, Long>>();
 
     /**
-     * The <tt>Logger</tt>, used to log messages to standard output.
-     */
-    private static final Logger logger = Logger
-        .getLogger(JireconSessionImpl.class);
-
-    /**
      * The list of <tt>JireconSessionPacketListener</tt> which is used for
      * handling kinds of XMPP packet.
      */
     private List<JireconSessionPacketListener> packetListeners =
         new ArrayList<JireconSessionPacketListener>();
-
-    /**
-     * Maximum wait time(microsecond).
-     */
-    private final int MAX_WAIT_TIME = 5000;
-
-    /**
-     * Minimum wait time(microsecond).
-     */
-    private final int MIN_WAIT_TIME = 1000;
 
     /**
      * {@inheritDoc}
@@ -195,7 +190,7 @@ public class JireconSessionImpl
      * @throws OperationFailedException 
      */
     @Override
-    public void sendAccpetPacket(
+    public void sendAcceptPacket(
         Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
         Map<MediaType, Long> localSsrcs,
         Map<MediaType, IceUdpTransportPacketExtension> transportPEs,
@@ -324,8 +319,7 @@ public class JireconSessionImpl
      * {@inheritDoc}
      */
     @Override
-    public void waitForAckPacket() 
-        throws OperationFailedException
+    public void waitForResultPacket() 
     {
         logger.info("waitForAckPacket");
 
@@ -339,7 +333,7 @@ public class JireconSessionImpl
                 @Override
                 public void handlePacket(Packet packet)
                 {
-                    if (packet.toXML().indexOf("type=\"result\"") >= 0)
+                    if (packet instanceof IQ && IQ.Type.RESULT.equals(((IQ)packet).getType()))
                     {
                         resultList.add(packet);
                         synchronized (waitForAckPacketSyncRoot)
@@ -373,8 +367,9 @@ public class JireconSessionImpl
         removePacketListener(packetListener);
         if (resultList.isEmpty())
         {
-            throw new OperationFailedException("Could not get ack packet",
-                OperationFailedException.GENERAL_ERROR);
+//            throw new OperationFailedException("Could not get ack packet",
+//                OperationFailedException.GENERAL_ERROR);
+            logger.info("Couldn't receive result packet from remote peer.");
         }
     }
 
@@ -390,6 +385,8 @@ public class JireconSessionImpl
         MUCUser userExt =
             (MUCUser) p
                 .getExtension("x", "http://jabber.org/protocol/muc#user");
+        // In case of presence packet isn't sent by participant, here I get
+        // participant id from p.getFrom() 
         String participantJid = userExt.getItem().getJid();
 
         // Jitsi-meeting presence packet should contain participant jid and
@@ -412,8 +409,7 @@ public class JireconSessionImpl
                 MediaDirection.parseString(mediaExt.getDirection(mediaType
                     .toString()));
             
-            if (direction == MediaDirection.SENDONLY
-                || direction == MediaDirection.SENDRECV)
+            if (direction.allowsSending())
             {
                 ssrcs.put(mediaType,
                     Long.valueOf(mediaExt.getSsrc(mediaType.toString())));
@@ -640,8 +636,7 @@ public class JireconSessionImpl
             @Override
             public void processPacket(Packet packet)
             {
-                // logger.debug("--->: " + packet.toXML());
-                System.out.println("--->: " + packet.toXML());
+                logger.info("--->: " + packet.toXML());
             }
         }, new PacketFilter()
         {
@@ -666,8 +661,7 @@ public class JireconSessionImpl
             @Override
             public void processPacket(Packet packet)
             {
-                // logger.debug(packet.getClass() + "<---: " + packet.toXML());
-                System.out.println("<---: " + packet.toXML());
+                logger.info(packet.getClass() + "<---: " + packet.toXML());
                 handlePacket(packet);
             }
         }, new PacketFilter()

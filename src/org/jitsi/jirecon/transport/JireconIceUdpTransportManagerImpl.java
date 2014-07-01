@@ -39,6 +39,22 @@ public class JireconIceUdpTransportManagerImpl
     implements JireconTransportManager
 {
     /**
+     * The <tt>Logger</tt>, used to log messages to standard output.
+     */
+    private static final Logger logger = Logger
+        .getLogger(JireconIceUdpTransportManagerImpl.class);
+    
+    /**
+     * The minimum time (second) when wait for something.
+     */
+    private static int MIN_WAIT_TIME = 1;
+
+    /**
+     * The maximum time (second) when wait for something.
+     */
+    private static int MAX_WAIT_TIME = 10;
+    
+    /**
      * Instance of <tt>Agent</tt>.
      */
     private Agent iceAgent;
@@ -58,12 +74,6 @@ public class JireconIceUdpTransportManagerImpl
         new HashMap<MediaType, MediaStreamTarget>();
 
     /**
-     * The <tt>Logger</tt>, used to log messages to standard output.
-     */
-    private static final Logger logger = Logger
-        .getLogger(JireconIceUdpTransportManagerImpl.class);
-
-    /**
      * The minimum stream port.
      */
     private int MIN_STREAM_PORT;
@@ -72,16 +82,6 @@ public class JireconIceUdpTransportManagerImpl
      * The maximum stream port.
      */
     private int MAX_STREAM_PORT;
-
-    /**
-     * The minimum time (second) when wait for something.
-     */
-    private int MIN_WAIT_TIME = 1;
-
-    /**
-     * The maximum time (second) when wait for something.
-     */
-    private int MAX_WAIT_TIME = 10;
 
     /**
      * The construction method.

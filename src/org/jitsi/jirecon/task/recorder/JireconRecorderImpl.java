@@ -35,6 +35,12 @@ public class JireconRecorderImpl
     implements JireconRecorder
 {
     /**
+     * The <tt>Logger</tt>, used to log messages to standard output.
+     */
+    private static final Logger logger = Logger
+        .getLogger(JireconRecorderImpl.class);
+    
+    /**
      * The map between <tt>MediaType</tt> and <tt>MediaStream</tt>. Those are
      * used to receiving media streams.
      */
@@ -90,12 +96,6 @@ public class JireconRecorderImpl
      * Whether the <tt>JireconRecorderImpl</tt> is recording streams.
      */
     private boolean isRecording = false;
-
-    /**
-     * The <tt>Logger</tt>, used to log messages to standard output.
-     */
-    private static final Logger logger = Logger
-        .getLogger(JireconRecorderImpl.class);
 
     /**
      * Indicate where <tt>JireconRecorderImpl</tt> will put the local files.
@@ -429,7 +429,7 @@ public class JireconRecorderImpl
                     Synchronizer synchronizer = recorder.getSynchronizer();
                     synchronizer.setEndpoint(ssrc.getValue(), endpointId);
 
-                    System.out.println("endpoint: " + endpointId + " "
+                    logger.info("endpoint: " + endpointId + " "
                         + ssrc.getKey() + " " + ssrc.getValue());
                 }
             }
@@ -552,7 +552,7 @@ public class JireconRecorderImpl
         @Override
         public void close()
         {
-            System.out.println("close");
+            logger.info("close");
         }
 
         /**
@@ -561,13 +561,13 @@ public class JireconRecorderImpl
         @Override
         public synchronized boolean handleEvent(RecorderEvent event)
         {
-            System.out.println(event + " ssrc:" + event.getSsrc());
+            logger.info(event + " ssrc:" + event.getSsrc());
             RecorderEvent.Type type = event.getType();
 
             // TODO: It seems that there is no STARTED event.
             if (RecorderEvent.Type.SPEAKER_CHANGED.equals(type))
             {
-                System.out.println("SPEAKER_CHANGED audio ssrc: "
+                logger.info("SPEAKER_CHANGED audio ssrc: "
                     + event.getAudioSsrc());
                 final long audioSsrc = event.getAudioSsrc();
                 final long videoSsrc =

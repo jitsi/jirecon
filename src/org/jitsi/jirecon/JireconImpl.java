@@ -7,18 +7,16 @@ package org.jitsi.jirecon;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
-
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.service.protocol.OperationFailedException;
-
-import org.jitsi.jirecon.extension.MediaExtensionProvider;
+import net.java.sip.communicator.service.protocol.*;
+import org.jitsi.jirecon.extension.*;
 import org.jitsi.jirecon.task.*;
-import org.jitsi.jirecon.utils.JireconConfigurationKey;
-import org.jitsi.service.configuration.ConfigurationService;
-import org.jitsi.service.libjitsi.LibJitsi;
-import org.jitsi.util.Logger;
+import org.jitsi.jirecon.utils.*;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
+import org.jitsi.util.*;
 import org.jivesoftware.smack.*;
-import org.jivesoftware.smack.provider.ProviderManager;
+import org.jivesoftware.smack.provider.*;
 
 /**
  * An implementation of <tt>Jirecon</tt>. The manager of <tt>JireconTask</tt>,
@@ -34,6 +32,11 @@ import org.jivesoftware.smack.provider.ProviderManager;
 public class JireconImpl
     implements Jirecon, JireconEventListener
 {
+    /**
+     * The <tt>Logger</tt>, used to log messages to standard output.
+     */
+    private static final Logger logger = Logger.getLogger(JireconImpl.class);
+    
     /**
      * List of <tt>JireconEventListener</tt>, if something important happen,
      * they will be notified.
@@ -52,11 +55,6 @@ public class JireconImpl
      */
     private Map<String, JireconTask> jireconTasks =
         new HashMap<String, JireconTask>();
-
-    /**
-     * The <tt>Logger</tt>, used to log messages to standard output.
-     */
-    private static final Logger logger = Logger.getLogger(JireconImpl.class);
 
     /**
      * The base directory to save recording files. <tt>JireconImpl</tt> will add
@@ -151,7 +149,7 @@ public class JireconImpl
     {
         logger.debug(this.getClass() + "startJireconTask: " + mucJid);
 
-        JireconTask j = null;
+        JireconTask task = null;
         synchronized (jireconTasks)
         {
             if (jireconTasks.containsKey(mucJid))
@@ -160,18 +158,18 @@ public class JireconImpl
                     + ". Duplicate mucJid.");
                 return false;
             }
-            j = new JireconTaskImpl();
-            jireconTasks.put(mucJid, j);
+            task = new JireconTaskImpl();
+            jireconTasks.put(mucJid, task);
         }
 
         String outputDir =
             baseOutputDir + "/" + mucJid
                 + new SimpleDateFormat("-yyMMdd-HHmmss").format(new Date());
 
-        j.addEventListener(this);
-        j.init(mucJid, connection, outputDir);
+        task.addEventListener(this);
+        task.init(mucJid, connection, outputDir);
 
-        j.start();
+        task.start();
         return true;
     }
 
@@ -182,12 +180,12 @@ public class JireconImpl
     public boolean stopJireconTask(String mucJid, boolean keepData)
     {
         logger.debug(this.getClass() + "stopJireconTask: " + mucJid);
-        JireconTask j = null;
+        JireconTask task = null;
         synchronized (jireconTasks)
         {
-            j = jireconTasks.remove(mucJid);
+            task = jireconTasks.remove(mucJid);
         }
-        if (null == j)
+        if (null == task)
         {
             logger.info("Failed to stop Jirecon by mucJid: " + mucJid
                 + ". Jid was not found.");
@@ -195,8 +193,8 @@ public class JireconImpl
         }
         else
         {
-            j.stop();
-            j.uninit(keepData);
+            task.stop();
+            task.uninit(keepData);
         }
         return true;
     }
@@ -223,7 +221,8 @@ public class JireconImpl
     private void closeConnection()
     {
         logger.debug(this.getClass() + "closeConnection");
-        connection.disconnect();
+        if (connection.isConnected())
+            connection.disconnect();
     }
 
     /**
@@ -247,8 +246,8 @@ public class JireconImpl
 
         providerManager.addIQProvider(JingleIQ.ELEMENT_NAME,
             JingleIQ.NAMESPACE, new JingleIQProvider());
-        providerManager.addExtensionProvider("media", "http://estos.de/ns/mjs",
-            new MediaExtensionProvider());
+        providerManager.addExtensionProvider(MediaExtension.ELEMENT_NAME,
+            MediaExtension.NAMESPACE, new MediaExtensionProvider());
     }
 
     /**
