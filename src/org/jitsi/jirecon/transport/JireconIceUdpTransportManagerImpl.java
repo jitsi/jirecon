@@ -129,7 +129,7 @@ public class JireconIceUdpTransportManagerImpl
         transportPE.setPassword(iceAgent.getLocalPassword());
         transportPE.setUfrag(iceAgent.getLocalUfrag());
         
-        for (CandidatePacketExtension candidatePE : getLocalCandidatePacketExts())
+        for (CandidatePacketExtension candidatePE : getLocalCandidatePacketExts(mediaType))
         {
             transportPE.addCandidate(candidatePE);
         }
@@ -368,17 +368,18 @@ public class JireconIceUdpTransportManagerImpl
     }
 
     /**
-     * Create list of <tt>CandidatePacketExtension</tt>.
+     * Create list of <tt>CandidatePacketExtension</tt> with specified <tt>MediaType</tt>.
      * 
+     * @param mediaType
      * @return List of <tt>CandidatePacketExtension</tt>
      */
-    private List<CandidatePacketExtension> getLocalCandidatePacketExts()
+    private List<CandidatePacketExtension> getLocalCandidatePacketExts(MediaType mediaType)
     {
         List<CandidatePacketExtension> candidatePEs =
             new ArrayList<CandidatePacketExtension>();
 
         int id = 1;
-        for (LocalCandidate candidate : getLocalCandidates())
+        for (LocalCandidate candidate : getLocalCandidates(mediaType))
         {
             CandidatePacketExtension candidatePE =
                 new CandidatePacketExtension();
@@ -401,27 +402,19 @@ public class JireconIceUdpTransportManagerImpl
     }
 
     /**
-     * Get local candidates
+     * Get local candidates of specified <tt>MediaType</tt>
      * 
+     * @param mediaType
      * @return List of <tt>LocalCandidate</tt>
      */
-    private List<LocalCandidate> getLocalCandidates()
+    private List<LocalCandidate> getLocalCandidates(MediaType mediaType)
     {
         List<LocalCandidate> candidates = new ArrayList<LocalCandidate>();
 
-        for (MediaType mediaType : MediaType.values())
+        IceMediaStream stream = getIceMediaStream(mediaType);
+        for (Component com : stream.getComponents())
         {
-            // Make sure that we only handle audio or video type.
-            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
-            {
-                continue;
-            }
-
-            IceMediaStream stream = getIceMediaStream(mediaType);
-            for (Component com : stream.getComponents())
-            {
-                candidates.addAll(com.getLocalCandidates());
-            }
+            candidates.addAll(com.getLocalCandidates());
         }
 
         return candidates;
@@ -550,8 +543,6 @@ public class JireconIceUdpTransportManagerImpl
             stream.getComponent(Component.RTP).getSelectedPair();
         final CandidatePair rtcpPair =
             stream.getComponent(Component.RTCP).getSelectedPair();
-
-        System.out.println(rtpPair);
 
         final DatagramSocket rtpSocket =
             rtpPair.getLocalCandidate().getDatagramSocket();
