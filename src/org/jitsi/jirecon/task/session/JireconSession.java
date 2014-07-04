@@ -7,6 +7,7 @@ package org.jitsi.jirecon.task.session;
 
 import java.util.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
@@ -67,8 +68,8 @@ public interface JireconSession
     public void sendAcceptPacket(
         Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
         Map<MediaType, Long> localSsrcs,
-        Map<MediaType, IceUdpTransportPacketExtension> transportPEs,
-        Map<MediaType, DtlsFingerprintPacketExtension> fingerprintPEs);
+        Map<MediaType, AbstractPacketExtension> transportPEs,
+        Map<MediaType, AbstractPacketExtension> fingerprintPEs);
 
     /**
      * Wait for ack packet.

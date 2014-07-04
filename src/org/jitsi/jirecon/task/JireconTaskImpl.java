@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.jirecon.*;
@@ -209,30 +210,16 @@ public class JireconTaskImpl
             Map<MediaType, Long> localSsrcs = recorder.getLocalSsrcs();
             
             // Transport packet extension.
-            Map<MediaType, IceUdpTransportPacketExtension> transportPEs =
-                new HashMap<MediaType, IceUdpTransportPacketExtension>();
-            transportPEs.put(MediaType.AUDIO, transport.getTransportPacketExt());
-            transportPEs.put(MediaType.VIDEO, transport.getTransportPacketExt());
+            Map<MediaType, AbstractPacketExtension> transportPEs =
+                new HashMap<MediaType, AbstractPacketExtension>();
+            transportPEs.put(MediaType.AUDIO, transport.getTransportPacketExt(MediaType.AUDIO));
+            transportPEs.put(MediaType.VIDEO, transport.getTransportPacketExt(MediaType.VIDEO));
             
             // Fingerprint packet extension.
-            Map<MediaType, DtlsFingerprintPacketExtension> fingerprintPEs =
-                new HashMap<MediaType, DtlsFingerprintPacketExtension>();
-            for (MediaType mediaType : MediaType.values())
-            {
-                if (mediaType != MediaType.AUDIO
-                    && mediaType != MediaType.VIDEO)
-                    continue;
-
-                DtlsFingerprintPacketExtension fingerprintPE =
-                    new DtlsFingerprintPacketExtension();
-                fingerprintPE.setHash(srtpControl
-                    .getLocalFingerprintHashFunction(mediaType));
-                fingerprintPE.setFingerprint(srtpControl
-                    .getLocalFingerprintHashFunction(mediaType));
-                fingerprintPE.setText(srtpControl
-                    .getLocalFingerprintHashFunction(mediaType));
-                fingerprintPEs.put(mediaType, fingerprintPE);
-            }
+            Map<MediaType, AbstractPacketExtension> fingerprintPEs =
+                new HashMap<MediaType, AbstractPacketExtension>();
+            fingerprintPEs.put(MediaType.AUDIO, srtpControl.getFingerprintPacketExt(MediaType.AUDIO));
+            fingerprintPEs.put(MediaType.VIDEO, srtpControl.getFingerprintPacketExt(MediaType.VIDEO));
 
             session.sendAcceptPacket(formatAndPTs, localSsrcs, transportPEs,
                 fingerprintPEs);

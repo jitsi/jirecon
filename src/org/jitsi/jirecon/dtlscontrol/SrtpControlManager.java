@@ -8,6 +8,8 @@ package org.jitsi.jirecon.dtlscontrol;
 
 import java.util.Map;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
+
 import org.jitsi.service.neomedia.*;
 
 /**
@@ -67,4 +69,6 @@ public interface SrtpControlManager
      * @return The map between <tt>MediaType</tt> and <tt>SrtpControl</tt>.
      */
     public Map<MediaType, SrtpControl> getAllSrtpControl();
+    
+    public AbstractPacketExtension getFingerprintPacketExt(MediaType mediaType);
 }

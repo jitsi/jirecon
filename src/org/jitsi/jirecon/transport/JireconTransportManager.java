@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.jitsi.service.neomedia.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.IceUdpTransportPacketExtension;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
@@ -47,9 +48,10 @@ public interface JireconTransportManager
      * Get a <tt>IceUdpTransportPacketExtension</tt> created by
      * <tt>JireconTransportManager</tt>.
      * 
+     * @param mediaType
      * @return <tt>IceUdpTransportPacketExtension</tt>
      */
-    public IceUdpTransportPacketExtension getTransportPacketExt();
+    public AbstractPacketExtension getTransportPacketExt(MediaType mediaType);
 
     /**
      * Get <tt>MediaStreamTarget</tt> of specified <tt>MediaType</tt> created by

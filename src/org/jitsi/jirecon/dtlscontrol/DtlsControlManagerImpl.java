@@ -9,6 +9,9 @@ package org.jitsi.jirecon.dtlscontrol;
 import java.util.*;
 import java.util.Map.Entry;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.DtlsFingerprintPacketExtension;
+
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 
@@ -115,5 +118,18 @@ public class DtlsControlManagerImpl
     public void setHashFunction(String hash)
     {
         this.hashFunction = hash;
+    }
+    
+    public AbstractPacketExtension getFingerprintPacketExt(MediaType mediaType)
+    {
+        DtlsFingerprintPacketExtension fingerprintPE =
+            new DtlsFingerprintPacketExtension();
+
+        fingerprintPE.setHash(getLocalFingerprintHashFunction(mediaType));
+        fingerprintPE.setFingerprint(getLocalFingerprint(mediaType));
+        // fingerprintPE.setText(getLocalFingerprint(mediaType));
+        fingerprintPE.setAttribute("setup", DtlsControl.Setup.ACTIVE);
+
+        return fingerprintPE;
     }
 }

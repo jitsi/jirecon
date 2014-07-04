@@ -7,6 +7,7 @@ package org.jitsi.jirecon.task.session;
 
 import java.util.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.SourcePacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.*;
@@ -14,6 +15,7 @@ import net.java.sip.communicator.service.protocol.OperationFailedException;
 import net.java.sip.communicator.util.Logger;
 
 import org.jitsi.jirecon.extension.MediaExtension;
+import org.jitsi.jirecon.extension.SsrcPacketExtension;
 import org.jitsi.jirecon.task.*;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
@@ -193,8 +195,8 @@ public class JireconSessionImpl
     public void sendAcceptPacket(
         Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
         Map<MediaType, Long> localSsrcs,
-        Map<MediaType, IceUdpTransportPacketExtension> transportPEs,
-        Map<MediaType, DtlsFingerprintPacketExtension> fingerprintPEs)
+        Map<MediaType, AbstractPacketExtension> transportPEs,
+        Map<MediaType, AbstractPacketExtension> fingerprintPEs)
     {
         logger.info("sendAcceptPacket");
         JingleIQ acceptIq = createAcceptPacket(formatAndPTs, localSsrcs, transportPEs, fingerprintPEs);
@@ -447,8 +449,8 @@ public class JireconSessionImpl
     private JingleIQ createAcceptPacket(
         Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
         Map<MediaType, Long> localSsrcs,
-        Map<MediaType, IceUdpTransportPacketExtension> transportPEs,
-        Map<MediaType, DtlsFingerprintPacketExtension> fingerprintPEs)
+        Map<MediaType, AbstractPacketExtension> transportPEs,
+        Map<MediaType, AbstractPacketExtension> fingerprintPEs)
     {
         logger.info("createSessionAcceptPacket");
         List<ContentPacketExtension> contentPEs =
@@ -466,9 +468,8 @@ public class JireconSessionImpl
                     formatAndPTs.get(mediaType), localSsrcs.get(mediaType));
 
             // 2. Create TransportPE, put FingerprintPE into it.
-            IceUdpTransportPacketExtension transportPE =
-                transportPEs.get(mediaType);
-            DtlsFingerprintPacketExtension fingerprintPE =
+            AbstractPacketExtension transportPE = transportPEs.get(mediaType);
+            AbstractPacketExtension fingerprintPE =
                 fingerprintPEs.get(mediaType);
             transportPE.addChildExtension(fingerprintPE);
 
@@ -484,7 +485,7 @@ public class JireconSessionImpl
         JingleIQ acceptJiq =
             JinglePacketFactory.createSessionAccept(localFullJid,
                 remoteFullJid, sid, contentPEs);
-//        acceptJiq.setInitiator(remoteFullJid);
+        acceptJiq.setInitiator(remoteFullJid);
 
         return acceptJiq;
     }
@@ -504,7 +505,7 @@ public class JireconSessionImpl
     private ContentPacketExtension createContentPacketExtension(
         String name,
         RtpDescriptionPacketExtension descriptionPE,
-        IceUdpTransportPacketExtension transportPE)
+        AbstractPacketExtension transportPE)
     {
         logger.debug(this.getClass() + " createContentPacketExtension");
         
@@ -555,13 +556,15 @@ public class JireconSessionImpl
             description.addPayloadType(payloadType);
         }
 
+        final MediaService mediaService = LibJitsi.getMediaService();
+        
         // 4. Set source information.
         SourcePacketExtension sourcePacketExtension =
             new SourcePacketExtension();
         final String label = mediaType.toString();
         sourcePacketExtension.setSSRC(localSsrc);
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
-            "cname", LibJitsi.getMediaService().getRtpCname()));
+            "cname", mediaService.getRtpCname()));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
             "msid", msLabel + " " + label));
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
@@ -569,6 +572,16 @@ public class JireconSessionImpl
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
             "label", label));
         description.addChildExtension(sourcePacketExtension);
+        
+        // 5. Set ssrc packet extension.
+        SsrcPacketExtension ssrcPacketExtension = 
+        new SsrcPacketExtension();
+        ssrcPacketExtension.setSsrc(String.valueOf(localSsrc));
+        ssrcPacketExtension.setCname(mediaService.getRtpCname());
+        ssrcPacketExtension.setMsid(msLabel + " " + label);
+        ssrcPacketExtension.setMslabel(msLabel);
+        ssrcPacketExtension.setLabel(label);
+        description.addChildExtension(ssrcPacketExtension);
         
         return description;
     }

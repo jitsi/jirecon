@@ -10,6 +10,7 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
@@ -43,7 +44,7 @@ public class JireconIceUdpTransportManagerImpl
      */
     private static final Logger logger = Logger
         .getLogger(JireconIceUdpTransportManagerImpl.class);
-    
+
     /**
      * The minimum time (second) when wait for something.
      */
@@ -53,7 +54,7 @@ public class JireconIceUdpTransportManagerImpl
      * The maximum time (second) when wait for something.
      */
     private static int MAX_WAIT_TIME = 10;
-    
+
     /**
      * Instance of <tt>Agent</tt>.
      */
@@ -89,8 +90,10 @@ public class JireconIceUdpTransportManagerImpl
     public JireconIceUdpTransportManagerImpl()
     {
         logger.info("init");
+        
         iceAgent = new Agent();
         iceAgent.setControlling(false);
+        
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         MIN_STREAM_PORT =
             configuration.getInt(JireconConfigurationKey.MIN_STREAM_PORT_KEY,
@@ -113,17 +116,24 @@ public class JireconIceUdpTransportManagerImpl
      * {@inheritDoc}
      */
     @Override
-    public IceUdpTransportPacketExtension getTransportPacketExt()
+    public AbstractPacketExtension getTransportPacketExt(MediaType mediaType)
     {
         logger.info("getTransportPacketExt");
+        
+        // Now, both audio and video's transport packet extension are same. So I
+        // don't use mediaType.
+        
         IceUdpTransportPacketExtension transportPE =
             new IceUdpTransportPacketExtension();
+        
         transportPE.setPassword(iceAgent.getLocalPassword());
         transportPE.setUfrag(iceAgent.getLocalUfrag());
+        
         for (CandidatePacketExtension candidatePE : getLocalCandidatePacketExts())
         {
             transportPE.addCandidate(candidatePE);
         }
+        
         return transportPE;
     }
 
@@ -142,6 +152,7 @@ public class JireconIceUdpTransportManagerImpl
     public void startConnectivityEstablishment()
     {
         logger.info("startConnectivityEstablishment");
+        
         new Thread(new Runnable()
         {
             @Override
@@ -157,6 +168,7 @@ public class JireconIceUdpTransportManagerImpl
                 }
             }
         }).start();
+        
         iceAgent.startConnectivityEstablishment();
     }
 
@@ -304,7 +316,7 @@ public class JireconIceUdpTransportManagerImpl
             {
                 if (candidate.getGeneration() != iceAgent.getGeneration())
                     continue;
-                
+
                 final Component component =
                     stream.getComponent(candidate.getComponent());
 
@@ -328,13 +340,10 @@ public class JireconIceUdpTransportManagerImpl
                             .getProtocol()));
 
                 final RemoteCandidate remoteCandidate =
-                    new RemoteCandidate(
-                        mainAddress, 
-                        component,
-                        org.ice4j.ice.CandidateType.parse(candidate.getType().toString()), 
-                        candidate.getFoundation(),
-                        candidate.getPriority(), 
-                        relatedCandidate);
+                    new RemoteCandidate(mainAddress, component,
+                        org.ice4j.ice.CandidateType.parse(candidate.getType()
+                            .toString()), candidate.getFoundation(),
+                        candidate.getPriority(), relatedCandidate);
 
                 if (!canReach(component, remoteCandidate))
                     continue;
@@ -378,7 +387,7 @@ public class JireconIceUdpTransportManagerImpl
             candidatePE.setFoundation(candidate.getFoundation());
             candidatePE.setGeneration(iceAgent.getGeneration());
             candidatePE.setID(String.valueOf(id++));
-            candidatePE.setNetwork(1);
+            candidatePE.setNetwork(0); // Why it is 0?
             candidatePE.setIP(candidate.getTransportAddress().getHostAddress());
             candidatePE.setPort(candidate.getTransportAddress().getPort());
             candidatePE.setPriority(candidate.getPriority());
@@ -502,44 +511,14 @@ public class JireconIceUdpTransportManagerImpl
         if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
             return null;
 
-        StreamConnector streamConnector = null;
-        IceMediaStream stream = getIceMediaStream(mediaType);
-        if (null == stream)
-        {
-            throw new OperationFailedException(
-                "Could not get stream connector, ICE media stream was not prepared.",
-                OperationFailedException.GENERAL_ERROR);
-        }
-
-        List<DatagramSocket> datagramSockets = new ArrayList<DatagramSocket>();
         int sumWaitTime = 0;
         while (sumWaitTime <= MAX_WAIT_TIME)
         {
-            for (Component component : stream.getComponents())
-            {
-                if (component != null)
-                {
-                    CandidatePair selectedPair = component.getSelectedPair();
-
-                    if (selectedPair != null)
-                    {
-                        datagramSockets.add(selectedPair.getLocalCandidate()
-                            .getDatagramSocket());
-                    }
-                }
-            }
-            if (datagramSockets.size() >= 2)
-            {
-                streamConnector =
-                    new DefaultStreamConnector(
-                        datagramSockets.get(0) /* RTP */,
-                        datagramSockets.get(1) /* RTCP */);
-                streamConnectors.put(mediaType, streamConnector);
-                break;
-            }
-
             try
             {
+                if (IceProcessingState.TERMINATED == iceAgent.getState())
+                    break;
+
                 logger
                     .info("Could not get stream connector, sleep for a while. Already sleep for "
                         + sumWaitTime + " seconds");
@@ -551,15 +530,39 @@ public class JireconIceUdpTransportManagerImpl
                 e.printStackTrace();
             }
         }
-
-        if (null != streamConnector)
-            return streamConnector;
-        else
+        if (IceProcessingState.TERMINATED != iceAgent.getState())
         {
             throw new OperationFailedException(
                 "Could not get stream connector, it seems that ICE connectivity establishment hung",
                 OperationFailedException.GENERAL_ERROR);
         }
+
+        StreamConnector streamConnector = null;
+        IceMediaStream stream = getIceMediaStream(mediaType);
+        if (null == stream)
+        {
+            throw new OperationFailedException(
+                "Could not get stream connector, ICE media stream was not prepared.",
+                OperationFailedException.GENERAL_ERROR);
+        }
+
+        final CandidatePair rtpPair =
+            stream.getComponent(Component.RTP).getSelectedPair();
+        final CandidatePair rtcpPair =
+            stream.getComponent(Component.RTCP).getSelectedPair();
+
+        System.out.println(rtpPair);
+
+        final DatagramSocket rtpSocket =
+            rtpPair.getLocalCandidate().getDatagramSocket();
+        final DatagramSocket rtcpSocket =
+            rtcpPair.getLocalCandidate().getDatagramSocket();
+
+        streamConnector = new DefaultStreamConnector(rtpSocket, rtcpSocket);
+
+        streamConnectors.put(mediaType, streamConnector);
+
+        return streamConnector;
     }
 
     /**
