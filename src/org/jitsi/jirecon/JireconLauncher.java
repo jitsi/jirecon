@@ -87,7 +87,6 @@ public class JireconLauncher
         
         jirecon.addEventListener(new JireconEventListener()
         {
-
             @Override
             public void handleEvent(JireconEvent evt)
             {

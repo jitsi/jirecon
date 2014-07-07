@@ -132,4 +132,16 @@ public class DtlsControlManagerImpl
 
         return fingerprintPE;
     }
+
+    @Override
+    public void startSrtpControl(MediaType mediaType)
+    {
+        dtlsControls.get(mediaType).start(mediaType);
+    }
+
+    @Override
+    public void stopSrtpControl(MediaType mediaType)
+    {
+        dtlsControls.get(mediaType).cleanup();
+    }
 }

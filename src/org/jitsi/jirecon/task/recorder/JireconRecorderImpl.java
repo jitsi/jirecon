@@ -110,6 +110,8 @@ public class JireconRecorderImpl
     {
         this.mediaService = LibJitsi.getMediaService();
         this.outputDir = outputDir;
+
+        // SrtpControl will be managed by MediaStream. 
         createMediaStreams(srtpControls);
     }
 
@@ -302,7 +304,7 @@ public class JireconRecorderImpl
         for (Map.Entry<MediaType, MediaStream> e : streams.entrySet())
         {
             e.getValue().close();
-            e.getValue().stop();
+//            e.getValue().stop();
         }
         streams.clear();
         isReceiving = false;

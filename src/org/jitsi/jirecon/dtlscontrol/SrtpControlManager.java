@@ -71,4 +71,8 @@ public interface SrtpControlManager
     public Map<MediaType, SrtpControl> getAllSrtpControl();
     
     public AbstractPacketExtension getFingerprintPacketExt(MediaType mediaType);
+    
+    public void startSrtpControl(MediaType mediaType);
+    
+    public void stopSrtpControl(MediaType mediaType);
 }
