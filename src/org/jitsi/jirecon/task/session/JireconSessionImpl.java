@@ -15,7 +15,6 @@ import net.java.sip.communicator.service.protocol.OperationFailedException;
 import net.java.sip.communicator.util.Logger;
 
 import org.jitsi.jirecon.extension.MediaExtension;
-import org.jitsi.jirecon.extension.SsrcPacketExtension;
 import org.jitsi.jirecon.task.*;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
@@ -572,16 +571,6 @@ public class JireconSessionImpl
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
             "label", label));
         description.addChildExtension(sourcePacketExtension);
-        
-        // 5. Set ssrc packet extension.
-        SsrcPacketExtension ssrcPacketExtension = 
-        new SsrcPacketExtension();
-        ssrcPacketExtension.setSsrc(String.valueOf(localSsrc));
-        ssrcPacketExtension.setCname(mediaService.getRtpCname());
-        ssrcPacketExtension.setMsid(msLabel + " " + label);
-        ssrcPacketExtension.setMslabel(msLabel);
-        ssrcPacketExtension.setLabel(label);
-        description.addChildExtension(ssrcPacketExtension);
         
         return description;
     }
