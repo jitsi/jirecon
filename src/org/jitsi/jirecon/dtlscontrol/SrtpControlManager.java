@@ -70,9 +70,25 @@ public interface SrtpControlManager
      */
     public Map<MediaType, SrtpControl> getAllSrtpControl();
     
+    /**
+     * Get Fingerprint packet extension from <tt>SrtpControlManager</tt>.
+     * 
+     * @param mediaType The <tt>MediaType</tt> of the fingerprint.
+     * @return Fingerprint packet extension.
+     */
     public AbstractPacketExtension getFingerprintPacketExt(MediaType mediaType);
     
+    /**
+     * Start SRTP control.
+     * 
+     * @param mediaType
+     */
     public void startSrtpControl(MediaType mediaType);
     
+    /**
+     * Stop SRTP control.
+     * 
+     * @param mediaType
+     */
     public void stopSrtpControl(MediaType mediaType);
 }

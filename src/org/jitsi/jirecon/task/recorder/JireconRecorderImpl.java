@@ -139,7 +139,7 @@ public class JireconRecorderImpl
     {
         stopRecordingStreams();
         stopReceivingStreams();
-        stopTranslators();
+        // stopTranslators();
     }
 
     /**
@@ -280,7 +280,7 @@ public class JireconRecorderImpl
      */
     private void stopRecordingStreams()
     {
-        logger.info("stopRecording");
+        logger.info("Stop recording streams.");
         if (!isRecording)
             return;
 
@@ -297,7 +297,7 @@ public class JireconRecorderImpl
      */
     private void stopReceivingStreams()
     {
-        logger.info("stopReceiving");
+        logger.info("Stop receiving streams");
         if (!isReceiving)
             return;
 
@@ -305,6 +305,7 @@ public class JireconRecorderImpl
         {
             e.getValue().close();
         }
+        
         streams.clear();
         isReceiving = false;
     }

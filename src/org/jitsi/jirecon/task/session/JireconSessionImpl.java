@@ -39,7 +39,7 @@ public class JireconSessionImpl
      * The <tt>Logger</tt>, used to log messages to standard output.
      */
     private static final Logger logger = Logger
-        .getLogger(JireconSessionImpl.class);
+        .getLogger(JireconSessionImpl.class.getName());
     
     /**
      * Maximum wait time(microsecond).
@@ -106,8 +106,6 @@ public class JireconSessionImpl
     @Override
     public void init(XMPPConnection connection)
     {
-        logger.setLevelDebug();
-
         this.connection = connection;
 
         addPacketSendingListener();
@@ -506,7 +504,7 @@ public class JireconSessionImpl
         RtpDescriptionPacketExtension descriptionPE,
         AbstractPacketExtension transportPE)
     {
-        logger.debug(this.getClass() + " createContentPacketExtension");
+        logger.info(this.getClass() + " createContentPacketExtension");
         
         ContentPacketExtension content = new ContentPacketExtension();
         content.setCreator(CreatorEnum.responder);
@@ -674,7 +672,7 @@ public class JireconSessionImpl
                 if (null != localFullJid
                     && !packet.getTo().equals(localFullJid))
                 {
-                    logger.fatal("packet failed: to " + packet.getTo()
+                    logger.info("packet failed: to " + packet.getTo()
                         + ", but we are " + localFullJid);
                     return false;
                 }

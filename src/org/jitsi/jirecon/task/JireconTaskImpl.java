@@ -45,7 +45,7 @@ public class JireconTaskImpl
      * The <tt>Logger</tt>, used to log messages to standard output.
      */
     private static final Logger logger = Logger
-        .getLogger(JireconTaskImpl.class);
+        .getLogger(JireconTaskImpl.class.getName());
     
     /**
      * The <tt>JireconEvent</tt> listeners, they will be notified when some
@@ -96,8 +96,7 @@ public class JireconTaskImpl
     @Override
     public void init(String mucJid, XMPPConnection connection, String savingDir)
     {
-        logger.setLevelAll();
-        logger.debug(this.getClass() + " init");
+        logger.info(this.getClass() + " init");
         
         info.setOutputDir(savingDir);
         File dir = new File(savingDir);

@@ -35,7 +35,7 @@ public class JireconImpl
     /**
      * The <tt>Logger</tt>, used to log messages to standard output.
      */
-    private static final Logger logger = Logger.getLogger(JireconImpl.class);
+    private static final Logger logger = Logger.getLogger(JireconImpl.class.getName());
     
     /**
      * List of <tt>JireconEventListener</tt>, if something important happen,
@@ -64,7 +64,6 @@ public class JireconImpl
 
     public JireconImpl()
     {
-        logger.setLevelDebug();
     }
 
     /**
@@ -77,7 +76,7 @@ public class JireconImpl
     public void init(String configurationPath) 
         throws OperationFailedException
     {
-        logger.debug(this.getClass() + "init");
+        logger.info(this.getClass() + "init");
 
         initiatePacketProviders();
 
@@ -90,7 +89,7 @@ public class JireconImpl
             configuration.getString(JireconConfigurationKey.SAVING_DIR_KEY);
         if (baseOutputDir.isEmpty())
         {
-            logger.fatal("Failed to initialize Jirecon, output directory was not set.");
+            logger.info("Failed to initialize Jirecon, output directory was not set.");
             throw new OperationFailedException(
                 "Failed to initialize Jirecon, ouput directory was not set.",
                 OperationFailedException.GENERAL_ERROR);
@@ -113,7 +112,7 @@ public class JireconImpl
         }
         catch (XMPPException e)
         {
-            logger.fatal("Failed to initialize Jirecon, " + e.getXMPPError());
+            logger.info("Failed to initialize Jirecon, " + e.getXMPPError());
             uninit();
             throw new OperationFailedException(
                 "Failed to initialize Jirecon, " + e.getMessage(),
@@ -129,7 +128,7 @@ public class JireconImpl
     @Override
     public void uninit()
     {
-        logger.debug(this.getClass() + "uninit");
+        logger.info(this.getClass() + "uninit");
         synchronized (jireconTasks)
         {
             for (JireconTask task : jireconTasks.values())
@@ -147,7 +146,7 @@ public class JireconImpl
     @Override
     public boolean startJireconTask(String mucJid)
     {
-        logger.debug(this.getClass() + "startJireconTask: " + mucJid);
+        logger.info(this.getClass() + "startJireconTask: " + mucJid);
 
         JireconTask task = null;
         synchronized (jireconTasks)
@@ -179,7 +178,7 @@ public class JireconImpl
     @Override
     public boolean stopJireconTask(String mucJid, boolean keepData)
     {
-        logger.debug(this.getClass() + "stopJireconTask: " + mucJid);
+        logger.info(this.getClass() + "stopJireconTask: " + mucJid);
         JireconTask task = null;
         synchronized (jireconTasks)
         {
@@ -208,7 +207,7 @@ public class JireconImpl
      */
     private void connect(String xmppHost, int xmppPort) throws XMPPException
     {
-        logger.debug(this.getClass() + "connect");
+        logger.info(this.getClass() + "connect");
         ConnectionConfiguration conf =
             new ConnectionConfiguration(xmppHost, xmppPort);
         connection = new XMPPConnection(conf);
@@ -220,7 +219,7 @@ public class JireconImpl
      */
     private void closeConnection()
     {
-        logger.debug(this.getClass() + "closeConnection");
+        logger.info(this.getClass() + "closeConnection");
         if (connection.isConnected())
             connection.disconnect();
     }
@@ -232,7 +231,7 @@ public class JireconImpl
      */
     private void loginAnonymously() throws XMPPException
     {
-        logger.debug(this.getClass() + "login");
+        logger.info(this.getClass() + "login");
         connection.loginAnonymously();
     }
 
@@ -241,7 +240,7 @@ public class JireconImpl
      */
     private void initiatePacketProviders()
     {
-        logger.debug(this.getClass() + "initiatePacketProviders");
+        logger.info(this.getClass() + "initiatePacketProviders");
         ProviderManager providerManager = ProviderManager.getInstance();
 
         providerManager.addIQProvider(JingleIQ.ELEMENT_NAME,
@@ -256,7 +255,7 @@ public class JireconImpl
     @Override
     public void addEventListener(JireconEventListener listener)
     {
-        logger.debug(this.getClass() + " addEventListener");
+        logger.info(this.getClass() + " addEventListener");
         listeners.add(listener);
     }
 
@@ -266,7 +265,7 @@ public class JireconImpl
     @Override
     public void removeEventListener(JireconEventListener listener)
     {
-        logger.debug(this.getClass() + " removeEventListener");
+        logger.info(this.getClass() + " removeEventListener");
         listeners.remove(listener);
     }
 
@@ -282,7 +281,7 @@ public class JireconImpl
         {
         case TASK_ABORTED:
             stopJireconTask(mucJid, false);
-            logger.fatal("Recording task of MUC " + mucJid + " failed.");
+            logger.info("Recording task of MUC " + mucJid + " failed.");
             fireEvent(evt);
             break;
         case TASK_FINISED:

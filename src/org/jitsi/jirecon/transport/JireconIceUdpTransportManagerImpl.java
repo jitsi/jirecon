@@ -43,7 +43,7 @@ public class JireconIceUdpTransportManagerImpl
      * The <tt>Logger</tt>, used to log messages to standard output.
      */
     private static final Logger logger = Logger
-        .getLogger(JireconIceUdpTransportManagerImpl.class);
+        .getLogger(JireconIceUdpTransportManagerImpl.class.getName());
 
     /**
      * The minimum time (second) when wait for something.
@@ -196,7 +196,7 @@ public class JireconIceUdpTransportManagerImpl
                         || IceProcessingState.TERMINATED.equals(newValue))
                     {
                         if (logger.isTraceEnabled())
-                            logger.trace("ICE " + newValue);
+                            logger.info("ICE " + newValue);
 
                         Agent iceAgent = (Agent) evt.getSource();
 

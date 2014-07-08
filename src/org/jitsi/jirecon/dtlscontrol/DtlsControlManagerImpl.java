@@ -114,12 +114,19 @@ public class DtlsControlManagerImpl
         return controls;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void setHashFunction(String hash)
     {
         this.hashFunction = hash;
     }
     
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public AbstractPacketExtension getFingerprintPacketExt(MediaType mediaType)
     {
         DtlsFingerprintPacketExtension fingerprintPE =
@@ -127,18 +134,29 @@ public class DtlsControlManagerImpl
 
         fingerprintPE.setHash(getLocalFingerprintHashFunction(mediaType));
         fingerprintPE.setFingerprint(getLocalFingerprint(mediaType));
-        // fingerprintPE.setText(getLocalFingerprint(mediaType));
         fingerprintPE.setAttribute("setup", DtlsControl.Setup.ACTIVE);
 
         return fingerprintPE;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method hasn't been used, because <tt>MediaStream</tt> will start
+     * DTLS control.
+     */
     @Override
     public void startSrtpControl(MediaType mediaType)
     {
         dtlsControls.get(mediaType).start(mediaType);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method hasn't been used, because <tt>MediaStream</tt> will clean
+     * DTLS control.
+     */
     @Override
     public void stopSrtpControl(MediaType mediaType)
     {
