@@ -137,6 +137,7 @@ public class JireconRecorderImpl
     @Override
     public void stopRecording()
     {
+//        stopTranslators();
         stopRecordingStreams();
         stopReceivingStreams();
         stopTranslators();
@@ -303,8 +304,7 @@ public class JireconRecorderImpl
 
         for (Map.Entry<MediaType, MediaStream> e : streams.entrySet())
         {
-            e.getValue().close();
-//            e.getValue().stop();
+//            e.getValue().close();
         }
         streams.clear();
         isReceiving = false;

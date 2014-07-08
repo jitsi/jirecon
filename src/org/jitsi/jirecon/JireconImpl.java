@@ -137,8 +137,8 @@ public class JireconImpl
                 task.uninit(true);
             }
         }
-        LibJitsi.stop();
         closeConnection();
+        LibJitsi.stop();
     }
 
     /**
