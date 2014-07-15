@@ -162,6 +162,9 @@ public class JireconTaskImpl
     public void start()
     {
         executorService.execute(this);
+        
+        fireEvent(new JireconEvent(info.getMucJid(),
+            JireconEvent.Type.TASK_STARTED));
     }
 
     /**
@@ -176,6 +179,7 @@ public class JireconTaskImpl
             recorder.stopRecording();
             session.disconnect(Reason.SUCCESS, "OK, gotta go.");
             isStopped = true;
+            
             fireEvent(new JireconEvent(info.getMucJid(),
                 JireconEvent.Type.TASK_FINISED));
         }

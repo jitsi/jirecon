@@ -61,6 +61,12 @@ public class JireconImpl
      * date suffix to it as a final output directory.
      */
     private String baseOutputDir;
+    
+    /**
+     * Indicates whether <tt>JireconImpl</tt> has been initialized, it is used
+     * to avoid double initialization.
+     */
+    private boolean isInitialized = false;
 
     public JireconImpl()
     {
@@ -76,6 +82,13 @@ public class JireconImpl
     public void init(String configurationPath) 
         throws OperationFailedException
     {
+        if (isInitialized) 
+        {
+            logger.info("Double initialization of " + this.getClass()
+                + ", ignored.");
+            return;
+        }
+        
         logger.info(this.getClass() + "init");
 
         initiatePacketProviders();
@@ -84,7 +97,8 @@ public class JireconImpl
 
         System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_NAME,
             configurationPath);
-        ConfigurationService configuration = LibJitsi.getConfigurationService();
+        final ConfigurationService configuration = LibJitsi.getConfigurationService();
+        
         baseOutputDir =
             configuration.getString(JireconConfigurationKey.SAVING_DIR_KEY);
         if (baseOutputDir.isEmpty())
@@ -105,6 +119,7 @@ public class JireconImpl
             configuration.getString(JireconConfigurationKey.XMPP_HOST_KEY);
         final int xmppPort =
             configuration.getInt(JireconConfigurationKey.XMPP_PORT_KEY, -1);
+        
         try
         {
             connect(xmppHost, xmppPort);
@@ -118,6 +133,8 @@ public class JireconImpl
                 "Failed to initialize Jirecon, " + e.getMessage(),
                 OperationFailedException.GENERAL_ERROR);
         }
+        
+        isInitialized = true;
     }
 
     /**

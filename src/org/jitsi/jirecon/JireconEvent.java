@@ -65,12 +65,17 @@ public class JireconEvent
     public enum Type
     {
         /**
-         * Task failed
+         * Task started.
+         */
+        TASK_STARTED("TASK_STARTED"),
+        
+        /**
+         * Task failed.
          */
         TASK_ABORTED("TASK_ABORTED"),
 
         /**
-         * Operation
+         * Task finished.
          */
         TASK_FINISED("TASK_FINISHED");
 

@@ -19,6 +19,9 @@ public interface Jirecon
 {
     /**
      * Initialize <tt>Jirecon</tt>.
+     * <p>
+     * Once this method has been executed successfully, <tt>Jirecon</tt> should
+     * be ready to start working.
      * 
      * @param configurationPath is the configuration file path.
      * @throws OperationFailedException if failed to initialize Jirecon.
@@ -28,6 +31,10 @@ public interface Jirecon
 
     /**
      * Uninitialize <tt>Jirecon</tt>, prepare for GC.
+     * <p>
+     * <strong>Warning:</tt> If there is any residue <tt>JireconTask</tt>,
+     * </tt>Jirecon</tt> will stop them and notify <tt>JireconEventListener</tt>
+     * s.
      */
     public void uninit();
 

@@ -496,8 +496,6 @@ public class JireconSessionImpl
      * @param transportManager is used for creating transport packet extension.
      * @param srtpControlManager is used for add fingerprint.
      * @return content packet extension.
-     * @throws OperationFailedException if something failed, and the content
-     *             packet extension can not be created.
      */
     private ContentPacketExtension createContentPacketExtension(
         String name,
