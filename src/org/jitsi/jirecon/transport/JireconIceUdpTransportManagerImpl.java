@@ -420,21 +420,6 @@ public class JireconIceUdpTransportManagerImpl
         return candidates;
     }
 
-    // private RemoteCandidate getRelatedCandidate(
-    // CandidatePacketExtension candidate, Component component)
-    // {
-    // if ((candidate.getRelAddr() != null) && (candidate.getRelPort() != -1))
-    // {
-    // final String relAddr = candidate.getRelAddr();
-    // final int relPort = candidate.getRelPort();
-    // final TransportAddress relatedAddress =
-    // new TransportAddress(relAddr, relPort,
-    // Transport.parse(candidate.getProtocol()));
-    // return component.findRemoteCandidate(relatedAddress);
-    // }
-    // return null;
-    // }
-
     /**
      * {@inheritDoc}
      */
@@ -491,14 +476,16 @@ public class JireconIceUdpTransportManagerImpl
      * <p>
      * <strong>Warning:</strong> This method will wait for the selected
      * candidate pair which should be generated during establish ICE
-     * connectivity. However, sometimes selected pair can't be generated
-     * forever, in this case, this method will hang.
+     * connectivity. If selected candidate pair hasn'e been generated, it will
+     * wait for at most MAX_WAIT_TIME. After that it will break and throw and
+     * exception.
      */
     @Override
     public StreamConnector getStreamConnector(MediaType mediaType)
         throws OperationFailedException
     {
         logger.info("getStreamConnector");
+        
         if (streamConnectors.containsKey(mediaType))
             return streamConnectors.get(mediaType);
         if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)

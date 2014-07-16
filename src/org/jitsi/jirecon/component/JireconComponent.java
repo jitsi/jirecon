@@ -5,23 +5,14 @@
  */
 package org.jitsi.jirecon.component;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
-import org.dom4j.Attribute;
-import org.dom4j.DocumentFactory;
-import org.dom4j.Element;
-import org.jitsi.jirecon.Jirecon;
-import org.jitsi.jirecon.JireconEvent;
-import org.jitsi.jirecon.JireconEventListener;
-import org.jitsi.jirecon.JireconImpl;
+import org.dom4j.*;
+import org.jitsi.jirecon.*;
 import org.xmpp.component.AbstractComponent;
-import org.xmpp.packet.IQ;
-import org.xmpp.packet.Packet;
-import org.xmpp.packet.PacketExtension;
+import org.xmpp.packet.*;
 
 public class JireconComponent
     extends AbstractComponent
@@ -41,6 +32,8 @@ public class JireconComponent
     public static final String ELEMENT_NAME = "recording";
 
     public static final String NAMESPACE = "http://jitsi.org/protocol/jirecon";
+    
+    public static final String LOCAL_JID = "jirecon@" + SUBDOMAIN + "." + DOMAIN;
 
     private final DocumentFactory docFactory = DocumentFactory.getInstance();
 
@@ -51,7 +44,6 @@ public class JireconComponent
     private List<RecordingSession> recordingSessions =
         new LinkedList<RecordingSession>();
 
-    // FIXME: It seems that this attribute can be removed.
     /**
      * Indicate whether the <tt>JireconComponent</tt> has been started. It is
      * used for:
@@ -85,12 +77,12 @@ public class JireconComponent
     @Override
     public void preComponentStart()
     {
-        System.out.println("Start Jireocn component");
-
         if (isStarted)
         {
             return;
         }
+
+        System.out.println("Start Jireocn component");
 
         jirecon.addEventListener(this);
         try
@@ -144,31 +136,21 @@ public class JireconComponent
 
         Element element = iq.getChildElement();
 
-        System.out.println("namespace: "
-            + element.getNamespace().getStringValue());
-        System.out.println("name: " + element.getName());
-
-        for (int i = 0; i < element.attributeCount(); i++)
-        {
-            final Attribute attr = element.attribute(i);
-
-            System.out.println(attr.getName() + ": " + attr.getValue());
-        }
-
         final String action = element.attribute("action").getValue();
+        IQ result = null;
 
         // Start recording
         if (0 == "start".compareTo(action))
         {
-            startRecording(iq);
+            result = startRecording(iq);
         }
         // Stop recording.
         else if (0 == "stop".compareTo(action))
         {
-            stopRecording(iq);
+            result = stopRecording(iq);
         }
 
-        return IQ.createResultIQ(iq);
+        return result;
     }
 
     @Override
@@ -179,46 +161,51 @@ public class JireconComponent
         final String mucJid = evt.getMucJid();
         RecordingSession session = null;
 
-        for (RecordingSession s : recordingSessions)
+        synchronized (recordingSessions)
         {
-            if (0 == mucJid.compareTo(s.getMucJid()))
+            for (RecordingSession s : recordingSessions)
             {
-                session = s;
-                break;
+                if (0 == mucJid.compareTo(s.getMucJid()))
+                {
+                    session = s;
+                    break;
+                }
             }
-        }
 
-        // Session should never be null.
-        if (null == session)
-            return;
+            // Session should never be null.
+            if (null == session)
+                return;
 
-        IQ notification = null;
-        if (JireconEvent.Type.TASK_ABORTED == evt.getType())
-        {
-            jirecon.stopJireconTask(evt.getMucJid(), false);
-            recordingSessions.remove(session);
-            notification = createIqSet(session, "aborted", session.getRid());
-        }
-        else if (JireconEvent.Type.TASK_FINISED == evt.getType())
-        {
-            jirecon.stopJireconTask(evt.getMucJid(), true);
-            recordingSessions.remove(session);
-            notification = createIqSet(session, "stopped", session.getRid());
-        }
-        else if (JireconEvent.Type.TASK_STARTED == evt.getType())
-        {
-            notification =
-                createIqSet(session, "started", session.getRid(),
-                    session.getOutputPath());
-        }
+            IQ notification = null;
+            if (JireconEvent.Type.TASK_ABORTED == evt.getType())
+            {
+                jirecon.stopJireconTask(evt.getMucJid(), false);
+                recordingSessions.remove(session);
+                notification =
+                    createIqSet(session, "aborted", session.getRid());
+            }
+            else if (JireconEvent.Type.TASK_FINISED == evt.getType())
+            {
+                jirecon.stopJireconTask(evt.getMucJid(), true);
+                recordingSessions.remove(session);
+                notification =
+                    createIqSet(session, "stopped", session.getRid());
+            }
+            else if (JireconEvent.Type.TASK_STARTED == evt.getType())
+            {
+                notification =
+                    createIqSet(session, "started", session.getRid(),
+                        session.getOutputPath());
+            }
 
-        if (null != notification)
-        {
-            send(notification);
+            if (null != notification)
+            {
+                send(notification);
+            }
         }
     }
 
-    private void startRecording(IQ iq)
+    private IQ startRecording(IQ iq)
     {
         final Element element = iq.getChildElement();
 
@@ -227,35 +214,42 @@ public class JireconComponent
         // that we can't join a MUC with full-jid.
         mucJid = mucJid.split("/")[0];
 
-        RecordingSession session = new RecordingSession(mucJid);
-        recordingSessions.add(session);
+        RecordingSession session = new RecordingSession(mucJid, iq.getFrom().toString());
+        synchronized (recordingSessions)
+        {
+            recordingSessions.add(session);
+        }
 
-        send(createIqResult(iq, "initiating", session.getRid()));
+         jirecon.startJireconTask(mucJid);
 
-        jirecon.startJireconTask(mucJid);
+        return createIqResult(iq, "initiating", session.getRid());
     }
 
-    private void stopRecording(IQ iq)
+    private IQ stopRecording(IQ iq)
     {
         final Element element = iq.getChildElement();
         final String rid = element.attribute("rid").getValue();
 
         RecordingSession session = null;
-        for (RecordingSession s : recordingSessions)
+        synchronized (recordingSessions)
         {
-            if (0 == rid.compareTo(s.getRid()))
+            for (RecordingSession s : recordingSessions)
             {
-                session = s;
-                break;
+                if (0 == rid.compareTo(s.getRid()))
+                {
+                    session = s;
+                    break;
+                }
             }
         }
 
         // Session should never be null.
         if (null != session)
         {
-            send(createIqResult(iq, "stopping", rid));
-            jirecon.stopJireconTask(session.getMucJid(), true);
+             jirecon.stopJireconTask(session.getMucJid(), true);
         }
+
+        return createIqResult(iq, "stopping", rid);
     }
 
     /**
@@ -279,16 +273,13 @@ public class JireconComponent
      */
     private IQ createIqResult(IQ iq, String status, String rid)
     {
-        Element record = docFactory.createElement(ELEMENT_NAME, NAMESPACE);
-        // TODO: Some of the attribute should be removed.
-        docFactory.createAttribute(record, "action", "");
-        docFactory.createAttribute(record, "status", status);
-        docFactory.createAttribute(record, "mucjid", "");
-        docFactory.createAttribute(record, "dst", "");
-        docFactory.createAttribute(record, "rid", rid);
-
         IQ result = IQ.createResultIQ(iq);
-        result.addExtension(new PacketExtension(record));
+        Element record = docFactory.createElement(ELEMENT_NAME, NAMESPACE);
+
+        record.add(docFactory.createAttribute(record, "status", status));
+        record.add(docFactory.createAttribute(record, "rid", rid));
+        
+        result.setChildElement(record);
 
         return result;
     }
@@ -317,21 +308,23 @@ public class JireconComponent
     {
         IQ set = new IQ(IQ.Type.set);
         Element record = docFactory.createElement(ELEMENT_NAME, NAMESPACE);
-        // TODO: Some of the attribute should be removed.
-        docFactory.createAttribute(record, "action", "info");
-        docFactory.createAttribute(record, "status", status);
-        docFactory.createAttribute(record, "mucjid", "");
-        docFactory.createAttribute(record, "dst", dst);
-        docFactory.createAttribute(record, "rid", rid);
+        
+        record.add(docFactory.createAttribute(record, "action", "info"));
+        record.add(docFactory.createAttribute(record, "status", status));
+        record.add(docFactory.createAttribute(record, "dst", dst));
+        if (null != rid)
+            record.add(docFactory.createAttribute(record, "rid", rid));
 
-        set.addExtension(new PacketExtension(record));
+        set.setFrom(LOCAL_JID);
+        set.setTo(session.getClientJid());
+        set.setChildElement(record);
 
         return set;
     }
 
     private IQ createIqSet(RecordingSession session, String status, String rid)
     {
-        return createIqSet(session, status, rid, "");
+        return createIqSet(session, status, rid, null);
     }
 
     private class RecordingSession
@@ -339,13 +332,16 @@ public class JireconComponent
         private String rid;
 
         private String mucJid;
+        
+        private String clientJid;
 
         private String outputPath;
 
-        public RecordingSession(String mucJid)
+        public RecordingSession(String mucJid, String clientJid)
         {
             this.rid = generateRid();
             this.mucJid = mucJid;
+            this.clientJid = clientJid;
             this.outputPath = generateOutputPath();
         }
 
@@ -357,6 +353,11 @@ public class JireconComponent
         public String getMucJid()
         {
             return mucJid;
+        }
+        
+        public String getClientJid()
+        {
+            return clientJid;
         }
 
         public String getOutputPath()

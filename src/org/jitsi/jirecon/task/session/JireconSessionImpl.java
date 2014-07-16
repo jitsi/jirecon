@@ -65,12 +65,12 @@ public class JireconSessionImpl
     private MultiUserChat muc;
 
     /**
-     * Local node full jid which is used for making <tt>JingleIQ</tt>.
+     * Local node's full-jid which is used for creating <tt>JingleIQ</tt>.
      */
     private String localFullJid;
 
     /**
-     * Remote node full jid which is used for making <tt>JingleIq</tt>.
+     * Remote node's full-jid which is used for creating <tt>JingleIQ</tt>.
      */
     private String remoteFullJid;
 
@@ -227,7 +227,7 @@ public class JireconSessionImpl
 
     /**
      * Record some session information according Jingle session-init packet.
-     * It's convenient to parse local jid, remote jid, sid, and so on, thouth
+     * It's convenient to parse local jid, remote jid, sid, and so on, though
      * this may seems weird.
      * 
      * @param initJiq is the Jingle session-init packet.

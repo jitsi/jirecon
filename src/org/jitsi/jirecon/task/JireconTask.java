@@ -45,10 +45,10 @@ public interface JireconTask
     public void start();
 
     /**
-     * Stop the <tt>JireconTask</tt>
+     * Stop the <tt>JireconTask</tt>.
      */
     public void stop();
-
+    
     /**
      * Get the task information.
      * 

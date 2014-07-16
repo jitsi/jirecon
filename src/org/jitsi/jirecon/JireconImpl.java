@@ -196,11 +196,14 @@ public class JireconImpl
     public boolean stopJireconTask(String mucJid, boolean keepData)
     {
         logger.info(this.getClass() + "stopJireconTask: " + mucJid);
+        
         JireconTask task = null;
+        
         synchronized (jireconTasks)
         {
             task = jireconTasks.remove(mucJid);
         }
+        
         if (null == task)
         {
             logger.info("Failed to stop Jirecon by mucJid: " + mucJid
@@ -305,6 +308,10 @@ public class JireconImpl
             stopJireconTask(mucJid, true);
             logger.info("Recording task of MUC: " + mucJid
                 + " finished successfully.");
+            fireEvent(evt);
+            break;
+        case TASK_STARTED:
+            logger.info("Recording task of MUC " + mucJid + " started.");
             fireEvent(evt);
             break;
         default:

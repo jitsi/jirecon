@@ -80,9 +80,16 @@ public class JireconTaskImpl
     private ExecutorService executorService;
 
     /**
-     * Indicate whether this task has stopped or not.
+     * Indicate whether this task has stopped.
      */
     private boolean isStopped = false;
+    
+    /**
+     * Indicate whether this task has aborted. We need this to identify the
+     * situation when method "stop" is called. In case to fire appropriate
+     * FINISHED or ABORTED event.
+     */
+    private boolean isAborted = false;
     
     /**
      * Record the task info. <tt>JireconTaskInfo</tt> can be accessed by outside
@@ -162,9 +169,6 @@ public class JireconTaskImpl
     public void start()
     {
         executorService.execute(this);
-        
-        fireEvent(new JireconEvent(info.getMucJid(),
-            JireconEvent.Type.TASK_STARTED));
     }
 
     /**
@@ -180,8 +184,15 @@ public class JireconTaskImpl
             session.disconnect(Reason.SUCCESS, "OK, gotta go.");
             isStopped = true;
             
-            fireEvent(new JireconEvent(info.getMucJid(),
-                JireconEvent.Type.TASK_FINISED));
+            /*
+             * We should only fire TASK_FINISHED event when the task has really
+             * finished, because when task is aborted, this "stop" method will
+             * also be called, and in this scene we shouldn't fire TASK_FINISHED
+             * event.
+             */
+            if (!isAborted)
+                fireEvent(new JireconEvent(info.getMucJid(),
+                    JireconEvent.Type.TASK_FINISED));
         }
     }
 
@@ -267,6 +278,9 @@ public class JireconTaskImpl
             // 6.2 Start recording.
             recorder.startRecording(formatAndPTs, streamConnectors,
                 mediaStreamTargets);
+            
+            fireEvent(new JireconEvent(info.getMucJid(),
+                JireconEvent.Type.TASK_STARTED));
         }
         catch (Exception e)
         {
@@ -321,7 +335,7 @@ public class JireconTaskImpl
     @Override
     public void handleTaskEvent(JireconTaskEvent event)
     {
-        logger.info(event);
+        logger.info("JireconTask event: " + event.getType());
 
         if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_CAME)
         {
@@ -334,7 +348,7 @@ public class JireconTaskImpl
         {
             Map<String, Map<MediaType, Long>> associatedSsrcs =
                 session.getAssociatedSsrcs();
-            // It seems that all participants have left the MUC(except Jirecon
+            // Oh, it seems that all participants have left the MUC(except Jirecon
             // or other participants which only receive data). It's time to
             // finish the recording.
             if (associatedSsrcs.isEmpty())
@@ -357,6 +371,11 @@ public class JireconTaskImpl
      */
     private void fireEvent(JireconEvent evt)
     {
+        if (JireconEvent.Type.TASK_ABORTED == evt.getType())
+        {
+            isAborted = true;
+        }
+        
         for (JireconEventListener l : listeners)
         {
             l.handleEvent(evt);
