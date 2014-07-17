@@ -12,17 +12,45 @@ import org.xmpp.component.ComponentException;
 
 public class ComponentLauncher
 {
+    /*
+     * TODO: This configuration attributes should be loaded from configuration file.
+     */
+    
+    /**
+     * Port of XMPP Component.
+     */
+    public static final int PORT = 5275;
+
+    /**
+     * Secret of XMPP Component.
+     */
+    public static final String SECRET = "xxxxx";
+
+    /**
+     * Subdomain of XMPP component.
+     */
+    public static final String SUBDOMAIN = "jirecon";
+
+    /**
+     * Domain of XMPP component.
+     */
+    public static final String DOMAIN = "example.com";
+
     public static void main(String[] args)
     {
         ExternalComponentManager mgr =
-            new ExternalComponentManager(JireconComponent.DOMAIN,
-                JireconComponent.PORT);
+            new ExternalComponentManager(DOMAIN, PORT);
 
-        mgr.setSecretKey(JireconComponent.SUBDOMAIN, JireconComponent.SECRET);
-        mgr.setServerName(JireconComponent.DOMAIN);
+        mgr.setSecretKey(SUBDOMAIN, SECRET);
+        mgr.setServerName(DOMAIN);
+        
         try
         {
-            mgr.addComponent(JireconComponent.SUBDOMAIN, new JireconComponent());
+            mgr.addComponent(
+                SUBDOMAIN, 
+                new JireconComponentImpl(
+                    "jirecon@" + SUBDOMAIN + "." + DOMAIN, 
+                    "./jirecon.properties"));
         }
         catch (ComponentException e)
         {
