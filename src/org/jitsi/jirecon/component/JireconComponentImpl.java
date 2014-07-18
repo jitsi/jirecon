@@ -9,14 +9,124 @@ import java.util.*;
 
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
-import org.dom4j.*;
 import org.jitsi.jirecon.*;
+import org.jitsi.util.Logger;
 import org.xmpp.component.AbstractComponent;
 import org.xmpp.packet.*;
 
 /**
- * Implements <tt>org.xmpp.component.Component</tt> to provide <tt>Jirecon</tt> as an
- * external XMPP component.
+ * Implements <tt>org.xmpp.component.Component</tt> to provide <tt>Jirecon</tt>
+ * as an external XMPP component.
+ * 
+ * In the process of interaction, client is the active side while Jirecon
+ * component is passive side.
+ * <ol>
+ * <li>
+ * 1. Client sends commands to Jirecon component, letting component do
+ * something.</li>
+ * <li>
+ * 2. Jirecon component listens to the commands, records meeting and sends
+ * reply.</li>
+ * </ol>
+ * <p>
+ * 
+ * Here are two simple interaction examples. The numbers in brackets indicate
+ * packet type(see packet introduction below).
+ * 
+ * <pre>
+ * 1. Normal scene
+ * 
+ *   client                                  XMPP component
+ *     |                                            |
+ *     |  'Hey, start recording'(1)                 |
+ * 1   |------------------------------------------->|
+ *     |                    'Roger, initiating'(6)  |
+ * 2   |<-------------------------------------------|
+ *     |           'Hey, recording has started'(3)  |
+ * 3   |<-------------------------------------------|
+ *     |  'Roger'(8)                                |
+ * 4   |------------------------------------------->|
+ *     |                                            |
+ *     |               Recording...                 |
+ *     |                                            |
+ *     |  'Hey, stop recording'(2)                  |
+ * 5   |------------------------------------------->|
+ *     |                      'Roger, stopping'(7)  |
+ * 6   |<-------------------------------------------|
+ *     |           'Hey, recording has stopped'(4)  |
+ * 7   |<-------------------------------------------|
+ *     |  'Roger'(8)                                |
+ * 8   |------------------------------------------->|
+ *     |                                            |
+ * 
+ * 
+ * 2. Abnormal scene
+ * 
+ *   client                                  XMPP component
+ *     |                                            |
+ *     |  'Hey, start recording'(1)                 |
+ * 1   |------------------------------------------->|
+ *     |                    'Roger, initiating'(6)  |
+ * 2   |<-------------------------------------------|
+ *     |           'Hey, recording has started'(3)  |
+ * 3   |<-------------------------------------------|
+ *     |  'Roger'(8)                                |
+ * 4   |------------------------------------------->|
+ *     |                                            |
+ *     |               Recording...                 |
+ *     |                                            |
+ *     |           'Hey, recording has aborted'(5)  |
+ * 5   |<-------------------------------------------|
+ *     |  'Roger'(8)                                |
+ * 6   |------------------------------------------->|
+ *     |                                            |
+ * </pre>
+ * <p>
+ * 
+ * Some rules:
+ * <ol>
+ * <li>
+ * 1. All packet should set "rid" in order to identify recording session, except
+ * for the first command packet sent from client, because ONLY Jirecon component
+ * can generate "rid".</li>
+ * <li>
+ * 2. All packet sent from Jirecon component should set "status", to tell client
+ * how's the recording session going.</li>
+ * </ol>
+ * 
+ * Now we come up with 8 type of IQ packet(IQ-set or IQ-result) of interaction:
+ * 
+ * <pre>
+ * +----+----+-------+--------+----------+----------+------------------+
+ * |No. |id  |action |status  |From      |To        |Meaning           |
+ * +----+----+-------+--------+----------+----------+------------------+
+ * |1   |    |start  |        |client    |component |Start a recording |
+ * +----+----+-------+--------+----------+----------+------------------+
+ * |2   |yes |stop   |        |client    |component |Stop a recording  |
+ * +----+----+-------+--------+----------+----------+------------------+
+ * |3   |yes |info   |started |component |client    |Notify client the |
+ * |    |    |       |        |          |          |recording has     |
+ * |    |    |       |        |          |          |started           |
+ * +----+----+-------+--------+----------+----------+------------------+
+ * |4   |yes |info   |stopped |component |client    |Notify client the |
+ * |    |    |       |        |          |          |recording has     |
+ * |    |    |       |        |          |          |stopped           |
+ * +----+----+-------+--------+----------+----------+------------------+
+ * |5   |yes |info   |aborted |component |client    |Notify client the |
+ * |    |    |       |        |          |          |recording has     |
+ * |    |    |       |        |          |          |aborted           |
+ * +----+----+-------+--------+----------+----------+------------------+
+ * |6   |yes |info   |initiat-|component |client    |Notify client the |
+ * |    |    |       |ing     |          |          |recording is      |
+ * |    |    |       |        |          |          |initiating        |
+ * +----+----+-------+--------+----------+----------+------------------+
+ * |7   |yes |info   |stopping|component |client    |Notify client the |
+ * |    |    |       |        |          |          |recording is      |
+ * |    |    |       |        |          |          |stopping          |
+ * +----+----+-------+--------+----------+----------+------------------+
+ * |8   |yes |info   |        |client    |component |Ack packet        |
+ * +----+----+-------+--------+----------+----------+------------------+
+ * </pre>
  * 
  * @author lishunyang
  * @see Jirecon
@@ -26,18 +136,38 @@ public class JireconComponentImpl
     implements JireconEventListener
 {
     /**
+     * Logger.
+     */
+    public static Logger logger = Logger.getLogger(JireconComponentImpl.class);
+
+    /**
      * Configuration file path.
      */
     public String configurationPath;
-    
+
+    /**
+     * Local jid.
+     */
     private String localJid;
 
+    /**
+     * Name of component.
+     */
     private final String name = "Jirecon component";
-    
+
+    /**
+     * Description of component.
+     */
     private final String description = "Jirecon component.";
 
+    /**
+     * Main part of <tt>JireconComponent</tt>.
+     */
     private Jirecon jirecon = new JireconImpl();
 
+    /**
+     * Recording sessions. It is used for caching some information.
+     */
     private List<RecordingSession> recordingSessions =
         new LinkedList<RecordingSession>();
 
@@ -53,6 +183,12 @@ public class JireconComponentImpl
      */
     private boolean isStarted = false;
 
+    /**
+     * Construction method.
+     * 
+     * @param localJid Jid of this component.
+     * @param configurationPath Path of configuration file.
+     */
     public JireconComponentImpl(String localJid, String configurationPath)
     {
         this.localJid = localJid;
@@ -79,7 +215,7 @@ public class JireconComponentImpl
             return;
         }
 
-        System.out.println("Start Jireocn component");
+        logger.info("Start Jireocn component");
 
         jirecon.addEventListener(this);
         try
@@ -94,14 +230,18 @@ public class JireconComponentImpl
 
         isStarted = true;
 
-        System.out.println("Jireocn component has been started successfully.");
+        logger.info("Jireocn component has been started successfully.");
     }
 
     @Override
     public void preComponentShutdown()
     {
-        System.out.println("Shutdown Jireocn component");
+        logger.info("Shutdown Jireocn component");
 
+        /*
+         * If there is any recording session hasn'e been finished, "uninit"
+         * method will stop them.
+         */
         jirecon.uninit();
         jirecon.removeEventListener(this);
 
@@ -109,17 +249,9 @@ public class JireconComponentImpl
     }
 
     @Override
-    protected void send(Packet packet)
-    {
-        System.out.println("SEND: " + packet.toXML());
-
-        super.send(packet);
-    }
-
-    @Override
     protected IQ handleIQGet(IQ iq)
     {
-        System.out.println("RECV IQGET: " + iq.toXML());
+        // System.out.println("RECV IQGET: " + iq.toXML());
 
         /*
          * According to the documentation of AbstracComponent, We have to return
@@ -130,23 +262,21 @@ public class JireconComponentImpl
     }
 
     @Override
-    protected IQ handleIQSet(IQ iq) 
-        throws Exception
+    protected IQ handleIQSet(IQ iq) throws Exception
     {
-        System.out.println("RECV IQSET: " + iq.toXML());
+        logger.info("RECV IQSET: " + iq.toXML());
 
-        final String action = RecordingIQUtils.getAttribute(iq, RecordingIQUtils.ACTION_NAME);
+        final String action =
+            RecordingIqUtils.getAttribute(iq, RecordingIqUtils.ACTION_NAME);
         IQ result = null;
 
         // Start recording
-        if (RecordingIQUtils
-            .actionsEqual(RecordingIQUtils.Action.START, action))
+        if (0 == action.compareTo(RecordingIqUtils.Action.START.toString()))
         {
             result = startRecording(iq);
         }
         // Stop recording.
-        else if (RecordingIQUtils.
-            actionsEqual(RecordingIQUtils.Action.STOP, action))
+        else if (0 == action.compareTo(RecordingIqUtils.Action.STOP.toString()))
         {
             result = stopRecording(iq);
         }
@@ -154,11 +284,15 @@ public class JireconComponentImpl
         return result;
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * Handle event from <tt>Jirecon</tt>, such as some recording task has been
+     * started/stopped/aborted.
+     */
     @Override
     public void handleEvent(JireconEvent evt)
     {
-        System.out.println("Task: " + evt.getMucJid() + " " + evt.getType());
-
         final String mucJid = evt.getMucJid();
         RecordingSession session = null;
 
@@ -178,36 +312,33 @@ public class JireconComponentImpl
                 return;
 
             IQ notification = null;
+
             if (JireconEvent.Type.TASK_ABORTED == evt.getType())
             {
                 jirecon.stopJireconTask(evt.getMucJid(), false);
                 recordingSessions.remove(session);
-                
+
                 notification =
-                    createIqSet(
-                        session, 
-                        RecordingIQUtils.Status.ABORTED.toString(), 
+                    createIqSet(session,
+                        RecordingIqUtils.Status.ABORTED.toString(),
                         session.getRid());
             }
             else if (JireconEvent.Type.TASK_FINISED == evt.getType())
             {
                 jirecon.stopJireconTask(evt.getMucJid(), true);
                 recordingSessions.remove(session);
-                
+
                 notification =
-                    createIqSet(
-                        session,
-                        RecordingIQUtils.Status.STOPPED.toString(),
+                    createIqSet(session,
+                        RecordingIqUtils.Status.STOPPED.toString(),
                         session.getRid());
             }
             else if (JireconEvent.Type.TASK_STARTED == evt.getType())
             {
                 notification =
-                    createIqSet(
-                        session,
-                        RecordingIQUtils.Status.STARTED.toString(),
-                        session.getRid(), 
-                        session.getOutputPath());
+                    createIqSet(session,
+                        RecordingIqUtils.Status.STARTED.toString(),
+                        session.getRid(), session.getOutputPath());
             }
 
             if (null != notification)
@@ -217,11 +348,16 @@ public class JireconComponentImpl
         }
     }
 
+    /**
+     * Start a recording session according to a "start" command IQ.
+     * 
+     * @param iq "start" command IQ.
+     * @return The result IQ which will be sent back to client.
+     */
     private IQ startRecording(IQ iq)
     {
-        final Element element = iq.getChildElement();
-
-        String mucJid = element.attribute("mucjid").getValue();
+        String mucJid =
+            RecordingIqUtils.getAttribute(iq, RecordingIqUtils.MUCJID_NAME);
         /*
          * Here we cut the 'resource' part of full-jid, because it seems that we
          * can't join a MUC with full-jid.
@@ -230,7 +366,7 @@ public class JireconComponentImpl
 
         RecordingSession session =
             new RecordingSession(mucJid, iq.getFrom().toString());
-        
+
         synchronized (recordingSessions)
         {
             recordingSessions.add(session);
@@ -238,13 +374,20 @@ public class JireconComponentImpl
 
         jirecon.startJireconTask(mucJid);
 
-        return createIqResult(iq, "initiating", session.getRid());
+        return createIqResult(iq,
+            RecordingIqUtils.Status.INITIATING.toString(), session.getRid());
     }
 
+    /**
+     * Stop a specified recording session according to a "stop" command IQ.
+     * 
+     * @param iq "stop" command IQ.
+     * @return The result IQ which will be sent back to client.
+     */
     private IQ stopRecording(IQ iq)
     {
-        final Element element = iq.getChildElement();
-        final String rid = element.attribute("rid").getValue();
+        final String rid =
+            RecordingIqUtils.getAttribute(iq, RecordingIqUtils.RID_NAME);
 
         RecordingSession session = null;
         synchronized (recordingSessions)
@@ -265,13 +408,14 @@ public class JireconComponentImpl
             jirecon.stopJireconTask(session.getMucJid(), true);
         }
 
-        return createIqResult(iq, "stopping", rid);
+        return createIqResult(iq, RecordingIqUtils.Status.STOPPING.toString(),
+            rid);
     }
 
     /**
-     * As for <tt>JireconComponent</tt>, there are two kinds of "result" IQ
-     * (action="notification"). The only difference between them is the
-     * attribute "status":
+     * As for <tt>JireconComponent</tt>, it will send two kinds of "result" IQ
+     * (action="info"). The only difference between them is the attribute
+     * "status":
      * <ol>
      * <li>
      * "initiating". Notify client the "start" command has been received.</li>
@@ -282,30 +426,25 @@ public class JireconComponentImpl
      * <strong>Warning:</strong> These "result" IQs should be sent back to
      * client immediately after receiving "set" IQ.
      * 
-     * @param iq
-     * @param status
-     * @param rid
-     * @return
+     * @param iq Associated IQ.
+     * @param status Value of attribute "status".
+     * @param rid Value of attribute "rid".
+     * @return Result IQ.
      */
     private IQ createIqResult(IQ iq, String status, String rid)
     {
-        IQ result = RecordingIQUtils.createIqResult(iq);
+        IQ result = RecordingIqUtils.createIqResult(iq);
 
-        RecordingIQUtils.addAttribute(
-            result, 
-            RecordingIQUtils.STATUS_NAME, 
+        RecordingIqUtils.addAttribute(result, RecordingIqUtils.STATUS_NAME,
             status);
-        
-        RecordingIQUtils.addAttribute(
-            result, 
-            RecordingIQUtils.RID_NAME, 
-            rid);
+
+        RecordingIqUtils.addAttribute(result, RecordingIqUtils.RID_NAME, rid);
 
         return result;
     }
 
     /**
-     * As for <tt>JireconComponent</tt>, there are three kinds of "set" IQ
+     * As for <tt>JireconComponent</tt>, it will send three kinds of "set" IQ
      * (action="info"). The only difference between them is the attribute
      * "status":
      * <ol>
@@ -317,59 +456,82 @@ public class JireconComponentImpl
      * "aborted". Notify to client that some recording task has been aborted.</li>
      * </ol>
      * 
-     * @param session
-     * @param status
-     * @param rid
-     * @param dst
-     * @return
+     * @param session Associated recording session.
+     * @param status Value of attribute "status".
+     * @param rid Value of attribute "rid".
+     * @param dst Value of attribute "dst".
+     * @return Set IQ.
      */
     private IQ createIqSet(RecordingSession session, String status, String rid,
         String dst)
     {
-        IQ set =
-            RecordingIQUtils.createIqSet(localJid, session.getClientJid());
+        IQ set = RecordingIqUtils.createIqSet(localJid, session.getClientJid());
 
-        RecordingIQUtils.addAttribute(
-            set, 
-            RecordingIQUtils.ACTION_NAME,
-            RecordingIQUtils.Action.INFO.toString());
-        
-        RecordingIQUtils.addAttribute(
-            set, 
-            RecordingIQUtils.OUTPUT_NAME, 
-            dst);
-        
-        RecordingIQUtils.addAttribute(
-            set, 
-            RecordingIQUtils.STATUS_NAME, 
-            status);
-        
+        RecordingIqUtils.addAttribute(set, RecordingIqUtils.ACTION_NAME,
+            RecordingIqUtils.Action.INFO.toString());
+
+        RecordingIqUtils.addAttribute(set, RecordingIqUtils.OUTPUT_NAME, dst);
+
+        RecordingIqUtils
+            .addAttribute(set, RecordingIqUtils.STATUS_NAME, status);
+
         if (null != rid)
         {
-            RecordingIQUtils.addAttribute(
-                set, 
-                RecordingIQUtils.RID_NAME, 
-                rid);
+            RecordingIqUtils.addAttribute(set, RecordingIqUtils.RID_NAME, rid);
         }
 
         return set;
     }
 
+    /**
+     * Create setIQ without attribute "dst".
+     * 
+     * @param session Associated recording session.
+     * @param status Value of attribute "status".
+     * @param rid Value of attribute "rid".
+     * @return Set IQ.
+     */
     private IQ createIqSet(RecordingSession session, String status, String rid)
     {
         return createIqSet(session, status, rid, null);
     }
 
+    /**
+     * Represent a recording session. It's used for encapsulating some
+     * information.
+     * 
+     * @author lishunyang
+     * 
+     */
     private class RecordingSession
     {
+        /**
+         * Recording session id.
+         */
         private String rid;
 
+        /**
+         * Jid of recorded meeting.
+         */
         private String mucJid;
 
+        /**
+         * Jid of client which starts this recording session.
+         */
         private String clientJid;
 
+        /**
+         * Path of recording output files.
+         */
         private String outputPath;
 
+        /**
+         * Construction method.
+         * 
+         * @param mucJid Jid of the recorded meeting.
+         * @param clientJid Jid of the client which starts this recording
+         *            session.
+         */
         public RecordingSession(String mucJid, String clientJid)
         {
             this.rid = generateRid();
@@ -398,6 +560,12 @@ public class JireconComponentImpl
             return outputPath;
         }
 
+        /**
+         * Generate a random rid string(32 chars length) for this recording
+         * session.
+         * 
+         * @return
+         */
         private String generateRid()
         {
             return UUID.randomUUID().toString().replace("-", "");
@@ -406,6 +574,11 @@ public class JireconComponentImpl
         /*
          * TODO: This should be associated with JireconImpl, but we haven't
          * decided the form yet, so just leave it now.
+         */
+        /**
+         * Generate output path.
+         * 
+         * @return
          */
         private String generateOutputPath()
         {
