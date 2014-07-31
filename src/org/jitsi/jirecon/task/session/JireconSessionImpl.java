@@ -15,6 +15,7 @@ import net.java.sip.communicator.service.protocol.OperationFailedException;
 import net.java.sip.communicator.util.Logger;
 
 import org.jitsi.jirecon.extension.MediaExtension;
+import org.jitsi.jirecon.extension.SctpMapExtension;
 import org.jitsi.jirecon.task.*;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
@@ -99,6 +100,10 @@ public class JireconSessionImpl
      */
     private List<JireconSessionPacketListener> packetListeners =
         new ArrayList<JireconSessionPacketListener>();
+    
+    private PacketListener sendingListener;
+    
+    private PacketListener receivingListener;
 
     /**
      * {@inheritDoc}
@@ -134,6 +139,8 @@ public class JireconSessionImpl
     {
         sendByePacket(reason, reasonText);
         leaveMUC();
+        connection.removePacketSendingListener(sendingListener);
+        connection.removePacketListener(receivingListener);
     }
 
     /**
@@ -395,14 +402,9 @@ public class JireconSessionImpl
         
         MediaExtension mediaExt = (MediaExtension) packetExt;
         Map<MediaType, Long> ssrcs = new HashMap<MediaType, Long>();
-        for (MediaType mediaType : MediaType.values())
+        
+        for (MediaType mediaType : new MediaType[] {MediaType.AUDIO, MediaType.VIDEO})
         {
-            // Make sure that we only handle audio or video type.
-            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
-            {
-                continue;
-            }
-
             // TODO: If someone only sends audio, this could be changed. 
             MediaDirection direction =
                 MediaDirection.parseString(mediaExt.getDirection(mediaType
@@ -455,24 +457,59 @@ public class JireconSessionImpl
 
         for (MediaType mediaType : MediaType.values())
         {
-            // Make sure that we only handle audio or video type.
-            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
+            if (!transportPEs.containsKey(mediaType) ||
+                !fingerprintPEs.containsKey(mediaType))
                 continue;
+            
+            /* The packet extension that we will create:) */
+            RtpDescriptionPacketExtension descriptionPE = null;
+            AbstractPacketExtension transportPE = null;
+            AbstractPacketExtension fingerprintPE = null;
+            ContentPacketExtension contentPE = null;
+            SctpMapExtension sctpMapPE = null;
 
-            // 1. Create DescriptionPE.
-            RtpDescriptionPacketExtension descriptionPE =
-                createDescriptionPacketExt(mediaType,
-                    formatAndPTs.get(mediaType), localSsrcs.get(mediaType));
-
-            // 2. Create TransportPE, put FingerprintPE into it.
-            AbstractPacketExtension transportPE = transportPEs.get(mediaType);
-            AbstractPacketExtension fingerprintPE =
+            /*
+             * 1. Create DescriptionPE. Only audio and video need this one.
+             */
+            if (MediaType.AUDIO == mediaType || MediaType.VIDEO == mediaType) 
+            {
+                descriptionPE =
+                    createDescriptionPacketExt(mediaType,
+                        formatAndPTs.get(mediaType), localSsrcs.get(mediaType));
+            }
+            
+            /* 2. Create TransportPE with FingerprintPE. */
+            transportPE = transportPEs.get(mediaType);
+            fingerprintPE =
                 fingerprintPEs.get(mediaType);
             transportPE.addChildExtension(fingerprintPE);
+            
+            /* 3. Create sctpMapPE. Only data need this one. */
+            if (MediaType.DATA == mediaType)
+            {
+                // TODO:
+//                sctpMapPE = new SctpMapExtension();
+//                sctpMapPE.setPort(5000);
+//                sctpMapPE.setProtocol("webrtc-datachannel");
+//                sctpMapPE.setStreams(1024);
+//                System.out.println(sctpMapPE.toXML());
+                transportPE.addPacket(new Packet() {
 
-            // 3. Create Content packet extension with DescriptionPE and
-            // TransportPE above.
-            ContentPacketExtension contentPE =
+                    @Override
+                    public String toXML()
+                    {
+                        return "<sctpmap xmlns=\"urn:xmpp:jingle:transports:dtls-sctp:1\" number=\"5000\" protocol=\"webrtc-datachannel\" streams=\"1024\"/>";
+                    }
+                    
+                });
+                System.out.println(transportPE.toXML());
+            }
+
+            /*
+             * 4. Create Content packet extension with DescriptionPE(could be
+             * null) and TransportPE above.
+             */
+            contentPE =
                 createContentPacketExtension(mediaType.toString(),
                     descriptionPE, transportPE);
 
@@ -508,7 +545,10 @@ public class JireconSessionImpl
         content.setCreator(CreatorEnum.responder);
         content.setName(name);
         content.setSenders(SendersEnum.initiator);
-        content.addChildExtension(descriptionPE);
+        if (null != descriptionPE)
+        {
+            content.addChildExtension(descriptionPE);
+        }
         content.addChildExtension(transportPE);
 
         return content;
@@ -556,7 +596,7 @@ public class JireconSessionImpl
         // 4. Set source information.
         SourcePacketExtension sourcePacketExtension =
             new SourcePacketExtension();
-        final String label = mediaType.toString();
+        final String label = UUID.randomUUID().toString().replace("-", "");
         sourcePacketExtension.setSSRC(localSsrc);
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
             "cname", mediaService.getRtpCname()));
@@ -629,14 +669,16 @@ public class JireconSessionImpl
      */
     private void addPacketSendingListener()
     {
-        connection.addPacketSendingListener(new PacketListener()
+        sendingListener = new PacketListener()
         {
             @Override
             public void processPacket(Packet packet)
             {
                 logger.info("--->: " + packet.toXML());
             }
-        }, new PacketFilter()
+        };
+
+        connection.addPacketSendingListener(sendingListener, new PacketFilter()
         {
             @Override
             public boolean accept(Packet packet)
@@ -654,7 +696,7 @@ public class JireconSessionImpl
      */
     private void addPacketReceivingListener()
     {
-        connection.addPacketListener(new PacketListener()
+        receivingListener = new PacketListener()
         {
             @Override
             public void processPacket(Packet packet)
@@ -662,7 +704,9 @@ public class JireconSessionImpl
                 logger.info(packet.getClass() + "<---: " + packet.toXML());
                 handlePacket(packet);
             }
-        }, new PacketFilter()
+        };
+
+        connection.addPacketListener(receivingListener, new PacketFilter()
         {
             @Override
             public boolean accept(Packet packet)

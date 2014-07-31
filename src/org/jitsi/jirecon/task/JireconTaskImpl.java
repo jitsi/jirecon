@@ -15,6 +15,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.dtlscontrol.*;
+import org.jitsi.jirecon.extension.SctpMapExtension;
+import org.jitsi.jirecon.task.data.JireconSctpConnection;
 import org.jitsi.jirecon.task.recorder.*;
 import org.jitsi.jirecon.task.session.*;
 import org.jitsi.jirecon.transport.*;
@@ -25,6 +27,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jitsi.util.Logger;
 import org.jivesoftware.smack.*;
+import org.xmpp.packet.Packet;
 
 /**
  * An implementation of <tt>JireconTask</tt>. It is designed in Mediator
@@ -68,6 +71,8 @@ public class JireconTaskImpl
      * The instance of <tt>SrtpControlManager</tt>.
      */
     private SrtpControlManager srtpControl;
+    
+    private JireconSctpConnection sctpConnection;
 
     /**
      * The instance of <tt>JireconRecorder</tt>.
@@ -96,6 +101,9 @@ public class JireconTaskImpl
      * system.
      */
     private JireconTaskInfo info = new JireconTaskInfo();
+    
+    // TODO: This is the debug toggle.
+    private boolean enableSctp = true;
 
     /**
      * {@inheritDoc}
@@ -132,6 +140,8 @@ public class JireconTaskImpl
         recorder = new JireconRecorderImpl();
         recorder.addTaskEventListener(this);
         recorder.init(savingDir, srtpControl.getAllSrtpControl());
+        
+        sctpConnection = new JireconSctpConnection();
     }
 
     /**
@@ -205,67 +215,107 @@ public class JireconTaskImpl
     {
         try
         {
-            // 1. Join MUC.
+            /* 1. Join MUC. */
             session.joinMUC(info.getMucJid(), info.getNickname());
             
-            // 2. Wait for session-init packet.
+            /* 2. Wait for session-init packet. */
             JingleIQ initIq = session.waitForInitPacket();
+            
+            /*
+             * 3. Harvest local candidates. (audio type, video type and data
+             * type.)
+             */
+            // TODO: We should examine session-init packet first and then deciede
+            // whether we should harvest data type.
+            for (MediaType mediaType : MediaType.values())
+            {
+                if (!enableSctp && MediaType.DATA == mediaType)
+                    continue;
+                
+                transport.harvestLocalCandidates(mediaType);
+            }
 
-            // 3. Harvest local candidates.
-            transport.harvestLocalCandidates();
+            /*
+             * 4.1 Prepare for sending session-accept packet.
+             */
+            Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs = new HashMap<MediaType, Map<MediaFormat, Byte>>();
+            for (MediaType mediaType : new MediaType[] {MediaType.AUDIO, MediaType.VIDEO})
+            {
+                formatAndPTs.put(mediaType, JinglePacketParser
+                    .getFormatAndDynamicPTs(initIq, mediaType));
+            }
 
-            // 4.1 Prepare for sending session-accept packet.
-            // Media format and dynamic payload type id.
-            Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs =
-                JinglePacketParser.getFormatAndDynamicPTs(initIq);
-
-            // 4.2 Send session-accept packet.
-            // Local ssrc.
             Map<MediaType, Long> localSsrcs = recorder.getLocalSsrcs();
             
             // Transport packet extension.
             Map<MediaType, AbstractPacketExtension> transportPEs =
                 new HashMap<MediaType, AbstractPacketExtension>();
-            transportPEs.put(MediaType.AUDIO, transport.getTransportPacketExt(MediaType.AUDIO));
-            transportPEs.put(MediaType.VIDEO, transport.getTransportPacketExt(MediaType.VIDEO));
-            
+            for (MediaType mediaType : MediaType.values())
+            {
+                if (!enableSctp && MediaType.DATA == mediaType)
+                    continue;
+                
+                transportPEs.put(mediaType,
+                    transport.getTransportPacketExt(mediaType));
+            }
+
             // Fingerprint packet extension.
             Map<MediaType, AbstractPacketExtension> fingerprintPEs =
                 new HashMap<MediaType, AbstractPacketExtension>();
-            fingerprintPEs.put(MediaType.AUDIO, srtpControl.getFingerprintPacketExt(MediaType.AUDIO));
-            fingerprintPEs.put(MediaType.VIDEO, srtpControl.getFingerprintPacketExt(MediaType.VIDEO));
+            for (MediaType mediaType : MediaType.values())
+            {
+                if (!enableSctp && MediaType.DATA == mediaType)
+                    continue;
+                
+                fingerprintPEs.put(mediaType,
+                    srtpControl.getFingerprintPacketExt(mediaType));
+            }
 
+            /* 4.2 Send session-accept packet. */
             session.sendAcceptPacket(formatAndPTs, localSsrcs, transportPEs,
                 fingerprintPEs);
 
-            // 4.3 Wait for session-ack packet.
+            /* 4.3 Wait for session-ack packet. */
             session.waitForResultPacket();
 
-            // 5.1 Prepare for ICE connectivity establishment.
-            // Harvest remote candidates.
-            Map<MediaType, IceUdpTransportPacketExtension> remoteTransportPEs =
-                JinglePacketParser.getTransportPacketExts(initIq);
+            /*
+             * 5.1 Prepare for ICE connectivity establishment. Harvest remote
+             * candidates.
+             */
+            Map<MediaType, IceUdpTransportPacketExtension> remoteTransportPEs = new HashMap<MediaType, IceUdpTransportPacketExtension>();
+            for (MediaType mediaType : MediaType.values())
+            {
+                if (!enableSctp && MediaType.DATA == mediaType)
+                    continue;
+                
+                remoteTransportPEs.put(mediaType, JinglePacketParser.getTransportPacketExt(initIq, mediaType));
+            }
             transport.harvestRemoteCandidates(remoteTransportPEs);
 
-            // 5.2 Start establishing ICE connectivity. 
-            // Warning: that this method is asynchronous method.
+            /*
+             * 5.2 Start establishing ICE connectivity. Warning: that this
+             * method is asynchronous method.
+             */
             transport.startConnectivityEstablishment();
 
-            // 6.1 Prepare for recording.
-            // Once transport manager has selected candidates pairs, we can get
-            // stream connectors from it, otherwise we have to wait. Notice that
-            // if ICE connectivity establishment doesn't get selected pairs for
-            // a specified time(MAX_WAIT_TIME), we must break the task.
+            /* 6.1 Start Receiving SCTP data. */
+            StreamConnector connector = transport.getStreamConnector(MediaType.DATA);
+            MediaStreamTarget target = transport.getStreamTarget(MediaType.DATA);
+            sctpConnection.start(connector, target);
+            
+            /*
+             * 7.1 Prepare for recording. Once transport manager has selected
+             * candidates pairs, we can get stream connectors from it, otherwise
+             * we have to wait. Notice that if ICE connectivity establishment
+             * doesn't get selected pairs for a specified time(MAX_WAIT_TIME),
+             * we must break the task.
+             */
             Map<MediaType, StreamConnector> streamConnectors =
                 new HashMap<MediaType, StreamConnector>();
             Map<MediaType, MediaStreamTarget> mediaStreamTargets =
                 new HashMap<MediaType, MediaStreamTarget>();
-            for (MediaType mediaType : MediaType.values())
+            for (MediaType mediaType : new MediaType[] {MediaType.AUDIO, MediaType.VIDEO})
             {
-                if (mediaType != MediaType.AUDIO
-                    && mediaType != MediaType.VIDEO)
-                    continue;
-
                 StreamConnector streamConnector =
                     transport.getStreamConnector(mediaType);
                 streamConnectors.put(mediaType, streamConnector);
@@ -274,8 +324,8 @@ public class JireconTaskImpl
                     transport.getStreamTarget(mediaType);
                 mediaStreamTargets.put(mediaType, mediaStreamTarget);
             }
-
-            // 6.2 Start recording.
+            
+            /* 7.2 Start recording. */
             recorder.startRecording(formatAndPTs, streamConnectors,
                 mediaStreamTargets);
             

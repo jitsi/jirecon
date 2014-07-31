@@ -7,8 +7,10 @@ package org.jitsi.jirecon;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.*;
+
 import org.jitsi.jirecon.extension.*;
 import org.jitsi.jirecon.task.*;
 import org.jitsi.jirecon.utils.*;
@@ -97,6 +99,7 @@ public class JireconImpl
 
         System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_NAME,
             configurationPath);
+        System.setProperty(ConfigurationService.PNAME_CONFIGURATION_FILE_IS_READ_ONLY, "true");
         final ConfigurationService configuration = LibJitsi.getConfigurationService();
         
         baseOutputDir =
@@ -267,6 +270,8 @@ public class JireconImpl
             JingleIQ.NAMESPACE, new JingleIQProvider());
         providerManager.addExtensionProvider(MediaExtension.ELEMENT_NAME,
             MediaExtension.NAMESPACE, new MediaExtensionProvider());
+        providerManager.addExtensionProvider(SctpMapExtension.ELEMENT_NAME,
+            SctpMapExtension.NAMESPACE, new SctpMapExtensionProvider());
     }
 
     /**

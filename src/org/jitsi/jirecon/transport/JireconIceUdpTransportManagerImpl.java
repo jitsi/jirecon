@@ -120,20 +120,17 @@ public class JireconIceUdpTransportManagerImpl
     {
         logger.info("getTransportPacketExt");
         
-        // Now, both audio and video's transport packet extension are same. So I
-        // don't use mediaType.
-        
         IceUdpTransportPacketExtension transportPE =
             new IceUdpTransportPacketExtension();
         
         transportPE.setPassword(iceAgent.getLocalPassword());
         transportPE.setUfrag(iceAgent.getLocalUfrag());
-        
+
         for (CandidatePacketExtension candidatePE : getLocalCandidatePacketExts(mediaType))
         {
             transportPE.addCandidate(candidatePE);
         }
-        
+
         return transportPE;
     }
 
@@ -251,32 +248,33 @@ public class JireconIceUdpTransportManagerImpl
      * {@inheritDoc}
      */
     @Override
-    public void harvestLocalCandidates() 
+    public void harvestLocalCandidates(MediaType mediaType) 
         throws OperationFailedException
     {
         logger.info("harvestLocalCandidates");
-        for (MediaType mediaType : MediaType.values())
-        {
-            // Make sure that we only handle audio or video type.
-            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
-            {
-                continue;
-            }
 
-            final IceMediaStream stream = getIceMediaStream(mediaType);
-            try
+        final IceMediaStream stream = getIceMediaStream(mediaType);
+
+        try
+        {
+            iceAgent.createComponent(stream, Transport.UDP, MIN_STREAM_PORT,
+                MIN_STREAM_PORT, MAX_STREAM_PORT);
+
+            /*
+             * Only audio and video type need 2 component, one for RTP
+             * transmission and one for RTCP transmission.
+             */
+            if (MediaType.AUDIO == mediaType || MediaType.VIDEO == mediaType)
             {
                 iceAgent.createComponent(stream, Transport.UDP,
                     MIN_STREAM_PORT, MIN_STREAM_PORT, MAX_STREAM_PORT);
-                iceAgent.createComponent(stream, Transport.UDP,
-                    MIN_STREAM_PORT, MIN_STREAM_PORT, MAX_STREAM_PORT);
             }
-            catch (Exception e)
-            {
-                throw new OperationFailedException(
-                    "Could not create ICE component, " + e.getMessage(),
-                    OperationFailedException.GENERAL_ERROR);
-            }
+        }
+        catch (Exception e)
+        {
+            throw new OperationFailedException(
+                "Could not create ICE component, " + e.getMessage(),
+                OperationFailedException.GENERAL_ERROR);
         }
     }
 
@@ -294,6 +292,8 @@ public class JireconIceUdpTransportManagerImpl
             final MediaType mediaType = e.getKey();
             final IceUdpTransportPacketExtension transportPE = e.getValue();
             final IceMediaStream stream = getIceMediaStream(mediaType);
+            
+            System.out.println(mediaType + " " + transportPE.toXML());
 
             final String ufrag =
                 JinglePacketParser.getTransportUfrag(transportPE);
@@ -430,9 +430,6 @@ public class JireconIceUdpTransportManagerImpl
         if (mediaStreamTargets.containsKey(mediaType))
             return mediaStreamTargets.get(mediaType);
 
-        if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
-            return null;
-
         IceMediaStream stream = getIceMediaStream(mediaType);
         MediaStreamTarget streamTarget = null;
         if (stream != null)
@@ -459,7 +456,7 @@ public class JireconIceUdpTransportManagerImpl
                     }
                 }
             }
-            if (streamTargetAddresses.size() >= 2)
+            if (streamTargetAddresses.size() == 2)
             {
                 streamTarget =
                     new MediaStreamTarget(
@@ -467,7 +464,16 @@ public class JireconIceUdpTransportManagerImpl
                         streamTargetAddresses.get(1) /* RTCP */);
                 mediaStreamTargets.put(mediaType, streamTarget);
             }
+            else if (streamTargetAddresses.size() == 1)
+            {
+                streamTarget =
+                    new MediaStreamTarget(
+                        streamTargetAddresses.get(0) /* RTP */,
+                        null);
+                mediaStreamTargets.put(mediaType, streamTarget);
+            }
         }
+        
         return streamTarget;
     }
 
@@ -484,12 +490,10 @@ public class JireconIceUdpTransportManagerImpl
     public StreamConnector getStreamConnector(MediaType mediaType)
         throws OperationFailedException
     {
-        logger.info("getStreamConnector");
+        logger.info("getStreamConnector " + mediaType);
         
         if (streamConnectors.containsKey(mediaType))
             return streamConnectors.get(mediaType);
-        if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
-            return null;
 
         int sumWaitTime = 0;
         while (sumWaitTime <= MAX_WAIT_TIME)
@@ -526,15 +530,19 @@ public class JireconIceUdpTransportManagerImpl
                 OperationFailedException.GENERAL_ERROR);
         }
 
-        final CandidatePair rtpPair =
-            stream.getComponent(Component.RTP).getSelectedPair();
-        final CandidatePair rtcpPair =
-            stream.getComponent(Component.RTCP).getSelectedPair();
+        CandidatePair rtpPair = null;
+        CandidatePair rtcpPair = null;
+        DatagramSocket rtpSocket = null;
+        DatagramSocket rtcpSocket = null;
 
-        final DatagramSocket rtpSocket =
-            rtpPair.getLocalCandidate().getDatagramSocket();
-        final DatagramSocket rtcpSocket =
-            rtcpPair.getLocalCandidate().getDatagramSocket();
+        rtpPair = stream.getComponent(Component.RTP).getSelectedPair();
+        rtpSocket = rtpPair.getLocalCandidate().getDatagramSocket();
+        
+        if (MediaType.AUDIO == mediaType || MediaType.VIDEO == mediaType)
+        {
+            rtcpPair = stream.getComponent(Component.RTCP).getSelectedPair();
+            rtcpSocket = rtcpPair.getLocalCandidate().getDatagramSocket();
+        }
 
         streamConnector = new DefaultStreamConnector(rtpSocket, rtcpSocket);
 

@@ -37,27 +37,10 @@ public class DtlsControlManagerImpl
     private String hashFunction;
 
     /**
-     * Initializes a new <tt>DtlsControlManagerImpl</tt> instance, create
-     * <tt>DtlsControl</tt> for both audio and video.
-     * <p>
-     * <strong>Warning:</strong> <tt>DtlsControlManagerImpl</tt> relies on
-     * <tt>LibJitsi</tt> service, so <tt>LibJitsi</tt> must be started before
-     * calling this method.
+     * Construction method.
      */
     public DtlsControlManagerImpl()
     {
-        MediaService mediaService = LibJitsi.getMediaService();
-
-        for (MediaType mediaType : MediaType.values())
-        {
-            if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
-                continue;
-            DtlsControl control =
-                (DtlsControl) mediaService
-                    .createSrtpControl(SrtpControlType.DTLS_SRTP);
-            dtlsControls.put(mediaType, control);
-            control.setSetup(DtlsControl.Setup.ACTIVE);
-        }
     }
 
     /**
@@ -66,7 +49,7 @@ public class DtlsControlManagerImpl
     @Override
     public void addRemoteFingerprint(MediaType mediaType, String fingerprint)
     {
-        final DtlsControl dtlsControl = dtlsControls.get(mediaType);
+        final DtlsControl dtlsControl = getDtlsControl(mediaType);
         final Map<String, String> fingerprints = new HashMap<String, String>();
         fingerprints.put(hashFunction, fingerprint);
         dtlsControl.setRemoteFingerprints(fingerprints);
@@ -78,7 +61,7 @@ public class DtlsControlManagerImpl
     @Override
     public String getLocalFingerprint(MediaType mediaType)
     {
-        return dtlsControls.get(mediaType).getLocalFingerprint();
+        return getDtlsControl(mediaType).getLocalFingerprint();
     }
 
     /**
@@ -87,7 +70,7 @@ public class DtlsControlManagerImpl
     @Override
     public String getLocalFingerprintHashFunction(MediaType mediaType)
     {
-        return dtlsControls.get(mediaType).getLocalFingerprintHashFunction();
+        return getDtlsControl(mediaType).getLocalFingerprintHashFunction();
     }
 
     /**
@@ -96,7 +79,7 @@ public class DtlsControlManagerImpl
     @Override
     public SrtpControl getSrtpControl(MediaType mediaType)
     {
-        return dtlsControls.get(mediaType);
+        return getDtlsControl(mediaType);
     }
 
     /**
@@ -107,10 +90,12 @@ public class DtlsControlManagerImpl
     {
         Map<MediaType, SrtpControl> controls =
             new HashMap<MediaType, SrtpControl>();
-        for (Entry<MediaType, DtlsControl> e : dtlsControls.entrySet())
+        
+        for (MediaType mediaType : MediaType.values())
         {
-            controls.put(e.getKey(), e.getValue());
+            controls.put(mediaType, getDtlsControl(mediaType));
         }
+        
         return controls;
     }
 
@@ -122,7 +107,7 @@ public class DtlsControlManagerImpl
     {
         this.hashFunction = hash;
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -154,12 +139,43 @@ public class DtlsControlManagerImpl
     /**
      * {@inheritDoc}
      * <p>
-     * This method hasn't been used, because <tt>MediaStream</tt> will clean
-     * DTLS control.
+     * Note: <tt>MediaStream</tt> will clean DTLS control by the way, so if you
+     * add srtp controller to <tt>MediaStream</tt>, you don't need to call this
+     * method.
      */
     @Override
     public void stopSrtpControl(MediaType mediaType)
     {
-        dtlsControls.get(mediaType).cleanup();
+        final DtlsControl control = getDtlsControl(mediaType);
+
+        if (null != control)
+        {
+            dtlsControls.get(mediaType).cleanup();
+        }
+    }
+
+    /**
+     * Get <tt>DtlsControl</tt> of a specified <tt>MediaType</tt>, if it doens't
+     * exist, just create a new one.
+     * 
+     * @param mediaType
+     * @return
+     */
+    private DtlsControl getDtlsControl(MediaType mediaType)
+    {
+        DtlsControl control = dtlsControls.get(mediaType);
+
+        if (null == control)
+        {
+            MediaService mediaService = LibJitsi.getMediaService();
+
+            control =
+                (DtlsControl) mediaService
+                    .createSrtpControl(SrtpControlType.DTLS_SRTP);
+            dtlsControls.put(mediaType, control);
+            control.setSetup(DtlsControl.Setup.ACTIVE);
+        }
+
+        return control;
     }
 }

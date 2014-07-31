@@ -27,11 +27,12 @@ public interface JireconTransportManager
     public void free();
 
     /**
-     * Harvest local candidates.
+     * Harvest local candidates of specified <tt>MediaType</tt>.
      * 
-     * @exception OperationFailedException if some thing failed.
+     * @mediaType
+     * @throws OperationFailedException if some thing failed.
      */
-    public void harvestLocalCandidates() 
+    public void harvestLocalCandidates(MediaType mediaType) 
         throws OperationFailedException;
 
     /**

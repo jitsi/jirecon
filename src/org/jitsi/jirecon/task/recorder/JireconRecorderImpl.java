@@ -168,9 +168,12 @@ public class JireconRecorderImpl
         {
             final MediaType mediaType = e.getKey();
             final MediaStream stream = e.getValue();
-
+            
+            StreamConnector s = connectors.get(mediaType); // TODO: Debug
+            
             stream.setConnector(connectors.get(mediaType));
             stream.setTarget(targets.get(mediaType));
+            
             for (Entry<MediaFormat, Byte> f : formatAndPTs.get(mediaType)
                 .entrySet())
             {

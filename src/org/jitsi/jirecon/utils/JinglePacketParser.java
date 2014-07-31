@@ -181,15 +181,17 @@ public class JinglePacketParser
 
         for (MediaType mediaType : MediaType.values())
         {
-            if (mediaType != MediaType.AUDIO && mediaType != MediaType.VIDEO)
-                continue;
-
-            transportPEs.put(mediaType, getTransportPacketExt(jiq, mediaType));
+            IceUdpTransportPacketExtension transportPE = getTransportPacketExt(jiq, mediaType);
+            
+            if (null != transportPE)
+            {
+                transportPEs.put(mediaType, transportPE);
+            }
         }
 
         return transportPEs;
     }
-
+    
     /**
      * Get ufrag from a <tt>JingleIQ</tt> of specified <tt>MediaType</tt>.
      * 
@@ -297,40 +299,26 @@ public class JinglePacketParser
 
     /**
      * Get maps between <tt>MediaFormat</tt> and dynamic payload type id from a
-     * specified <tt>JingleIQ</tt>.
+     * specified <tt>JingleIQ</tt> and <tt>MediaType</tt>.
      * 
      * @param jiq
      * @return map between <tt>MediaFormat</tt> and dynamic payload type id.
      */
-    public static Map<MediaType, Map<MediaFormat, Byte>> getFormatAndDynamicPTs(JingleIQ jiq)
+    public static Map<MediaFormat, Byte> getFormatAndDynamicPTs(JingleIQ jiq, MediaType mediaType)
     {
-        Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs =
-            new HashMap<MediaType, Map<MediaFormat, Byte>>();
+        final Map<MediaFormat, Byte> formatAndPTs = new HashMap<MediaFormat, Byte>();
         final MediaFormatFactoryImpl fmtFactory = new MediaFormatFactoryImpl();
 
-        for (MediaType mediaType : MediaType.values())
+        // TODO: Video format only support RED only at present.
+        for (PayloadTypePacketExtension payloadTypePacketExt : getPayloadTypePacketExts(
+            jiq, mediaType))
         {
-            // Make sure that we only handle audio or video type.
-            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
-            {
-                continue;
-            }
-
-            Map<MediaFormat, Byte> formatAndPT = new HashMap<MediaFormat, Byte>();
-            // TODO: Video format only support RED only at present.
-            for (PayloadTypePacketExtension payloadTypePacketExt : getPayloadTypePacketExts(
-                jiq, mediaType))
-            {
-                MediaFormat format =
-                    fmtFactory.createMediaFormat(
-                        payloadTypePacketExt.getName(),
-                        payloadTypePacketExt.getClockrate(),
-                        payloadTypePacketExt.getChannels());
-                if (format != null)
-                    formatAndPT.put(format, (byte) (payloadTypePacketExt.getID()));
-            }
-            
-            formatAndPTs.put(mediaType, formatAndPT);
+            MediaFormat format =
+                fmtFactory.createMediaFormat(payloadTypePacketExt.getName(),
+                    payloadTypePacketExt.getClockrate(),
+                    payloadTypePacketExt.getChannels());
+            if (format != null)
+                formatAndPTs.put(format, (byte) (payloadTypePacketExt.getID()));
         }
 
         return formatAndPTs;
@@ -347,11 +335,6 @@ public class JinglePacketParser
         Map<MediaType, String> fingerprints = new HashMap<MediaType, String>();
         for (MediaType mediaType : MediaType.values())
         {
-            // Make sure that we only handle audio or video type.
-            if (MediaType.AUDIO != mediaType && MediaType.VIDEO != mediaType)
-            {
-                continue;
-            }
             IceUdpTransportPacketExtension transport =
                 JinglePacketParser.getTransportPacketExt(jiq, mediaType);
             fingerprints.put(mediaType, transport.getText());
