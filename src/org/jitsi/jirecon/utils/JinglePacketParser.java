@@ -342,4 +342,16 @@ public class JinglePacketParser
 
         return fingerprints;
     }
+    
+    public static List<MediaType> getSupportedMediaTypes(JingleIQ jiq)
+    {
+        List<MediaType> mediaTypes = new ArrayList<MediaType>();
+        
+        for (ContentPacketExtension c : jiq.getContentList())
+        {
+            mediaTypes.add(MediaType.parseString(c.getName()));
+        }
+        
+        return mediaTypes;
+    }
 }

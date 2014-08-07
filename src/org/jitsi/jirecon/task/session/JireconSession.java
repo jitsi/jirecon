@@ -11,6 +11,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketE
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
+import org.jitsi.jirecon.task.JireconEndpoint;
 import org.jitsi.jirecon.task.JireconTaskEventListener;
 import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.format.MediaFormat;
@@ -101,13 +102,5 @@ public interface JireconSession
      */
     public void removeTaskEventListener(JireconTaskEventListener listener);
 
-    /**
-     * Get associated ssrc list.
-     * <p>
-     * Every participant usually has two ssrc(one for audio and one for video),
-     * these two ssrc are associated.
-     * 
-     * @return Map between participant's jid and its associated ssrc.
-     */
-    public Map<String, Map<MediaType, Long>> getAssociatedSsrcs();
+    public List<JireconEndpoint> getEndpoints();
 }

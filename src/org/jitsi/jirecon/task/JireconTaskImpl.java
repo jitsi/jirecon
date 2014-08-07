@@ -15,8 +15,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.dtlscontrol.*;
-import org.jitsi.jirecon.extension.SctpMapExtension;
-import org.jitsi.jirecon.task.data.JireconSctpConnection;
 import org.jitsi.jirecon.task.recorder.*;
 import org.jitsi.jirecon.task.session.*;
 import org.jitsi.jirecon.transport.*;
@@ -27,7 +25,6 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jitsi.util.Logger;
 import org.jivesoftware.smack.*;
-import org.xmpp.packet.Packet;
 
 /**
  * An implementation of <tt>JireconTask</tt>. It is designed in Mediator
@@ -72,8 +69,6 @@ public class JireconTaskImpl
      */
     private SrtpControlManager srtpControl;
     
-    private JireconSctpConnection sctpConnection;
-
     /**
      * The instance of <tt>JireconRecorder</tt>.
      */
@@ -102,9 +97,6 @@ public class JireconTaskImpl
      */
     private JireconTaskInfo info = new JireconTaskInfo();
     
-    // TODO: This is the debug toggle.
-    private boolean enableSctp = true;
-
     /**
      * {@inheritDoc}
      */
@@ -140,8 +132,6 @@ public class JireconTaskImpl
         recorder = new JireconRecorderImpl();
         recorder.addTaskEventListener(this);
         recorder.init(savingDir, srtpControl.getAllSrtpControl());
-        
-        sctpConnection = new JireconSctpConnection();
     }
 
     /**
@@ -220,18 +210,15 @@ public class JireconTaskImpl
             
             /* 2. Wait for session-init packet. */
             JingleIQ initIq = session.waitForInitPacket();
+            List<MediaType> supportedMediaTypes =
+                JinglePacketParser.getSupportedMediaTypes(initIq);
             
             /*
              * 3. Harvest local candidates. (audio type, video type and data
              * type.)
              */
-            // TODO: We should examine session-init packet first and then deciede
-            // whether we should harvest data type.
-            for (MediaType mediaType : MediaType.values())
+            for (MediaType mediaType : supportedMediaTypes)
             {
-                if (!enableSctp && MediaType.DATA == mediaType)
-                    continue;
-                
                 transport.harvestLocalCandidates(mediaType);
             }
 
@@ -250,11 +237,8 @@ public class JireconTaskImpl
             // Transport packet extension.
             Map<MediaType, AbstractPacketExtension> transportPEs =
                 new HashMap<MediaType, AbstractPacketExtension>();
-            for (MediaType mediaType : MediaType.values())
+            for (MediaType mediaType : supportedMediaTypes)
             {
-                if (!enableSctp && MediaType.DATA == mediaType)
-                    continue;
-                
                 transportPEs.put(mediaType,
                     transport.getTransportPacketExt(mediaType));
             }
@@ -262,11 +246,8 @@ public class JireconTaskImpl
             // Fingerprint packet extension.
             Map<MediaType, AbstractPacketExtension> fingerprintPEs =
                 new HashMap<MediaType, AbstractPacketExtension>();
-            for (MediaType mediaType : MediaType.values())
+            for (MediaType mediaType : supportedMediaTypes)
             {
-                if (!enableSctp && MediaType.DATA == mediaType)
-                    continue;
-                
                 fingerprintPEs.put(mediaType,
                     srtpControl.getFingerprintPacketExt(mediaType));
             }
@@ -283,11 +264,8 @@ public class JireconTaskImpl
              * candidates.
              */
             Map<MediaType, IceUdpTransportPacketExtension> remoteTransportPEs = new HashMap<MediaType, IceUdpTransportPacketExtension>();
-            for (MediaType mediaType : MediaType.values())
+            for (MediaType mediaType : supportedMediaTypes)
             {
-                if (!enableSctp && MediaType.DATA == mediaType)
-                    continue;
-                
                 remoteTransportPEs.put(mediaType, JinglePacketParser.getTransportPacketExt(initIq, mediaType));
             }
             transport.harvestRemoteCandidates(remoteTransportPEs);
@@ -298,13 +276,8 @@ public class JireconTaskImpl
              */
             transport.startConnectivityEstablishment();
 
-            /* 6.1 Start Receiving SCTP data. */
-            StreamConnector connector = transport.getStreamConnector(MediaType.DATA);
-            MediaStreamTarget target = transport.getStreamTarget(MediaType.DATA);
-            sctpConnection.start(connector, target);
-            
             /*
-             * 7.1 Prepare for recording. Once transport manager has selected
+             * 6.1 Prepare for recording. Once transport manager has selected
              * candidates pairs, we can get stream connectors from it, otherwise
              * we have to wait. Notice that if ICE connectivity establishment
              * doesn't get selected pairs for a specified time(MAX_WAIT_TIME),
@@ -314,8 +287,10 @@ public class JireconTaskImpl
                 new HashMap<MediaType, StreamConnector>();
             Map<MediaType, MediaStreamTarget> mediaStreamTargets =
                 new HashMap<MediaType, MediaStreamTarget>();
-            for (MediaType mediaType : new MediaType[] {MediaType.AUDIO, MediaType.VIDEO})
+            for (MediaType mediaType : supportedMediaTypes)
             {
+                System.out.println("TaskImpl: " + mediaType);
+                
                 StreamConnector streamConnector =
                     transport.getStreamConnector(mediaType);
                 streamConnectors.put(mediaType, streamConnector);
@@ -325,7 +300,7 @@ public class JireconTaskImpl
                 mediaStreamTargets.put(mediaType, mediaStreamTarget);
             }
             
-            /* 7.2 Start recording. */
+            /* 6.2 Start recording. */
             recorder.startRecording(formatAndPTs, streamConnectors,
                 mediaStreamTargets);
             
@@ -389,19 +364,19 @@ public class JireconTaskImpl
 
         if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_CAME)
         {
-            Map<String, Map<MediaType, Long>> associatedSsrcs =
-                session.getAssociatedSsrcs();
-            recorder.setAssociatedSsrcs(associatedSsrcs);
+            List<JireconEndpoint> endpoints =
+                session.getEndpoints();
+            recorder.setEndpoints(endpoints);
         }
 
         else if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_LEFT)
         {
-            Map<String, Map<MediaType, Long>> associatedSsrcs =
-                session.getAssociatedSsrcs();
+            List<JireconEndpoint> endpoints =
+                session.getEndpoints();
             // Oh, it seems that all participants have left the MUC(except Jirecon
             // or other participants which only receive data). It's time to
             // finish the recording.
-            if (associatedSsrcs.isEmpty())
+            if (endpoints.isEmpty())
             {
                 stop();
                 fireEvent(new JireconEvent(info.getMucJid(),
@@ -409,13 +384,13 @@ public class JireconTaskImpl
             }
             else
             {
-                recorder.setAssociatedSsrcs(associatedSsrcs);
+                recorder.setEndpoints(endpoints);
             }
         }
     }
     
     /**
-     * Fire the event if the task has finished or break.
+     * Fire the event if the task has finished or aborted.
      * 
      * @param evt is the <tt>JireconEvent</tt> you want to notify the listeners.
      */

@@ -5,10 +5,12 @@
  */
 package org.jitsi.jirecon.task.recorder;
 
+import java.util.List;
 import java.util.Map;
 
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 
+import org.jitsi.jirecon.task.JireconEndpoint;
 import org.jitsi.jirecon.task.JireconTaskEventListener;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -80,10 +82,5 @@ public interface JireconRecorder
      */
     public Map<MediaType, Long> getLocalSsrcs();
 
-    /**
-     * Set associated ssrcs. It will override the old data.
-     * 
-     * @param associatedSsrcs Map between participant jid and associated ssrc.
-     */
-    public void setAssociatedSsrcs(Map<String, Map<MediaType, Long>> associatedSsrcs);
+    public void setEndpoints(List<JireconEndpoint> endpoints);
 }

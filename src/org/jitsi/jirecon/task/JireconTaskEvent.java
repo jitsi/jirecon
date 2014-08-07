@@ -56,7 +56,9 @@ public class JireconTaskEvent
         /**
          * One participant left.
          */
-        PARTICIPANT_LEFT("PARTICIPANT_LEFT");
+        PARTICIPANT_LEFT("PARTICIPANT_LEFT"),
+
+        RECORDER_ABORTED("RECORDER_ABORTED");
 
         private String name;
 

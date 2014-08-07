@@ -85,14 +85,8 @@ public class JireconSessionImpl
      */
     private String msLabel = UUID.randomUUID().toString();
 
-    /**
-     * Map between participant's jid and their associated ssrcs.
-     * <p>
-     * Every participant usually has two ssrc(one for audio and one for video),
-     * these two ssrc are associated.
-     */
-    private Map<String, Map<MediaType, Long>> associatedSsrcs =
-        new HashMap<String, Map<MediaType, Long>>();
+    private List<JireconEndpoint> endpoints =
+        new ArrayList<JireconEndpoint>();
 
     /**
      * The list of <tt>JireconSessionPacketListener</tt> which is used for
@@ -421,14 +415,14 @@ public class JireconSessionImpl
         // Oh, it seems that some participant has left the MUC.
         if (p.getType() == Presence.Type.unavailable)
         {
-            removeAssociatedSsrc(participantJid);
+            removeEndpoint(participantJid);
             fireEvent(new JireconTaskEvent(
                 JireconTaskEvent.Type.PARTICIPANT_LEFT));
         }
         // Otherwise we think that some new participant has joined the MUC.
         else
         {
-            addAssociatedSsrc(participantJid, ssrcs);
+            addEndpoint(participantJid, ssrcs);
             fireEvent(new JireconTaskEvent(
                 JireconTaskEvent.Type.PARTICIPANT_CAME));
         }
@@ -764,38 +758,63 @@ public class JireconSessionImpl
      * {@inheritDoc}
      */
     @Override
-    public Map<String, Map<MediaType, Long>> getAssociatedSsrcs()
+    public List<JireconEndpoint> getEndpoints()
     {
-        return associatedSsrcs;
+        return endpoints;
     }
 
-    /**
-     * Add new participant's associated ssrc, if this participant's record has
-     * existed, it will override it.
-     * 
-     * @param jid
-     * @param ssrcs
-     */
-    private void addAssociatedSsrc(String jid, Map<MediaType, Long> ssrcs)
+    private void addEndpoint(String jid, Map<MediaType, Long> ssrcs)
     {
-        synchronized (associatedSsrcs)
+        synchronized (endpoints)
         {
-            associatedSsrcs.remove(jid);
-            associatedSsrcs.put(jid, ssrcs);
+            JireconEndpoint endpoint = new JireconEndpoint();
+            
+            endpoint.setId(jid);
+            for (MediaType mediaType : new MediaType[]
+            { MediaType.AUDIO, MediaType.VIDEO })
+            {
+                endpoint.setSsrc(mediaType, ssrcs.get(mediaType));
+            }
+            
+            Iterator<JireconEndpoint> iter = endpoints.iterator();
+            while (iter.hasNext())
+            {
+                if (0 == iter.next().getId().compareTo(jid))
+                {
+                    iter.remove();
+                }
+            }
+            
+            endpoints.remove(jid);
+            endpoints.add(endpoint);
         }
     }
 
-    /**
-     * Remove a participant's associated ssrc, if this participant's record
-     * hasn't existed, it will ignore it.
-     * 
-     * @param jid
-     */
-    private void removeAssociatedSsrc(String jid)
+    private void removeEndpoint(String jid)
     {
-        synchronized (associatedSsrcs)
+        System.out.println("Remove Endpoint " + jid);
+        synchronized (endpoints)
         {
-            associatedSsrcs.remove(jid);
+            System.out.println("original length = " + endpoints.size());
+            for (JireconEndpoint endpoint : endpoints)
+            {
+                System.out.println(endpoint.getId());
+            }
+            
+            Iterator<JireconEndpoint> iter = endpoints.iterator();
+            while (iter.hasNext())
+            {
+                if (0 == iter.next().getId().compareTo(jid))
+                {
+                    iter.remove();
+                }
+            }
+            
+            System.out.println("latest length = " + endpoints.size());
+            for (JireconEndpoint endpoint : endpoints)
+            {
+                System.out.println(endpoint.getId());
+            }
         }
     }
 }

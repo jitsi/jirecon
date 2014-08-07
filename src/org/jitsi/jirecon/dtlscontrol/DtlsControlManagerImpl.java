@@ -12,6 +12,7 @@ import java.util.Map.Entry;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.DtlsFingerprintPacketExtension;
 
+import org.jitsi.impl.neomedia.transform.dtls.DtlsControlImpl;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 
@@ -35,13 +36,6 @@ public class DtlsControlManagerImpl
      * Indicate which kind of hash function is used by <tt>DtlsContrl</tt>.
      */
     private String hashFunction;
-
-    /**
-     * Construction method.
-     */
-    public DtlsControlManagerImpl()
-    {
-    }
 
     /**
      * {@inheritDoc}
@@ -167,11 +161,23 @@ public class DtlsControlManagerImpl
 
         if (null == control)
         {
+            if (MediaType.DATA == mediaType)
+            {
+                /*
+                 * We have to create DtlsControlImpl directly because
+                 * MediaService can only create DtlsControl without Srtp
+                 * support(construcive argument is false).
+                 */
+                control = new DtlsControlImpl(true);
+            }
+            else
+            {
             MediaService mediaService = LibJitsi.getMediaService();
-
             control =
                 (DtlsControl) mediaService
                     .createSrtpControl(SrtpControlType.DTLS_SRTP);
+            }
+            
             dtlsControls.put(mediaType, control);
             control.setSetup(DtlsControl.Setup.ACTIVE);
         }
