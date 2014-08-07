@@ -316,6 +316,7 @@ public class JireconRecorderImpl
             }
         }
         isRecording = true;
+        System.out.println("Starting success!");
     }
     
     private void closeDataChannel()

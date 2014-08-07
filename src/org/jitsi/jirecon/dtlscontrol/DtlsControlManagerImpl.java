@@ -172,12 +172,12 @@ public class DtlsControlManagerImpl
             }
             else
             {
-            MediaService mediaService = LibJitsi.getMediaService();
-            control =
-                (DtlsControl) mediaService
-                    .createSrtpControl(SrtpControlType.DTLS_SRTP);
+                MediaService mediaService = LibJitsi.getMediaService();
+                control =
+                    (DtlsControl) mediaService
+                        .createSrtpControl(SrtpControlType.DTLS_SRTP);
             }
-            
+
             dtlsControls.put(mediaType, control);
             control.setSetup(DtlsControl.Setup.ACTIVE);
         }

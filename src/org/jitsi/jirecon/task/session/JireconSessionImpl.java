@@ -45,7 +45,7 @@ public class JireconSessionImpl
     /**
      * Maximum wait time(microsecond).
      */
-    private static final int MAX_WAIT_TIME = 5000;
+    private static final int MAX_WAIT_TIME = 10000;
 
     /**
      * The <tt>XMPPConnection</tt> is used to send/receive XMPP packet.
