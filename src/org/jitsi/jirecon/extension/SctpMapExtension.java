@@ -20,8 +20,14 @@ public class SctpMapExtension
      */
     public static final String NAMESPACE = "urn:xmpp:jingle:transports:dtls-sctp:1";
     
+    /**
+     * Port number of "sctpmap" element.
+     */
     public static final String PORT_ATTR_NAME = "number";
     
+    /**
+     * Protocol name of "sctpmap" element.
+     */
     public static final String PROTOCOL_ATTR_NAME = "protocol";
     
     public static final String STREAMS_ATTR_NAME = "streams";
@@ -74,6 +80,11 @@ public class SctpMapExtension
         this.protocol = protocol;
     }
     
+    public void setProtocol(Protocol protocol)
+    {
+        this.protocol = protocol.toString();
+    }
+    
     public String getProtocol()
     {
         return protocol;
@@ -87,5 +98,23 @@ public class SctpMapExtension
     public int getStreams()
     {
         return streams;
+    }
+    
+    public static enum Protocol
+    {
+        WEBRTC_CHANNEL("webrtc-datachannel");
+        
+        private String name;
+        
+        private Protocol(String name)
+        {
+            this.name = name;
+        }
+        
+        @Override
+        public String toString()
+        {
+            return name;
+        }
     }
 }

@@ -53,12 +53,11 @@ public class TestJireconImpl
         }
         catch (OperationFailedException e)
         {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             result = false;
         }
 
-        String mucJid = "l2s4e05eqb1kbj4i@conference.example.com";
+        String mucJid = "2j5wd83bf0yeqaor@conference.example.com";
         j.startJireconTask(mucJid);
 
         try

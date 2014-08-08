@@ -289,8 +289,6 @@ public class JireconTaskImpl
                 new HashMap<MediaType, MediaStreamTarget>();
             for (MediaType mediaType : supportedMediaTypes)
             {
-                System.out.println("TaskImpl: " + mediaType);
-                
                 StreamConnector streamConnector =
                     transport.getStreamConnector(mediaType);
                 streamConnectors.put(mediaType, streamConnector);

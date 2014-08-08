@@ -292,9 +292,6 @@ public class JireconIceUdpTransportManagerImpl
             final MediaType mediaType = e.getKey();
             final IceUdpTransportPacketExtension transportPE = e.getValue();
             final IceMediaStream stream = getIceMediaStream(mediaType);
-            
-            System.out.println(mediaType + " " + transportPE.toXML());
-
             final String ufrag =
                 JinglePacketParser.getTransportUfrag(transportPE);
             if (null != ufrag)

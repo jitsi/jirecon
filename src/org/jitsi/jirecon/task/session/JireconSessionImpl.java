@@ -46,7 +46,7 @@ public class JireconSessionImpl
      * Maximum wait time(microsecond).
      */
     private static final int MAX_WAIT_TIME = 10000;
-
+    
     /**
      * The <tt>XMPPConnection</tt> is used to send/receive XMPP packet.
      */
@@ -81,10 +81,8 @@ public class JireconSessionImpl
     private String sid;
 
     /**
-     * Attribute "mslable" in source packet extension.
+     * <tt>Endpoint</tt>s in the meeting.
      */
-    private String msLabel = UUID.randomUUID().toString();
-
     private List<JireconEndpoint> endpoints =
         new ArrayList<JireconEndpoint>();
 
@@ -98,7 +96,7 @@ public class JireconSessionImpl
     private PacketListener sendingListener;
     
     private PacketListener receivingListener;
-
+    
     /**
      * {@inheritDoc}
      */
@@ -110,7 +108,9 @@ public class JireconSessionImpl
         addPacketSendingListener();
         addPacketReceivingListener();
 
-        // Register the packet listener to handle presence packet.
+        /*
+         * Register the packet listener to handle presence packet.
+         */
         JireconSessionPacketListener packetListener =
             new JireconSessionPacketListener()
             {
@@ -196,7 +196,8 @@ public class JireconSessionImpl
         Map<MediaType, AbstractPacketExtension> transportPEs,
         Map<MediaType, AbstractPacketExtension> fingerprintPEs)
     {
-        logger.info("sendAcceptPacket");
+        logger.debug("sendAcceptPacket");
+        
         JingleIQ acceptIq = createAcceptPacket(formatAndPTs, localSsrcs, transportPEs, fingerprintPEs);
         connection.sendPacket(acceptIq);
     }
@@ -208,7 +209,8 @@ public class JireconSessionImpl
      */
     private void sendAck(JingleIQ jiq)
     {
-        logger.info("sendAck");
+        logger.debug("sendAck");
+        
         connection.sendPacket(IQ.createResultIQ(jiq));
     }
 
@@ -220,7 +222,7 @@ public class JireconSessionImpl
      */
     private void sendByePacket(Reason reason, String reasonText)
     {
-        logger.info("sendByePacket");
+        logger.debug("sendByePacket");
 
         connection.sendPacket(JinglePacketFactory.createSessionTerminate(
             localFullJid, remoteFullJid, sid, reason, reasonText));
@@ -254,7 +256,9 @@ public class JireconSessionImpl
         final List<JingleIQ> resultList = new ArrayList<JingleIQ>();
         final Object waitForInitPacketSyncRoot = new Object();
 
-        // Register a packet listener for handling Jingle session-init packet.
+        /*
+         * Register a packet listener for handling Jingle session-init packet.
+         */
         JireconSessionPacketListener packetListener =
             new JireconSessionPacketListener()
             {
@@ -326,7 +330,9 @@ public class JireconSessionImpl
         final List<Packet> resultList = new ArrayList<Packet>();
         final Object waitForAckPacketSyncRoot = new Object();
 
-        // Register a packet listener for handling ack packet.
+        /*
+         * Register a packet listener for handling ack packet.
+         */
         JireconSessionPacketListener packetListener =
             new JireconSessionPacketListener()
             {
@@ -369,7 +375,7 @@ public class JireconSessionImpl
         {
 //            throw new OperationFailedException("Could not get ack packet",
 //                OperationFailedException.GENERAL_ERROR);
-            logger.info("Couldn't receive result packet from remote peer.");
+            logger.warn("Couldn't receive result packet from remote peer.");
         }
     }
 
@@ -382,15 +388,20 @@ public class JireconSessionImpl
     private void handlePresencePacket(Presence p)
     {
         PacketExtension packetExt = p.getExtension(MediaExtension.NAMESPACE);
-        MUCUser userExt =
-            (MUCUser) p
-                .getExtension("x", "http://jabber.org/protocol/muc#user");
-        // In case of presence packet isn't sent by participant, here I get
-        // participant id from p.getFrom() 
+        final String name = "x";
+        final String namespace = "http://jabber.org/protocol/muc#user";
+        MUCUser userExt = (MUCUser) p.getExtension(name, namespace);
+        
+        /*
+         * In case of presence packet isn't sent by participant, here I get
+         * participant id from p.getFrom()
+         */ 
         String participantJid = userExt.getItem().getJid();
 
-        // Jitsi-meeting presence packet should contain participant jid and
-        // media packet extension
+        /*
+         * Jitsi-meeting presence packet should contain participant jid and
+         * media packet extension
+         */
         if (null == participantJid || null == packetExt)
             return;
         
@@ -399,7 +410,7 @@ public class JireconSessionImpl
         
         for (MediaType mediaType : new MediaType[] {MediaType.AUDIO, MediaType.VIDEO})
         {
-            // TODO: If someone only sends audio, this could be changed. 
+            // TODO: What if someone only sends audio? this could be changed. 
             MediaDirection direction =
                 MediaDirection.parseString(mediaExt.getDirection(mediaType
                     .toString()));
@@ -445,7 +456,8 @@ public class JireconSessionImpl
         Map<MediaType, AbstractPacketExtension> transportPEs,
         Map<MediaType, AbstractPacketExtension> fingerprintPEs)
     {
-        logger.info("createSessionAcceptPacket");
+        logger.debug("createSessionAcceptPacket");
+        
         List<ContentPacketExtension> contentPEs =
             new ArrayList<ContentPacketExtension>();
 
@@ -455,7 +467,7 @@ public class JireconSessionImpl
                 !fingerprintPEs.containsKey(mediaType))
                 continue;
             
-            /* The packet extension that we will create:) */
+            /* The packet extension that we will create :) */
             RtpDescriptionPacketExtension descriptionPE = null;
             AbstractPacketExtension transportPE = null;
             AbstractPacketExtension fingerprintPE = null;
@@ -472,35 +484,38 @@ public class JireconSessionImpl
                         formatAndPTs.get(mediaType), localSsrcs.get(mediaType));
             }
             
-            /* 2. Create TransportPE with FingerprintPE. */
+            /* 
+             * 2. Create TransportPE with FingerprintPE. 
+             */
             transportPE = transportPEs.get(mediaType);
             fingerprintPE =
                 fingerprintPEs.get(mediaType);
             transportPE.addChildExtension(fingerprintPE);
             
-            /* 3. Create sctpMapPE. Only data need this one. */
+            /* 
+             * 3. Create sctpMapPE. Only data need this one. 
+             */
             if (MediaType.DATA == mediaType)
             {
-                // TODO:
-//                sctpMapPE = new SctpMapExtension();
-//                sctpMapPE.setPort(5000);
-//                sctpMapPE.setProtocol("webrtc-datachannel");
-//                sctpMapPE.setStreams(1024);
-//                System.out.println(sctpMapPE.toXML());
-                transportPE.addPacket(new Packet() {
-
-                    @Override
-                    public String toXML()
-                    {
-                        return "<sctpmap xmlns=\"urn:xmpp:jingle:transports:dtls-sctp:1\" number=\"5000\" protocol=\"webrtc-datachannel\" streams=\"1024\"/>";
-                    }
-                    
-                });
-                System.out.println(transportPE.toXML());
+                /*
+                 * Actually the port could be any number, but let's keep it 5000
+                 * everywhere.
+                 */
+                final int port = 5000;
+                /*
+                 * Jirecon didn't care about this at this moment. So just set it 1024. 
+                 */
+                final int numStreams = 1024;
+                
+                sctpMapPE = new SctpMapExtension();
+                sctpMapPE.setPort(port);
+                sctpMapPE.setProtocol(SctpMapExtension.Protocol.WEBRTC_CHANNEL);
+                sctpMapPE.setStreams(numStreams);
+                transportPE.addChildExtension(sctpMapPE);
             }
 
             /*
-             * 4. Create Content packet extension with DescriptionPE(could be
+             * 4. Create Content packet extension with DescriptionPE(it could be
              * null) and TransportPE above.
              */
             contentPE =
@@ -533,7 +548,7 @@ public class JireconSessionImpl
         RtpDescriptionPacketExtension descriptionPE,
         AbstractPacketExtension transportPE)
     {
-        logger.info(this.getClass() + " createContentPacketExtension");
+        logger.debug(this.getClass() + " createContentPacketExtension");
         
         ContentPacketExtension content = new ContentPacketExtension();
         content.setCreator(CreatorEnum.responder);
@@ -555,12 +570,18 @@ public class JireconSessionImpl
         RtpDescriptionPacketExtension description =
             new RtpDescriptionPacketExtension();
         
-        // 1. Set media type.
+        /*
+         *  1. Set media type.
+         */
         description.setMedia(mediaType.toString());
-        // 2. Set local ssrc.
+        /*
+         *  2. Set local ssrc.
+         */
         description.setSsrc(localSsrc.toString());
 
-        // 3. Set payload type id.
+        /*
+         *  3. Set payload type id.
+         */
         for (Map.Entry<MediaFormat, Byte> e : formatAndPayloadTypes.entrySet())
         {
             PayloadTypePacketExtension payloadType =
@@ -587,10 +608,14 @@ public class JireconSessionImpl
 
         final MediaService mediaService = LibJitsi.getMediaService();
         
-        // 4. Set source information.
+        /*
+         *  4. Set source information.
+         */
         SourcePacketExtension sourcePacketExtension =
             new SourcePacketExtension();
         final String label = UUID.randomUUID().toString().replace("-", "");
+        final String msLabel = UUID.randomUUID().toString();
+        
         sourcePacketExtension.setSSRC(localSsrc);
         sourcePacketExtension.addChildExtension(new ParameterPacketExtension(
             "cname", mediaService.getRtpCname()));
@@ -668,7 +693,7 @@ public class JireconSessionImpl
             @Override
             public void processPacket(Packet packet)
             {
-                logger.info("--->: " + packet.toXML());
+                logger.debug("--->: " + packet.toXML());
             }
         };
 
@@ -695,7 +720,7 @@ public class JireconSessionImpl
             @Override
             public void processPacket(Packet packet)
             {
-                logger.info(packet.getClass() + "<---: " + packet.toXML());
+                logger.debug(packet.getClass() + "<---: " + packet.toXML());
                 handlePacket(packet);
             }
         };
@@ -708,7 +733,7 @@ public class JireconSessionImpl
                 if (null != localFullJid
                     && !packet.getTo().equals(localFullJid))
                 {
-                    logger.info("packet failed: to " + packet.getTo()
+                    logger.warn("packet rejected: \"to\" is " + packet.getTo()
                         + ", but we are " + localFullJid);
                     return false;
                 }
@@ -792,15 +817,10 @@ public class JireconSessionImpl
 
     private void removeEndpoint(String jid)
     {
-        System.out.println("Remove Endpoint " + jid);
+        logger.debug("Remove Endpoint " + jid);
+        
         synchronized (endpoints)
         {
-            System.out.println("original length = " + endpoints.size());
-            for (JireconEndpoint endpoint : endpoints)
-            {
-                System.out.println(endpoint.getId());
-            }
-            
             Iterator<JireconEndpoint> iter = endpoints.iterator();
             while (iter.hasNext())
             {
@@ -808,12 +828,6 @@ public class JireconSessionImpl
                 {
                     iter.remove();
                 }
-            }
-            
-            System.out.println("latest length = " + endpoints.size());
-            for (JireconEndpoint endpoint : endpoints)
-            {
-                System.out.println(endpoint.getId());
             }
         }
     }

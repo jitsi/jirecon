@@ -251,8 +251,6 @@ public class JireconComponentImpl
     @Override
     protected IQ handleIQGet(IQ iq)
     {
-        // System.out.println("RECV IQGET: " + iq.toXML());
-
         /*
          * According to the documentation of AbstracComponent, We have to return
          * a result iq, otherwise component will send error iq back to remote

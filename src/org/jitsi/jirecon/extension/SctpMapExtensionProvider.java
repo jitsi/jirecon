@@ -30,26 +30,6 @@ public class SctpMapExtensionProvider
                 SctpMapExtension.STREAMS_ATTR_NAME)));
         }
 
-//        boolean done = false;
-//        while (!done)
-//        {
-//            switch (parser.next())
-//            {
-//            case XmlPullParser.END_TAG:
-//                System.out.println("END");
-//                done = true;
-//                break;
-//            case XmlPullParser.START_TAG:
-//                System.out.println("START");
-//                break;
-//            case XmlPullParser.TEXT:
-//                System.out.println("TEXT");
-//                break;
-//            }
-//        }
-
-        System.out.println(result.toXML());
-
         return result;
     }
 }

@@ -237,8 +237,7 @@ public class JireconRecorderImpl
     {
         if (null == connector || null == streamTarget)
         {
-            System.out.println("Ignore data channel?");
-            
+            logger.debug("Ignore data channel");
             return;
         }
         
@@ -316,7 +315,6 @@ public class JireconRecorderImpl
             }
         }
         isRecording = true;
-        System.out.println("Starting success!");
     }
     
     private void closeDataChannel()
@@ -630,9 +628,8 @@ public class JireconRecorderImpl
         @Override
         public synchronized boolean handleEvent(RecorderEvent event)
         {
-            System.out.println("Look, handleEvent! " + event.getType());
+            logger.debug(event + " ssrc:" + event.getSsrc());
             
-            logger.info(event + " ssrc:" + event.getSsrc());
             RecorderEvent.Type type = event.getType();
 
             if (RecorderEvent.Type.SPEAKER_CHANGED.equals(type))
@@ -641,7 +638,7 @@ public class JireconRecorderImpl
                  * We have to use audio ssrc instead endpoint id to find video
                  * ssrc because of the compatibility.
                  */
-                logger.info("SPEAKER_CHANGED audio ssrc: "
+                logger.debug("SPEAKER_CHANGED audio ssrc: "
                     + event.getAudioSsrc());
                 final long audioSsrc = event.getAudioSsrc();
                 final long videoSsrc =
@@ -683,7 +680,7 @@ public class JireconRecorderImpl
         public void connect(final StreamConnector connector,
             final MediaStreamTarget streamTarget)
         {
-            System.out.println(connector.getDataSocket().getLocalAddress()
+            logger.debug(connector.getDataSocket().getLocalAddress()
                 .getHostName()
                 + ", "
                 + connector.getDataSocket().getLocalPort()
@@ -739,8 +736,6 @@ public class JireconRecorderImpl
                                 org.jitsi.sctp4j.SctpSocket s, byte[] packet)
                                 throws IOException
                             {
-                                System.out.println(packet);
-
                                 // Send through DTLS transport
                                 rawPacket.setBuffer(packet);
                                 rawPacket.setLength(packet.length);
@@ -753,11 +748,7 @@ public class JireconRecorderImpl
 
                         while (true)
                         {
-                            System.out.println("AAAAAA");
-
                             iceUdpSocket.receive(rcvPacket);
-
-                            System.out.println("BBBBB");
 
                             RawPacket raw =
                                 new RawPacket(rcvPacket.getData(), rcvPacket
@@ -769,8 +760,6 @@ public class JireconRecorderImpl
                             if (raw == null)
                                 continue;
                             
-                            System.out.println("CCCCC ");
-
                             // Pass network packet to SCTP stack
                             sctpSocket.onConnIn(raw.getBuffer(),
                                 raw.getOffset(), raw.getLength());
@@ -801,24 +790,15 @@ public class JireconRecorderImpl
         public void onSctpPacket(byte[] data, int sid, int ssn, int tsn,
             long ppid, int context, int flags)
         {
-            System.out.println("SCTP DATA");
-            System.out.println("\tdata: " + new String(data));
-            System.out.println("\tlen: " + data.length);
-            System.out.println("\tsid: " + sid);
-            System.out.println("\tssn: " + ssn);
-            System.out.println("\tppid: " + tsn);
-            System.out.println("\tcontext: " + context);
-            System.out.println("\tflags: " + flags);
-            
             String dataStr = new String(data);
-            
             JSONParser parser = new JSONParser();
+            
             try
             {
                 JSONObject json = (JSONObject) parser.parse(dataStr);
                 String endpointId = json.get("dominantSpeakerEndpoint").toString();
                 
-                System.out.println("Hey! " + endpointId);
+                logger.debug("Hey! " + endpointId);
                 
               RecorderEvent event = new RecorderEvent();
               event.setMediaType(MediaType.AUDIO); // Is that suitable?
@@ -839,14 +819,12 @@ public class JireconRecorderImpl
         public void onSctpNotification(SctpSocket socket,
             SctpNotification notification)
         {
-            System.out.println("SCTP Notification: " + notification);
+            logger.debug("SCTP Notification: " + notification);
 
             if (notification.sn_type == SctpNotification.SCTP_ASSOC_CHANGE)
             {
                 SctpNotification.AssociationChange assocChange =
                     (SctpNotification.AssociationChange) notification;
-
-                System.out.println(assocChange);
 
                 switch (assocChange.state)
                 {
