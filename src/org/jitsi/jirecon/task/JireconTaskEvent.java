@@ -58,6 +58,9 @@ public class JireconTaskEvent
          */
         PARTICIPANT_LEFT("PARTICIPANT_LEFT"),
 
+        /**
+         * Recorder has broken for some reasons.
+         */
         RECORDER_ABORTED("RECORDER_ABORTED");
 
         private String name;

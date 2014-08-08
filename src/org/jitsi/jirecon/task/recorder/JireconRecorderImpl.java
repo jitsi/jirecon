@@ -6,40 +6,26 @@
 package org.jitsi.jirecon.task.recorder;
 
 import java.io.*;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
+import java.net.*;
 import java.util.*;
 import java.util.Map.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-
-import javax.media.rtp.SessionAddress;
-
-import net.java.sip.communicator.service.protocol.OperationFailedException;
-
-import org.jitsi.impl.neomedia.RTPConnectorUDPImpl;
-import org.jitsi.impl.neomedia.RawPacket;
+import java.util.concurrent.*;
+import javax.media.rtp.*;
+import net.java.sip.communicator.service.protocol.*;
+import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.recording.*;
-import org.jitsi.impl.neomedia.rtp.translator.RTPTranslatorImpl;
-import org.jitsi.impl.neomedia.transform.dtls.DtlsPacketTransformer;
-import org.jitsi.impl.neomedia.transform.dtls.DtlsTransformEngine;
+import org.jitsi.impl.neomedia.rtp.translator.*;
+import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.jirecon.task.*;
-import org.jitsi.sctp4j.NetworkLink;
-import org.jitsi.sctp4j.Sctp;
-import org.jitsi.sctp4j.SctpDataCallback;
-import org.jitsi.sctp4j.SctpNotification;
-import org.jitsi.sctp4j.SctpSocket;
-import org.jitsi.sctp4j.SctpSocket.NotificationListener;
-import org.jitsi.service.libjitsi.LibJitsi;
+import org.jitsi.sctp4j.*;
+import org.jitsi.sctp4j.SctpSocket.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
-import org.jitsi.util.Logger;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
+import org.jitsi.util.*;
+import org.json.simple.*;
+import org.json.simple.parser.*;
 
 /**
  * An implementation of <tt>JireconRecorder</tt>.
@@ -60,7 +46,7 @@ public class JireconRecorderImpl
      */
     private static final Logger logger = Logger
         .getLogger(JireconRecorderImpl.class);
-    
+
     /**
      * The map between <tt>MediaType</tt> and <tt>MediaStream</tt>. Those are
      * used to receiving media streams.
@@ -86,12 +72,16 @@ public class JireconRecorderImpl
      */
     private Map<MediaType, Recorder> recorders =
         new HashMap<MediaType, Recorder>();
-    
+
     /**
-     * TODO
+     * SCTP data channel. It's used for receiving some event packets, such as
+     * SPEAKER_CHANGE event.
      */
     private SctpConnection dataChannel;
-    
+
+    /**
+     * Used for handling recorder's event.
+     */
     private RecorderEventHandlerImpl eventHandler;
 
     /**
@@ -101,8 +91,10 @@ public class JireconRecorderImpl
     private List<JireconTaskEventListener> listeners =
         new ArrayList<JireconTaskEventListener>();
 
-    private List<JireconEndpoint> endpoints =
-        new ArrayList<JireconEndpoint>();
+    /**
+     * Active endpoints in the meeting currently.
+     */
+    private List<JireconEndpoint> endpoints = new ArrayList<JireconEndpoint>();
 
     /**
      * Map between <tt>MediaType</tt> and local recorder's ssrc.
@@ -128,15 +120,19 @@ public class JireconRecorderImpl
      * {@inheritDoc}
      */
     @Override
-    public void init(String outputDir, Map<MediaType, SrtpControl> srtpControls) 
+    public void init(String outputDir, Map<MediaType, SrtpControl> srtpControls)
     {
         this.mediaService = LibJitsi.getMediaService();
         this.outputDir = outputDir;
+        logger.setLevelAll();
 
-        // SrtpControl will be managed by MediaStream. 
+        /*
+         * NOTE: SrtpControl will be managed by MediaStream. So we don't need to
+         * open/close SctpControl addtionally.
+         */
         createMediaStreams(srtpControls);
         createDataChannel(srtpControls.get(MediaType.DATA));
-        
+
     }
 
     /**
@@ -149,13 +145,37 @@ public class JireconRecorderImpl
         Map<MediaType, MediaStreamTarget> targets)
         throws OperationFailedException
     {
-        eventHandler =
-            new RecorderEventHandlerImpl(outputDir + "/metadata.json");
-        
+        /*
+         * Here we don't garuantee whether file path is available.
+         * RecorderEventHandlerImpl needs check this and do some job.
+         */
+        final String filename = "metadata.json";
+        eventHandler = new RecorderEventHandlerImpl(outputDir + "/" + filename);
+
+        /*
+         * 1. Open sctp data channel, if there is data connector and target.
+         */
+        openDataChannel(connectors.get(MediaType.DATA),
+            targets.get(MediaType.DATA));
+
+        /*
+         * 2. Prepare audio and video media streams.
+         */
         prepareMediaStreams(formatAndDynamicPTs, connectors, targets);
-        openDataChannel(connectors.get(MediaType.DATA), targets.get(MediaType.DATA));
+
+        /*
+         * 3. Start receiving audio and video streams
+         */
         startReceivingStreams();
+
+        /*
+         * 4. Prepare audio and video recorders.
+         */
         prepareRecorders();
+
+        /*
+         * 5. Start recording audio and video streams.
+         */
         startRecordingStreams();
     }
 
@@ -191,16 +211,16 @@ public class JireconRecorderImpl
         Map<MediaType, MediaStreamTarget> targets)
         throws OperationFailedException
     {
-        logger.info("prepareMediaStreams");
+        logger.debug("prepareMediaStreams");
 
         for (Entry<MediaType, MediaStream> e : streams.entrySet())
         {
             final MediaType mediaType = e.getKey();
             final MediaStream stream = e.getValue();
-            
+
             stream.setConnector(connectors.get(mediaType));
             stream.setTarget(targets.get(mediaType));
-            
+
             for (Entry<MediaFormat, Byte> f : formatAndPTs.get(mediaType)
                 .entrySet())
             {
@@ -220,10 +240,9 @@ public class JireconRecorderImpl
      * @throws OperationFailedException if some operation failed and the
      *             preparation is aborted.
      */
-    private void prepareRecorders() 
-        throws OperationFailedException
+    private void prepareRecorders() throws OperationFailedException
     {
-        logger.info("prepareRecorders");
+        logger.debug("prepareRecorders");
 
         for (Entry<MediaType, RTPTranslator> e : rtpTranslators.entrySet())
         {
@@ -231,7 +250,15 @@ public class JireconRecorderImpl
             recorders.put(e.getKey(), recorder);
         }
     }
-    
+
+    /**
+     * Open data channel, build SCTP connection with remote sctp server.
+     * <p>
+     * If there any parameters is null, data channel won't be openned.
+     * 
+     * @param connector Data stream connector
+     * @param streamTarget Data stream target
+     */
     private void openDataChannel(StreamConnector connector,
         MediaStreamTarget streamTarget)
     {
@@ -240,20 +267,19 @@ public class JireconRecorderImpl
             logger.debug("Ignore data channel");
             return;
         }
-        
+
         dataChannel.connect(connector, streamTarget);
     }
-    
+
     /**
      * Start receiving media streams.
      * 
      * @throws OperationFailedException if some operation failed and the
      *             receiving is aborted.
      */
-    private void startReceivingStreams() 
-        throws OperationFailedException
+    private void startReceivingStreams() throws OperationFailedException
     {
-        logger.info("startReceiving");
+        logger.debug("startReceiving");
 
         int startCount = 0;
         for (Entry<MediaType, MediaStream> e : streams.entrySet())
@@ -285,7 +311,8 @@ public class JireconRecorderImpl
      */
     private void startRecordingStreams() throws OperationFailedException
     {
-        logger.info("startRecording");
+        logger.debug("startRecording");
+        
         if (!isReceiving)
         {
             throw new OperationFailedException(
@@ -316,18 +343,19 @@ public class JireconRecorderImpl
         }
         isRecording = true;
     }
-    
+
     private void closeDataChannel()
     {
         dataChannel.disconnect();
     }
-    
+
     /**
      * Stop recording media streams.
      */
     private void stopRecordingStreams()
     {
-        logger.info("Stop recording streams.");
+        logger.debug("Stop recording streams.");
+        
         if (!isRecording)
             return;
 
@@ -344,7 +372,8 @@ public class JireconRecorderImpl
      */
     private void stopReceivingStreams()
     {
-        logger.info("Stop receiving streams");
+        logger.debug("Stop receiving streams");
+        
         if (!isReceiving)
             return;
 
@@ -352,7 +381,7 @@ public class JireconRecorderImpl
         {
             e.getValue().close();
         }
-        
+
         streams.clear();
         isReceiving = false;
     }
@@ -368,7 +397,12 @@ public class JireconRecorderImpl
         }
         rtpTranslators.clear();
     }
-    
+
+    /**
+     * Create data channel. We need <tt>DtlsControl</tt> to initialize it.
+     * 
+     * @param srtpControl
+     */
     private void createDataChannel(SrtpControl srtpControl)
     {
         dataChannel = new SctpConnection((DtlsControl) srtpControl);
@@ -386,8 +420,10 @@ public class JireconRecorderImpl
      */
     private void createMediaStreams(Map<MediaType, SrtpControl> srtpControls)
     {
-        logger.info("createMediaStreams");
-        for (MediaType mediaType : new MediaType[] {MediaType.AUDIO, MediaType.VIDEO})
+        logger.debug("createMediaStreams");
+        
+        for (MediaType mediaType : new MediaType[]
+        { MediaType.AUDIO, MediaType.VIDEO })
         {
             final MediaStream stream =
                 mediaService.createMediaStream(null, mediaType,
@@ -409,6 +445,7 @@ public class JireconRecorderImpl
     private RTPTranslator getTranslator(MediaType mediaType)
     {
         RTPTranslator translator = null;
+        
         if (rtpTranslators.containsKey(mediaType))
             translator = rtpTranslators.get(mediaType);
         else
@@ -441,7 +478,7 @@ public class JireconRecorderImpl
             for (JireconEndpoint endpoint : endpoints)
             {
                 Map<MediaType, Long> ssrcs = endpoint.getSsrcs();
-                
+
                 if (ssrcs.size() < 2)
                     continue;
 
@@ -454,7 +491,18 @@ public class JireconRecorderImpl
 
         return -1;
     }
-    
+
+    /**
+     * Find the specified <tt>MediaType<tt> ssrc which belongs to some endpont.
+     * <strong>Warning:</strong> An endpoint means a media stream source, each
+     * media stream source generally contains two ssrc, one for audio stream and
+     * one for video stream.
+     * 
+     * @param endpointId indicates an endpoint
+     * @param mediaType is the <tt>MediaType</tt> which indicates which ssrc you
+     *            want to get.
+     * @return ssrc or -1 if not found
+     */
     private long getEndpointSsrc(String endpointId, MediaType mediaType)
     {
         synchronized (endpoints)
@@ -467,7 +515,7 @@ public class JireconRecorderImpl
                     return endpoint.getSsrc(mediaType);
                 }
             }
-            
+
             return -1;
         }
     }
@@ -484,14 +532,15 @@ public class JireconRecorderImpl
             for (JireconEndpoint endpoint : endpoints)
             {
                 final String endpointId = endpoint.getId();
-                for (Entry<MediaType, Long> ssrc : endpoint.getSsrcs().entrySet())
+                for (Entry<MediaType, Long> ssrc : endpoint.getSsrcs()
+                    .entrySet())
                 {
                     Recorder recorder = recorders.get(ssrc.getKey());
                     Synchronizer synchronizer = recorder.getSynchronizer();
                     synchronizer.setEndpoint(ssrc.getValue(), endpointId);
 
-                    logger.info("endpoint: " + endpointId + " "
-                        + ssrc.getKey() + " " + ssrc.getValue());
+                    logger.info("endpoint: " + endpointId + " " + ssrc.getKey()
+                        + " " + ssrc.getValue());
                 }
             }
         }
@@ -591,10 +640,11 @@ public class JireconRecorderImpl
             while (true)
             {
                 file = new File(filenameAvailable);
-                
+
                 try
                 {
-                    handler = new RecorderEventHandlerJSONImpl(filenameAvailable);
+                    handler =
+                        new RecorderEventHandlerJSONImpl(filenameAvailable);
                     break;
                 }
                 catch (IOException e)
@@ -619,7 +669,7 @@ public class JireconRecorderImpl
         @Override
         public void close()
         {
-            logger.info("close");
+            logger.debug("close");
         }
 
         /**
@@ -629,7 +679,7 @@ public class JireconRecorderImpl
         public synchronized boolean handleEvent(RecorderEvent event)
         {
             logger.debug(event + " ssrc:" + event.getSsrc());
-            
+
             RecorderEvent.Type type = event.getType();
 
             if (RecorderEvent.Type.SPEAKER_CHANGED.equals(type))
@@ -640,6 +690,7 @@ public class JireconRecorderImpl
                  */
                 logger.debug("SPEAKER_CHANGED audio ssrc: "
                     + event.getAudioSsrc());
+                
                 final long audioSsrc = event.getAudioSsrc();
                 final long videoSsrc =
                     getAssociatedSsrc(audioSsrc, MediaType.VIDEO);
@@ -659,7 +710,13 @@ public class JireconRecorderImpl
             return handler.handleEvent(event);
         }
     }
-    
+
+    /**
+     * SCTP connection, which is used for receiving packets from data channel.
+     * 
+     * @author lishunyang
+     * 
+     */
     private class SctpConnection
         implements SctpDataCallback, NotificationListener
     {
@@ -668,7 +725,12 @@ public class JireconRecorderImpl
         private DtlsControl dtlsControl;
 
         private SctpSocket sctpSocket;
-        
+
+        /**
+         * Construction method.
+         * 
+         * @param dtlsControl
+         */
         public SctpConnection(DtlsControl dtlsControl)
         {
             this.dtlsControl = dtlsControl;
@@ -677,6 +739,12 @@ public class JireconRecorderImpl
                 Executors.newSingleThreadExecutor(new HandlerThreadFactory());
         }
 
+        /**
+         * Build SCTP connection with remote SCTP server.
+         * 
+         * @param connector
+         * @param streamTarget
+         */
         public void connect(final StreamConnector connector,
             final MediaStreamTarget streamTarget)
         {
@@ -699,7 +767,7 @@ public class JireconRecorderImpl
                     try
                     {
                         Sctp.init();
-                        
+
                         RTPConnectorUDPImpl rtpConnector =
                             new RTPConnectorUDPImpl(connector);
 
@@ -744,7 +812,16 @@ public class JireconRecorderImpl
                             }
                         });
 
-                        sctpSocket.connect(5000);
+                        /*
+                         * Actually the port can be any number, but let's keep
+                         * it 5000.
+                         */
+                        final int port = 5000;
+                        /*
+                         * NOTE: This method is asynchronrous and it may take
+                         * some time to build connection.
+                         */
+                        sctpSocket.connect(port);
 
                         while (true)
                         {
@@ -759,7 +836,7 @@ public class JireconRecorderImpl
                             // Check for app data
                             if (raw == null)
                                 continue;
-                            
+
                             // Pass network packet to SCTP stack
                             sctpSocket.onConnIn(raw.getBuffer(),
                                 raw.getOffset(), raw.getLength());
@@ -776,50 +853,70 @@ public class JireconRecorderImpl
             });
         }
 
+        /**
+         * Shut down SCTP connection.
+         */
         public void disconnect()
         {
             if (sctpSocket != null)
                 sctpSocket.close();
-            
+
             dtlsControl.cleanup();
-            
-            // We shouldn't finish SCTP, because other JireconTask may be using it.
+
+            /*
+             * NOTE: We shouldn't shutdown SCTP, because other JireconTask may be using
+             * it. SCTP util is global.
+             */
         }
 
+        /**
+         * {@inheritDoc} Receive the SCTP packets and parse into event string,
+         * then record them.
+         */
         @Override
         public void onSctpPacket(byte[] data, int sid, int ssn, int tsn,
             long ppid, int context, int flags)
         {
             String dataStr = new String(data);
             JSONParser parser = new JSONParser();
+
+            /*
+             * We only care about SPEAKER_CHANGE event.
+             */
             
             try
             {
                 JSONObject json = (JSONObject) parser.parse(dataStr);
-                String endpointId = json.get("dominantSpeakerEndpoint").toString();
-                
+                String endpointId =
+                    json.get("dominantSpeakerEndpoint").toString();
+
                 logger.debug("Hey! " + endpointId);
-                
-              RecorderEvent event = new RecorderEvent();
-              event.setMediaType(MediaType.AUDIO); // Is that suitable?
-              event.setType(RecorderEvent.Type.SPEAKER_CHANGED);
-              event.setEndpointId(endpointId);
-              event.setAudioSsrc(getEndpointSsrc(endpointId, MediaType.AUDIO));
-              eventHandler.handleEvent(event);
+                System.out.println("Hey! " + endpointId);
+
+                RecorderEvent event = new RecorderEvent();
+                event.setMediaType(MediaType.AUDIO);
+                event.setType(RecorderEvent.Type.SPEAKER_CHANGED);
+                event.setEndpointId(endpointId);
+                event
+                    .setAudioSsrc(getEndpointSsrc(endpointId, MediaType.AUDIO));
+                eventHandler.handleEvent(event);
             }
             catch (ParseException e)
             {
                 e.printStackTrace();
             }
-            
 
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onSctpNotification(SctpSocket socket,
             SctpNotification notification)
         {
             logger.debug("SCTP Notification: " + notification);
+            System.out.println("SCTP Notification: " + notification);
 
             if (notification.sn_type == SctpNotification.SCTP_ASSOC_CHANGE)
             {
@@ -829,6 +926,9 @@ public class JireconRecorderImpl
                 switch (assocChange.state)
                 {
                 case SctpNotification.AssociationChange.SCTP_COMM_UP:
+                    logger.debug("SCTP connection established successfully.");
+                    System.out
+                        .println("SCTP connection established successfully.");
                     break;
                 case SctpNotification.AssociationChange.SCTP_COMM_LOST:
                 case SctpNotification.AssociationChange.SCTP_SHUTDOWN_COMP:
@@ -838,7 +938,7 @@ public class JireconRecorderImpl
             }
         }
     }
-    
+
     /**
      * Thread exception handler, in order to catch exceptions of the task
      * thread.

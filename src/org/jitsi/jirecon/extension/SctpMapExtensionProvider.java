@@ -5,14 +5,24 @@
  */
 package org.jitsi.jirecon.extension;
 
-import org.jivesoftware.smack.packet.PacketExtension;
-import org.jivesoftware.smack.provider.PacketExtensionProvider;
+import org.jivesoftware.smack.packet.*;
+import org.jivesoftware.smack.provider.*;
 import org.xmlpull.v1.XmlPullParser;
 
+/**
+ * The <tt>SctpMapExtensionProvider</tt> parses "sctpmap" elements into
+ * <tt>SctpMapExtension</tt> instances.
+ * 
+ * @author lishunyang
+ * @see SctpMapExtension
+ */
 public class SctpMapExtensionProvider
     implements PacketExtensionProvider
 {
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public PacketExtension parseExtension(XmlPullParser parser)
         throws Exception
