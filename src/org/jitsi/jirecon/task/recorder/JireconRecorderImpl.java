@@ -800,6 +800,8 @@ public class JireconRecorderImpl
                 @Override
                 public void run()
                 {
+                    DatagramSocket iceUdpSocket = null;
+                    
                     try
                     {
                         Sctp.init();
@@ -824,7 +826,7 @@ public class JireconRecorderImpl
                         sctpSocket.setDataCallback(SctpConnection.this);
 
                         // Receive loop, breaks when SCTP socket is closed
-                        DatagramSocket iceUdpSocket =
+                        iceUdpSocket =
                             rtpConnector.getDataSocket();
                         byte[] receiveBuffer = new byte[2035];
                         DatagramPacket rcvPacket =
@@ -859,7 +861,8 @@ public class JireconRecorderImpl
                          */
                         sctpSocket.connect(port);
 
-                        while (true)
+                        
+                        while (!iceUdpSocket.isClosed())
                         {
                             iceUdpSocket.receive(rcvPacket);
 
@@ -881,9 +884,19 @@ public class JireconRecorderImpl
                     }
                     catch (IOException e)
                     {
-                        e.printStackTrace();
-                        fireEvent(new JireconTaskEvent(
-                            JireconTaskEvent.Type.RECORDER_ABORTED));
+                        /*
+                         * We need to guarentee that socket is opened, becase
+                         * when someone stop the recording task, udp socket will
+                         * be closed, and this will cause an exception thrown by
+                         * receive method. But in this case, we shouldn't throw
+                         * exception.
+                         */
+                        if (!iceUdpSocket.isClosed())
+                        {
+                            e.printStackTrace();
+                            fireEvent(new JireconTaskEvent(
+                                JireconTaskEvent.Type.RECORDER_ABORTED));
+                        }
                     }
                 }
             });
