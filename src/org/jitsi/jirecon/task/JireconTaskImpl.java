@@ -144,7 +144,7 @@ public class JireconTaskImpl
         stop();
         
         listeners.clear();
-        transport.free();
+//        transport.free();
 
         if (!keepData)
         {
@@ -180,6 +180,7 @@ public class JireconTaskImpl
         if (!isStopped)
         {
             logger.info(this.getClass() + " stop.");
+            transport.free();
             recorder.stopRecording();
             session.disconnect(Reason.SUCCESS, "OK, gotta go.");
             isStopped = true;

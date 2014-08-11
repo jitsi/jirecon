@@ -724,6 +724,38 @@ public class JireconRecorderImpl
     private class SctpConnection
         implements SctpDataCallback, NotificationListener
     {
+        /**
+         * Message type used to acknowledge WebRTC data channel allocation on SCTP
+         * stream ID on which <tt>MSG_OPEN_CHANNEL</tt> message arrives.
+         */
+        private static final int MSG_CHANNEL_ACK = 0x2;
+        
+        /**
+         * Message with this type sent over control PPID in order to open new WebRTC
+         * data channel on SCTP stream ID that this message is sent.
+         */
+        private static final int MSG_OPEN_CHANNEL = 0x3;
+        
+        private final byte[] MSG_CHANNEL_ACK_BYTES
+        = new byte[] { MSG_CHANNEL_ACK };
+        
+        /**
+         * Payload protocol id for control data. Used for <tt>WebRtcDataStream</tt>
+         * allocation.
+         */
+        static final int WEB_RTC_PPID_CTRL = 50;
+        
+        /**
+         * Payload protocol id that identifies text data UTF8 encoded in WebRTC data
+         * channels.
+         */
+        static final int WEB_RTC_PPID_STRING = 51;
+        
+        /**
+         * Payload protocol id that identifies binary data in WebRTC data channel.
+         */
+        static final int WEB_RTC_PPID_BIN = 53;
+        
         private ExecutorService executorService;
 
         private DtlsControl dtlsControl;
@@ -884,48 +916,63 @@ public class JireconRecorderImpl
             System.out.println("Everybody freeze! " + ppid);
             for (byte b : data)
             {
-//                System.out.printf("%03d ", b);
+                // System.out.printf("%03d ", b);
                 System.out.printf("%x ", b);
             }
             System.out.println();
-            ByteBuffer buffer = ByteBuffer.wrap(data);
-            int messageType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
-            System.out.println(messageType);
-            
-            
 
-            /*
-             * We only care about SPEAKER_CHANGE event.
-             */
-            
-            try
+            if (ppid == WEB_RTC_PPID_CTRL)
             {
-                String dataStr = new String(data, "UTF-8");
-                JSONParser parser = new JSONParser();
-                JSONObject json = (JSONObject) parser.parse(dataStr);
-                String endpointId =
-                    json.get("dominantSpeakerEndpoint").toString();
-
-                logger.debug("Hey! " + endpointId);
-                System.out.println("Hey! " + endpointId);
-
-                RecorderEvent event = new RecorderEvent();
-                event.setMediaType(MediaType.AUDIO);
-                event.setType(RecorderEvent.Type.SPEAKER_CHANGED);
-                event.setEndpointId(endpointId);
-                event
-                    .setAudioSsrc(getEndpointSsrc(endpointId, MediaType.AUDIO));
-                eventHandler.handleEvent(event);
+                // Channel control PPID
+                try
+                {
+                    onCtrlPacket(data, sid);
+                }
+                catch (IOException e)
+                {
+                    logger.error("IOException when processing ctrl packet", e);
+                }
             }
-            catch (ParseException e)
+            else if (ppid == WEB_RTC_PPID_STRING || ppid == WEB_RTC_PPID_BIN)
             {
-                e.printStackTrace();
-            }
-            catch (UnsupportedEncodingException e)
-            {
-                e.printStackTrace();
-            }
 
+                ByteBuffer buffer = ByteBuffer.wrap(data);
+                int messageType =
+                    /* 1 byte unsigned integer */0xFF & buffer.get();
+                System.out.println(messageType);
+
+                /*
+                 * We only care about SPEAKER_CHANGE event.
+                 */
+
+                try
+                {
+                    String dataStr = new String(data, "UTF-8");
+                    JSONParser parser = new JSONParser();
+                    JSONObject json = (JSONObject) parser.parse(dataStr);
+                    String endpointId =
+                        json.get("dominantSpeakerEndpoint").toString();
+
+                    logger.debug("Hey! " + endpointId);
+                    System.out.println("Hey! " + endpointId);
+
+                    RecorderEvent event = new RecorderEvent();
+                    event.setMediaType(MediaType.AUDIO);
+                    event.setType(RecorderEvent.Type.SPEAKER_CHANGED);
+                    event.setEndpointId(endpointId);
+                    event.setAudioSsrc(getEndpointSsrc(endpointId,
+                        MediaType.AUDIO));
+                    eventHandler.handleEvent(event);
+                }
+                catch (ParseException e)
+                {
+                    e.printStackTrace();
+                }
+                catch (UnsupportedEncodingException e)
+                {
+                    e.printStackTrace();
+                }
+            }
         }
 
         /**
@@ -955,6 +1002,87 @@ public class JireconRecorderImpl
                 case SctpNotification.AssociationChange.SCTP_CANT_STR_ASSOC:
                     break;
                 }
+            }
+        }
+        
+        /**
+         * Handles control packet.
+         * @param data raw packet data that arrived on control PPID.
+         * @param sid SCTP stream id on which the data has arrived.
+         */
+        private void onCtrlPacket(byte[] data, int sid)
+            throws IOException
+        {
+            System.out.print("Control Packet");
+            for (byte b : data)
+            {
+                System.out.printf("%03d ", b);
+            }
+            System.out.println();
+            
+            ByteBuffer buffer = ByteBuffer.wrap(data);
+            int messageType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
+
+            if(messageType == MSG_OPEN_CHANNEL)
+            {
+                int channelType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
+                int priority
+                    = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
+                long reliability
+                    = /* 4 bytes unsigned integer */ 0xFFFFFFFFL & buffer.getInt();
+                int labelLength
+                    = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
+                int protocolLength
+                    = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
+                String label;
+                String protocol;
+
+                if (labelLength == 0)
+                {
+                    label = "";
+                }
+                else
+                {
+                    byte[] labelBytes = new byte[labelLength];
+
+                    buffer.get(labelBytes);
+                    label = new String(labelBytes, "UTF-8");
+                }
+                if (protocolLength == 0)
+                {
+                    protocol = "";
+                }
+                else
+                {
+                    byte[] protocolBytes = new byte[protocolLength];
+
+                    buffer.get(protocolBytes);
+                    protocol = new String(protocolBytes, "UTF-8");
+                }
+
+                System.out.println("!!! "
+                    + " data channel open request on SID: " + sid + " type: "
+                    + channelType + " prio: " + priority + " reliab: "
+                    + reliability + " label: " + label + " proto: " + protocol);
+
+                sendOpenChannelAck(sid);
+            }
+        }
+        
+        /**
+         * Sends acknowledgment for open channel request on given SCTP stream ID.
+         * @param sid SCTP stream identifier to be used for sending ack.
+         */
+        private void sendOpenChannelAck(int sid)
+            throws IOException
+        {
+            // Send ACK
+            byte[] ack = MSG_CHANNEL_ACK_BYTES;
+            int sendAck = sctpSocket.send(ack, true, sid, WEB_RTC_PPID_CTRL);
+
+            if(sendAck != ack.length)
+            {
+                logger.error("Failed to send open channel confirmation");
             }
         }
     }
