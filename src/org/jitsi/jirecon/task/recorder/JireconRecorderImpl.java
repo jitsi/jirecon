@@ -7,11 +7,15 @@ package org.jitsi.jirecon.task.recorder;
 
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.Map.*;
 import java.util.concurrent.*;
+
 import javax.media.rtp.*;
+
 import net.java.sip.communicator.service.protocol.*;
+
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.recording.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
@@ -877,8 +881,18 @@ public class JireconRecorderImpl
         public void onSctpPacket(byte[] data, int sid, int ssn, int tsn,
             long ppid, int context, int flags)
         {
-            String dataStr = new String(data);
-            JSONParser parser = new JSONParser();
+            System.out.println("Everybody freeze! " + ppid);
+            for (byte b : data)
+            {
+//                System.out.printf("%03d ", b);
+                System.out.printf("%x ", b);
+            }
+            System.out.println();
+            ByteBuffer buffer = ByteBuffer.wrap(data);
+            int messageType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
+            System.out.println(messageType);
+            
+            
 
             /*
              * We only care about SPEAKER_CHANGE event.
@@ -886,6 +900,8 @@ public class JireconRecorderImpl
             
             try
             {
+                String dataStr = new String(data, "UTF-8");
+                JSONParser parser = new JSONParser();
                 JSONObject json = (JSONObject) parser.parse(dataStr);
                 String endpointId =
                     json.get("dominantSpeakerEndpoint").toString();
@@ -902,6 +918,10 @@ public class JireconRecorderImpl
                 eventHandler.handleEvent(event);
             }
             catch (ParseException e)
+            {
+                e.printStackTrace();
+            }
+            catch (UnsupportedEncodingException e)
             {
                 e.printStackTrace();
             }
