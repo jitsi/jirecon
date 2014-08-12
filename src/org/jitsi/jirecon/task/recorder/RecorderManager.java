@@ -31,25 +31,19 @@ import org.jitsi.util.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
-/**
- * An implementation of <tt>JireconRecorder</tt>.
- * <p>
- * <tt>JireconRecorderImpl</tt> will record the media streams that you
- * specified, besides, it also records a meta data file which is used for
- * post-proceeding.
+ /**
+ * <tt>RecorderManager</tt> is used to record media
+ * streams and save them into local files.
  * 
  * @author lishunyang
- * @see JireconRecorder
- * 
  */
-public class JireconRecorderImpl
-    implements JireconRecorder
+public class RecorderManager
 {
     /**
      * The <tt>Logger</tt>, used to log messages to standard output.
      */
     private static final Logger logger = Logger
-        .getLogger(JireconRecorderImpl.class);
+        .getLogger(RecorderManager.class);
 
     /**
      * The map between <tt>MediaType</tt> and <tt>MediaStream</tt>. Those are
@@ -121,9 +115,16 @@ public class JireconRecorderImpl
     private String outputDir;
 
     /**
-     * {@inheritDoc}
+     * Initialize <tt>JireconRecorder</tt>.
+     * <p>
+     * <strong>Warning:</strong> LibJitsi must be started before calling this
+     * method.
+     * 
+     * @param outputDir decide where to output the files. The directory must be
+     *            existed and writable.
+     * @param dtlsControls is the map between <tt>MediaType</tt> and
+     *            <tt>DtlsControl</tt> which is used for SRTP transfer.
      */
-    @Override
     public void init(String outputDir, Map<MediaType, DtlsControl> dtlsControls)
     {
         this.mediaService = LibJitsi.getMediaService();
@@ -140,9 +141,18 @@ public class JireconRecorderImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Start recording media streams.
+     * 
+     * @param formatAndPTs
+     * @param connectors is the map between <tt>MediaType</tt> and
+     *            <tt>StreamConnector</tt>. <tt>JireconRecorder</tt> needs those
+     *            connectors to transfer stream data.
+     * @param targets is the map between <tt>MediaType</tt> and
+     *            <tt>MediaStreamTarget</tt>. Every target indicates a media
+     *            source.
+     * @throws OperationFailedException if some operation failed and the
+     *             recording is aborted.
      */
-    @Override
     public void startRecording(
         Map<MediaType, Map<MediaFormat, Byte>> formatAndDynamicPTs,
         Map<MediaType, StreamConnector> connectors,
@@ -184,9 +194,8 @@ public class JireconRecorderImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Stop the recording.
      */
-    @Override
     public void stopRecording()
     {
         stopRecordingStreams();
@@ -527,7 +536,6 @@ public class JireconRecorderImpl
     /**
      * {@inheritDoc}
      */
-    @Override
     public void setEndpoints(List<JireconEndpoint> newEndpoints)
     {
         synchronized (endpoints)
@@ -551,9 +559,10 @@ public class JireconRecorderImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Add <tt>JireconTaskEvent</tt> listener.
+     * 
+     * @param listener
      */
-    @Override
     public void addTaskEventListener(JireconTaskEventListener listener)
     {
         synchronized (listeners)
@@ -563,9 +572,10 @@ public class JireconRecorderImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Remove <tt>JireconTaskEvent</tt> listener.
+     * 
+     * @param listener
      */
-    @Override
     public void removeTaskEventListener(JireconTaskEventListener listener)
     {
         synchronized (listeners)
@@ -575,9 +585,10 @@ public class JireconRecorderImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Get local ssrcs of each <tt>MediaType</tt>.
+     * 
+     * @return Map between <tt>MediaType</tt> and ssrc.
      */
-    @Override
     public Map<MediaType, Long> getLocalSsrcs()
     {
         if (!localSsrcs.isEmpty())

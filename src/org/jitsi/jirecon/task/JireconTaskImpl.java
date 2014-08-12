@@ -70,9 +70,9 @@ public class JireconTaskImpl
     private DtlsControlManager dtlsControl;
     
     /**
-     * The instance of <tt>JireconRecorder</tt>.
+     * The instance of <tt>RecorderManager</tt>.
      */
-    private JireconRecorder recorder;
+    private RecorderManager recorder;
 
     /**
      * The thread pool to make the method "start" to be asynchronous.
@@ -129,7 +129,7 @@ public class JireconTaskImpl
         session.addTaskEventListener(this);
         session.init(connection);
 
-        recorder = new JireconRecorderImpl();
+        recorder = new RecorderManager();
         recorder.addTaskEventListener(this);
         recorder.init(savingDir, dtlsControl.getAllDtlsControl());
     }
@@ -421,7 +421,7 @@ public class JireconTaskImpl
         {
             if (t instanceof JireconTask)
             {
-                ((JireconTask) e).stop();
+                ((JireconTask) t).stop();
                 fireEvent(new JireconEvent(info.getMucJid(),
                     JireconEvent.Type.TASK_ABORTED));
             }
