@@ -86,13 +86,13 @@ public class RecorderManager
      * The <tt>JireconTaskEventListener</tt>, if <tt>JireconRecorder</tt> has
      * something important, it will notify them.
      */
-    private List<JireconTaskEventListener> listeners =
-        new ArrayList<JireconTaskEventListener>();
+    private List<TaskEventListener> listeners =
+        new ArrayList<TaskEventListener>();
 
     /**
      * Active endpoints in the meeting currently.
      */
-    private List<JireconEndpoint> endpoints = new ArrayList<JireconEndpoint>();
+    private List<Endpoint> endpoints = new ArrayList<Endpoint>();
 
     /**
      * Map between <tt>MediaType</tt> and local recorder's ssrc.
@@ -488,7 +488,7 @@ public class RecorderManager
     {
         synchronized (endpoints)
         {
-            for (JireconEndpoint endpoint : endpoints)
+            for (Endpoint endpoint : endpoints)
             {
                 Map<MediaType, Long> ssrcs = endpoint.getSsrcs();
 
@@ -520,7 +520,7 @@ public class RecorderManager
     {
         synchronized (endpoints)
         {
-            for (JireconEndpoint endpoint : endpoints)
+            for (Endpoint endpoint : endpoints)
             {
                 if (0 == endpoint.getId().compareTo(endpointId)
                     || 0 == endpoint.getBareId().compareTo(endpointId))
@@ -536,12 +536,12 @@ public class RecorderManager
     /**
      * {@inheritDoc}
      */
-    public void setEndpoints(List<JireconEndpoint> newEndpoints)
+    public void setEndpoints(List<Endpoint> newEndpoints)
     {
         synchronized (endpoints)
         {
             endpoints = newEndpoints;
-            for (JireconEndpoint endpoint : endpoints)
+            for (Endpoint endpoint : endpoints)
             {
                 final String endpointId = endpoint.getId();
                 for (Entry<MediaType, Long> ssrc : endpoint.getSsrcs()
@@ -563,7 +563,7 @@ public class RecorderManager
      * 
      * @param listener
      */
-    public void addTaskEventListener(JireconTaskEventListener listener)
+    public void addTaskEventListener(TaskEventListener listener)
     {
         synchronized (listeners)
         {
@@ -576,7 +576,7 @@ public class RecorderManager
      * 
      * @param listener
      */
-    public void removeTaskEventListener(JireconTaskEventListener listener)
+    public void removeTaskEventListener(TaskEventListener listener)
     {
         synchronized (listeners)
         {
@@ -611,11 +611,11 @@ public class RecorderManager
      * 
      * @param event
      */
-    private void fireEvent(JireconTaskEvent event)
+    private void fireEvent(TaskEvent event)
     {
         synchronized (listeners)
         {
-            for (JireconTaskEventListener l : listeners)
+            for (TaskEventListener l : listeners)
                 l.handleTaskEvent(event);
         }
     }
@@ -905,8 +905,8 @@ public class RecorderManager
                         if (!iceUdpSocket.isClosed())
                         {
                             e.printStackTrace();
-                            fireEvent(new JireconTaskEvent(
-                                JireconTaskEvent.Type.RECORDER_ABORTED));
+                            fireEvent(new TaskEvent(
+                                TaskEvent.Type.RECORDER_ABORTED));
                         }
                     }
                 }
@@ -1128,8 +1128,8 @@ public class RecorderManager
              * If Sctp data channel crashed, fire an aborted event to notify
              * upper class.
              */
-            fireEvent(new JireconTaskEvent(
-                JireconTaskEvent.Type.RECORDER_ABORTED));
+            fireEvent(new TaskEvent(
+                TaskEvent.Type.RECORDER_ABORTED));
         }
     }
 

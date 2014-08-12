@@ -56,8 +56,8 @@ public class JingleSessionManager
      * The <tt>JireconTaskEventListener</tt>, if <tt>JireconRecorder</tt> has
      * something important, it will notify them.
      */
-    private List<JireconTaskEventListener> listeners =
-        new ArrayList<JireconTaskEventListener>();
+    private List<TaskEventListener> listeners =
+        new ArrayList<TaskEventListener>();
 
     /**
      * The instance of a <tt>MultiUserChat</tt>. <tt>JireconSessionImpl</tt>
@@ -83,8 +83,8 @@ public class JingleSessionManager
     /**
      * <tt>Endpoint</tt>s in the meeting.
      */
-    private List<JireconEndpoint> endpoints =
-        new ArrayList<JireconEndpoint>();
+    private List<Endpoint> endpoints =
+        new ArrayList<Endpoint>();
 
     /**
      * The list of <tt>JireconSessionPacketListener</tt> which is used for
@@ -446,15 +446,15 @@ public class JingleSessionManager
         if (p.getType() == Presence.Type.unavailable)
         {
             removeEndpoint(participantJid);
-            fireEvent(new JireconTaskEvent(
-                JireconTaskEvent.Type.PARTICIPANT_LEFT));
+            fireEvent(new TaskEvent(
+                TaskEvent.Type.PARTICIPANT_LEFT));
         }
         // Otherwise we think that some new participant has joined the MUC.
         else
         {
             addEndpoint(participantJid, ssrcs);
-            fireEvent(new JireconTaskEvent(
-                JireconTaskEvent.Type.PARTICIPANT_CAME));
+            fireEvent(new TaskEvent(
+                TaskEvent.Type.PARTICIPANT_CAME));
         }
     }
     
@@ -654,7 +654,7 @@ public class JingleSessionManager
      * 
      * @param listener
      */
-    public void addTaskEventListener(JireconTaskEventListener listener)
+    public void addTaskEventListener(TaskEventListener listener)
     {
         synchronized (listeners)
         {
@@ -667,7 +667,7 @@ public class JingleSessionManager
      * 
      * @param listener
      */
-    public void removeTaskEventListener(JireconTaskEventListener listener)
+    public void removeTaskEventListener(TaskEventListener listener)
     {
         synchronized (listeners)
         {
@@ -681,11 +681,11 @@ public class JingleSessionManager
      * 
      * @param event
      */
-    private void fireEvent(JireconTaskEvent event)
+    private void fireEvent(TaskEvent event)
     {
         synchronized (listeners)
         {
-            for (JireconTaskEventListener l : listeners)
+            for (TaskEventListener l : listeners)
                 l.handleTaskEvent(event);
         }
     }
@@ -803,7 +803,7 @@ public class JingleSessionManager
     /**
      * {@inheritDoc}
      */
-    public List<JireconEndpoint> getEndpoints()
+    public List<Endpoint> getEndpoints()
     {
         return endpoints;
     }
@@ -812,7 +812,7 @@ public class JingleSessionManager
     {
         synchronized (endpoints)
         {
-            JireconEndpoint endpoint = new JireconEndpoint();
+            Endpoint endpoint = new Endpoint();
             
             endpoint.setId(jid);
             for (MediaType mediaType : new MediaType[]
@@ -821,7 +821,7 @@ public class JingleSessionManager
                 endpoint.setSsrc(mediaType, ssrcs.get(mediaType));
             }
             
-            Iterator<JireconEndpoint> iter = endpoints.iterator();
+            Iterator<Endpoint> iter = endpoints.iterator();
             while (iter.hasNext())
             {
                 if (0 == iter.next().getId().compareTo(jid))
@@ -841,7 +841,7 @@ public class JingleSessionManager
         
         synchronized (endpoints)
         {
-            Iterator<JireconEndpoint> iter = endpoints.iterator();
+            Iterator<Endpoint> iter = endpoints.iterator();
             while (iter.hasNext())
             {
                 if (0 == iter.next().getId().compareTo(jid))

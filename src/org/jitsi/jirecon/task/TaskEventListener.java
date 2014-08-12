@@ -6,18 +6,18 @@
 package org.jitsi.jirecon.task;
 
 /**
- * <tt>JireconTaskEvent</tt> listener.
+ * <tt>TaskEvent</tt> listener.
  * 
  * @author lishunyang
- * @see JireconTaskEvent
+ * @see TaskEvent
  * 
  */
-public interface JireconTaskEventListener
+public interface TaskEventListener
 {
     /**
      * Handle the event.
      * 
      * @param event
      */
-    public void handleTaskEvent(JireconTaskEvent event);
+    public void handleTaskEvent(TaskEvent event);
 }

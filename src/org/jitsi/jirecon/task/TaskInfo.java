@@ -12,7 +12,7 @@ package org.jitsi.jirecon.task;
  * @author lishunyang
  * 
  */
-public class JireconTaskInfo
+public class TaskInfo
 {
     /**
      * The MUC jid, which is used to join a MUC. There is no mandatory to use

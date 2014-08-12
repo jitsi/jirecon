@@ -10,13 +10,13 @@ import java.util.Map;
 
 import org.jitsi.service.neomedia.MediaType;
 
-public class JireconEndpoint
+public class Endpoint
 {
     private Map<MediaType, Long> ssrcs = new HashMap<MediaType, Long>();
 
     private String id;
 
-    public JireconEndpoint()
+    public Endpoint()
     {
     }
 

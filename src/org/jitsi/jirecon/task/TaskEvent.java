@@ -11,9 +11,9 @@ package org.jitsi.jirecon.task;
  * <tt>JireconTask</tt>.
  * 
  * @author lishunyang
- * @see JireconTaskEvent.Type
+ * @see TaskEvent.Type
  */
-public class JireconTaskEvent
+public class TaskEvent
 {
     /**
      * Type of this event.
@@ -25,7 +25,7 @@ public class JireconTaskEvent
      * 
      * @param type
      */
-    public JireconTaskEvent(Type type)
+    public TaskEvent(Type type)
     {
         this.type = type;
     }

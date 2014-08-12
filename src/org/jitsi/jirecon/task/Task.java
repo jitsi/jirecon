@@ -37,7 +37,7 @@ import org.jivesoftware.smack.*;
  */
 public class Task
     implements JireconEventListener, 
-    JireconTaskEventListener,
+    TaskEventListener,
     Runnable
 {
     /**
@@ -94,7 +94,7 @@ public class Task
      * Record the task info. <tt>JireconTaskInfo</tt> can be accessed by outside
      * system.
      */
-    private JireconTaskInfo info = new JireconTaskInfo();
+    private TaskInfo info = new TaskInfo();
     
     /**
      * Initialize a <tt>JireconTask</tt>. Specify which Jitsi-meet you want to
@@ -165,7 +165,7 @@ public class Task
             }
         }
         
-        info = new JireconTaskInfo();
+        info = new TaskInfo();
     }
 
     /**
@@ -347,7 +347,7 @@ public class Task
      * 
      * @return The task information.
      */
-    public JireconTaskInfo getTaskInfo()
+    public TaskInfo getTaskInfo()
     {
         return info;
     }
@@ -368,20 +368,20 @@ public class Task
      * {@inheritDoc}
      */
     @Override
-    public void handleTaskEvent(JireconTaskEvent event)
+    public void handleTaskEvent(TaskEvent event)
     {
         logger.info("JireconTask event: " + event.getType());
 
-        if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_CAME)
+        if (event.getType() == TaskEvent.Type.PARTICIPANT_CAME)
         {
-            List<JireconEndpoint> endpoints =
+            List<Endpoint> endpoints =
                 session.getEndpoints();
             recorder.setEndpoints(endpoints);
         }
 
-        else if (event.getType() == JireconTaskEvent.Type.PARTICIPANT_LEFT)
+        else if (event.getType() == TaskEvent.Type.PARTICIPANT_LEFT)
         {
-            List<JireconEndpoint> endpoints =
+            List<Endpoint> endpoints =
                 session.getEndpoints();
             // Oh, it seems that all participants have left the MUC(except Jirecon
             // or other participants which only receive data). It's time to
