@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.transport;
+package org.jitsi.jirecon.task;
 
 import java.beans.*;
 import java.net.*;

@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
-import org.jitsi.jirecon.extension.*;
+import org.jitsi.jirecon.protocol.extension.*;
 import org.jitsi.jirecon.task.Task;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.configuration.ConfigurationService;

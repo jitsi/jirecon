@@ -5,6 +5,8 @@
  */
 package org.jitsi.jirecon;
 
+import java.util.EventListener;
+
 /**
  * Running event of <tt>Jirecon</tt>, which means some important things
  * happened.
@@ -91,5 +93,22 @@ public class JireconEvent
         {
             return name;
         }
+    }
+    
+    /**
+     * Listener interface of <tt>JireconEvent</tt>.
+     * 
+     * @author lishunyang
+     * @see JireconEvent
+     */
+    public interface JireconEventListener
+        extends EventListener
+    {
+        /**
+         * Handle the specified <tt>JireconEvent</tt>.
+         * 
+         * @param evt is the specified event.
+         */
+        void handleEvent(JireconEvent evt);
     }
 }

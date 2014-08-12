@@ -3,13 +3,12 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.component;
+package org.jitsi.jirecon.xmppcomponent;
 
 import java.util.*;
-
 import net.java.sip.communicator.service.protocol.OperationFailedException;
-
 import org.jitsi.jirecon.*;
+import org.jitsi.jirecon.JireconEvent.*;
 import org.jitsi.util.Logger;
 import org.xmpp.component.AbstractComponent;
 import org.xmpp.packet.*;

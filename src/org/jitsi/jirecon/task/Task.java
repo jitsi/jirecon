@@ -9,15 +9,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
-
 import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-
 import org.jitsi.jirecon.*;
-import org.jitsi.jirecon.dtlscontrol.*;
-import org.jitsi.jirecon.task.recorder.*;
-import org.jitsi.jirecon.task.session.*;
-import org.jitsi.jirecon.transport.*;
+import org.jitsi.jirecon.JireconEvent.*;
 import org.jitsi.jirecon.utils.*;
 import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
@@ -32,7 +27,6 @@ import org.jivesoftware.smack.*;
  * <tt>JireconSession</tt>, <tt>JireconRecorder</tt> are the colleagues.
  * 
  * @author lishunyang
- * @see JireconTask
  * 
  */
 public class Task

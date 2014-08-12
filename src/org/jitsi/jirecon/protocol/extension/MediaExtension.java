@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.extension;
+package org.jitsi.jirecon.protocol.extension;
 
 import java.util.*;
 import java.util.Map.*;

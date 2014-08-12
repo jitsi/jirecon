@@ -11,7 +11,8 @@ import java.util.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.protocol.*;
 
-import org.jitsi.jirecon.extension.*;
+import org.jitsi.jirecon.JireconEvent.*;
+import org.jitsi.jirecon.protocol.extension.*;
 import org.jitsi.jirecon.task.*;
 import org.jitsi.jirecon.utils.*;
 import org.jitsi.service.configuration.*;

@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.task.recorder;
+package org.jitsi.jirecon.task;
 
 import java.io.*;
 import java.net.*;
@@ -11,16 +11,12 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.Map.*;
 import java.util.concurrent.*;
-
 import javax.media.rtp.*;
-
 import net.java.sip.communicator.service.protocol.*;
-
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.recording.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
-import org.jitsi.jirecon.task.*;
 import org.jitsi.sctp4j.*;
 import org.jitsi.sctp4j.SctpSocket.*;
 import org.jitsi.service.libjitsi.*;
