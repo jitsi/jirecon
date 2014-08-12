@@ -767,7 +767,7 @@ public class RecorderManager
          */
         static final int WEB_RTC_PPID_BIN = 53;
         
-        private ExecutorService executorService;
+        private ExecutorService sctpExecutor;
 
         private DtlsControl dtlsControl;
 
@@ -782,7 +782,7 @@ public class RecorderManager
         {
             this.dtlsControl = dtlsControl;
 
-            executorService =
+            sctpExecutor =
                 Executors.newSingleThreadExecutor(new HandlerThreadFactory());
         }
 
@@ -806,7 +806,7 @@ public class RecorderManager
 
             dtlsControl.start(MediaType.DATA);
 
-            executorService.execute(new Runnable()
+            sctpExecutor.execute(new Runnable()
             {
                 @Override
                 public void run()
@@ -1124,12 +1124,12 @@ public class RecorderManager
         @Override
         public void uncaughtException(Thread t, Throwable e)
         {
-            if (t instanceof JireconTask)
-            {
-                ((JireconTask) e).stop();
-                fireEvent(new JireconTaskEvent(
-                    JireconTaskEvent.Type.RECORDER_ABORTED));
-            }
+            /*
+             * If Sctp data channel crashed, fire an aborted event to notify
+             * upper class.
+             */
+            fireEvent(new JireconTaskEvent(
+                JireconTaskEvent.Type.RECORDER_ABORTED));
         }
     }
 

@@ -27,7 +27,7 @@ import org.jitsi.util.Logger;
 import org.jivesoftware.smack.*;
 
 /**
- * An implementation of <tt>JireconTask</tt>. It is designed in Mediator
+ * The individual task to record specified Jitsi-meeting. It is designed in Mediator
  * pattern, <tt>JireconTaskImpl</tt> is the mediator, others like
  * <tt>JireconSession</tt>, <tt>JireconRecorder</tt> are the colleagues.
  * 
@@ -35,9 +35,8 @@ import org.jivesoftware.smack.*;
  * @see JireconTask
  * 
  */
-public class JireconTaskImpl
-    implements JireconTask, 
-    JireconEventListener, 
+public class Task
+    implements JireconEventListener, 
     JireconTaskEventListener,
     Runnable
 {
@@ -45,7 +44,7 @@ public class JireconTaskImpl
      * The <tt>Logger</tt>, used to log messages to standard output.
      */
     private static final Logger logger = Logger
-        .getLogger(JireconTaskImpl.class.getName());
+        .getLogger(Task.class.getName());
     
     /**
      * The <tt>JireconEvent</tt> listeners, they will be notified when some
@@ -98,9 +97,14 @@ public class JireconTaskImpl
     private JireconTaskInfo info = new JireconTaskInfo();
     
     /**
-     * {@inheritDoc}
+     * Initialize a <tt>JireconTask</tt>. Specify which Jitsi-meet you want to
+     * record and where we should output the media files.
+     * 
+     * @param mucJid indicates which meet you want to record.
+     * @param connection is an existed <tt>XMPPConnection</tt> which will be
+     *            used to send/receive Jingle packet.
+     * @param savingDir indicates where we should output the media fiels.
      */
-    @Override
     public void init(String mucJid, XMPPConnection connection, String savingDir)
     {
         logger.info(this.getClass() + " init");
@@ -135,9 +139,11 @@ public class JireconTaskImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Uninitialize the <tt>JireconTask</tt> and get ready to be recycled by GC.
+     * 
+     * @param keepData Whether we should keep data. Keep the data if it is true,
+     *            other wise remove them.
      */
-    @Override
     public void uninit(boolean keepData)
     {
         // Stop the task in case of something hasn't been released correctly.
@@ -163,18 +169,20 @@ public class JireconTaskImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Start the <tt>JireconTask</tt>.
+     * <p>
+     * <strong>Warning:</strong> This is a asynchronous method, so it will
+     * return quickly, but it doesn't mean that the task has been successfully
+     * started. It will notify event listeners if the task is failed.
      */
-    @Override
     public void start()
     {
         executorService.execute(this);
     }
 
     /**
-     * {@inheritDoc}
+     * Stop the <tt>JireconTask</tt>.
      */
-    @Override
     public void stop()
     {
         if (!isStopped)
@@ -315,27 +323,30 @@ public class JireconTaskImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Register an event listener to this <tt>JireconTask</tt>.
+     * 
+     * @param listener
      */
-    @Override
     public void addEventListener(JireconEventListener listener)
     {
         listeners.add(listener);
     }
 
     /**
-     * {@inheritDoc}
+     * Remove and event listener from this <tt>JireconTask</tt>.
+     * 
+     * @param listener
      */
-    @Override
     public void removeEventListener(JireconEventListener listener)
     {
         listeners.remove(listener);
     }
 
     /**
-     * {@inheritDoc}
+     * Get the task information.
+     * 
+     * @return The task information.
      */
-    @Override
     public JireconTaskInfo getTaskInfo()
     {
         return info;
@@ -419,12 +430,12 @@ public class JireconTaskImpl
         @Override
         public void uncaughtException(Thread t, Throwable e)
         {
-            if (t instanceof JireconTask)
-            {
-                ((JireconTask) t).stop();
-                fireEvent(new JireconEvent(info.getMucJid(),
-                    JireconEvent.Type.TASK_ABORTED));
-            }
+            /*
+             * Exception can only be thrown by Task.
+             */
+            Task.this.stop();
+            fireEvent(new JireconEvent(info.getMucJid(),
+                JireconEvent.Type.TASK_ABORTED));
         }
     }
 

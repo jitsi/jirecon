@@ -10,8 +10,7 @@ import java.util.concurrent.TimeUnit;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.jirecon.extension.*;
-import org.jitsi.jirecon.task.JireconTask;
-import org.jitsi.jirecon.task.JireconTaskImpl;
+import org.jitsi.jirecon.task.Task;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.*;
@@ -23,7 +22,7 @@ import junit.framework.TestCase;
 public class TestJireconTaskImpl
     extends TestCase
 {
-    private static JireconTask task;
+    private static Task task;
 
     private final static String XMPP_HOST_KEY = "XMPP_HOST";
 
@@ -81,7 +80,7 @@ public class TestJireconTaskImpl
         providerManager.addExtensionProvider("media", "http://estos.de/ns/mjs",
             new MediaExtensionProvider());
 
-        task = new JireconTaskImpl();
+        task = new Task();
         String mucJid = "p15uivfwk4xcg14i@conference.example.com";
         task.init(mucJid, connection, savingDir + "/" + mucJid);
     }

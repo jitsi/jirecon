@@ -55,8 +55,8 @@ public class JireconImpl
     /**
      * Active <tt>JireconTask</tt>, map between Jitsi-meeting jid and task.
      */
-    private Map<String, JireconTask> jireconTasks =
-        new HashMap<String, JireconTask>();
+    private Map<String, Task> tasks =
+        new HashMap<String, Task>();
 
     /**
      * The base directory to save recording files. <tt>JireconImpl</tt> will add
@@ -149,9 +149,9 @@ public class JireconImpl
     public void uninit()
     {
         logger.info(this.getClass() + "uninit");
-        synchronized (jireconTasks)
+        synchronized (tasks)
         {
-            for (JireconTask task : jireconTasks.values())
+            for (Task task : tasks.values())
             {
                 task.uninit(true);
             }
@@ -168,17 +168,17 @@ public class JireconImpl
     {
         logger.info(this.getClass() + "startJireconTask: " + mucJid);
 
-        JireconTask task = null;
-        synchronized (jireconTasks)
+        Task task = null;
+        synchronized (tasks)
         {
-            if (jireconTasks.containsKey(mucJid))
+            if (tasks.containsKey(mucJid))
             {
                 logger.info("Failed to start Jirecon by mucJid: " + mucJid
                     + ". Duplicate mucJid.");
                 return false;
             }
-            task = new JireconTaskImpl();
-            jireconTasks.put(mucJid, task);
+            task = new Task();
+            tasks.put(mucJid, task);
         }
 
         String outputDir =
@@ -200,11 +200,11 @@ public class JireconImpl
     {
         logger.info(this.getClass() + "stopJireconTask: " + mucJid);
         
-        JireconTask task = null;
+        Task task = null;
         
-        synchronized (jireconTasks)
+        synchronized (tasks)
         {
-            task = jireconTasks.remove(mucJid);
+            task = tasks.remove(mucJid);
         }
         
         if (null == task)
