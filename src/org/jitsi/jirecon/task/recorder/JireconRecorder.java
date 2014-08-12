@@ -32,10 +32,10 @@ public interface JireconRecorder
      * 
      * @param outputDir decide where to output the files. The directory must be
      *            existed and writable.
-     * @param srtpControls is the map between <tt>MediaType</tt> and
-     *            <tt>SrtpControl</tt> which is used for SRTP transfer.
+     * @param dtlsControls is the map between <tt>MediaType</tt> and
+     *            <tt>DtlsControl</tt> which is used for SRTP transfer.
      */
-    public void init(String outputDir, Map<MediaType, SrtpControl> srtpControls);
+    public void init(String outputDir, Map<MediaType, DtlsControl> dtlsControls);
 
     /**
      * Start recording media streams.

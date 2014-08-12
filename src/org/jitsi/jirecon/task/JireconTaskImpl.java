@@ -65,9 +65,9 @@ public class JireconTaskImpl
     private JireconTransportManager transport;
 
     /**
-     * The instance of <tt>SrtpControlManager</tt>.
+     * The instance of <tt>DtlsControlManager</tt>.
      */
-    private SrtpControlManager srtpControl;
+    private DtlsControlManager dtlsControl;
     
     /**
      * The instance of <tt>JireconRecorder</tt>.
@@ -121,8 +121,8 @@ public class JireconTaskImpl
 
         transport = new JireconIceUdpTransportManagerImpl();
 
-        srtpControl = new DtlsControlManagerImpl();
-        srtpControl.setHashFunction(configuration
+        dtlsControl = new DtlsControlManager();
+        dtlsControl.setHashFunction(configuration
             .getString(JireconConfigurationKey.HASH_FUNCTION_KEY));
 
         session = new JireconSessionImpl();
@@ -131,7 +131,7 @@ public class JireconTaskImpl
 
         recorder = new JireconRecorderImpl();
         recorder.addTaskEventListener(this);
-        recorder.init(savingDir, srtpControl.getAllSrtpControl());
+        recorder.init(savingDir, dtlsControl.getAllDtlsControl());
     }
 
     /**
@@ -250,7 +250,7 @@ public class JireconTaskImpl
             for (MediaType mediaType : supportedMediaTypes)
             {
                 fingerprintPEs.put(mediaType,
-                    srtpControl.getFingerprintPacketExt(mediaType));
+                    dtlsControl.getFingerprintPacketExt(mediaType));
             }
 
             /* 4.2 Send session-accept packet. */

@@ -124,7 +124,7 @@ public class JireconRecorderImpl
      * {@inheritDoc}
      */
     @Override
-    public void init(String outputDir, Map<MediaType, SrtpControl> srtpControls)
+    public void init(String outputDir, Map<MediaType, DtlsControl> dtlsControls)
     {
         this.mediaService = LibJitsi.getMediaService();
         this.outputDir = outputDir;
@@ -134,8 +134,8 @@ public class JireconRecorderImpl
          * NOTE: SrtpControl will be managed by MediaStream. So we don't need to
          * open/close SctpControl addtionally.
          */
-        createMediaStreams(srtpControls);
-        createDataChannel(srtpControls.get(MediaType.DATA));
+        createMediaStreams(dtlsControls);
+        createDataChannel(dtlsControls.get(MediaType.DATA));
 
     }
 
@@ -405,11 +405,11 @@ public class JireconRecorderImpl
     /**
      * Create data channel. We need <tt>DtlsControl</tt> to initialize it.
      * 
-     * @param srtpControl
+     * @param dtlsControl
      */
-    private void createDataChannel(SrtpControl srtpControl)
+    private void createDataChannel(DtlsControl dtlsControl)
     {
-        dataChannel = new SctpConnection((DtlsControl) srtpControl);
+        dataChannel = new SctpConnection(dtlsControl);
     }
 
     /**
@@ -419,10 +419,10 @@ public class JireconRecorderImpl
      * <strong>Warning:</strong> We can only add <tt>SrtpControl</tt> to
      * <tt>MediaStream</tt> at this moment.
      * 
-     * @param srtpControls is the map between <tt>MediaType</tt> and
+     * @param dtlsControls is the map between <tt>MediaType</tt> and
      *            <tt>SrtpControl</tt>.
      */
-    private void createMediaStreams(Map<MediaType, SrtpControl> srtpControls)
+    private void createMediaStreams(Map<MediaType, DtlsControl> dtlsControls)
     {
         logger.debug("createMediaStreams");
         
@@ -431,7 +431,7 @@ public class JireconRecorderImpl
         {
             final MediaStream stream =
                 mediaService.createMediaStream(null, mediaType,
-                    srtpControls.get(mediaType));
+                    dtlsControls.get(mediaType));
             streams.put(mediaType, stream);
 
             stream.setName(mediaType.toString());

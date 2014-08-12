@@ -7,7 +7,6 @@
 package org.jitsi.jirecon.dtlscontrol;
 
 import java.util.*;
-import java.util.Map.Entry;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.DtlsFingerprintPacketExtension;
@@ -17,14 +16,11 @@ import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 
 /**
- * An implementation of <tt>SrtpControlManager</tt>, it holds the
- * <tt>DtlsControl</tt> of different <tt>MediaType</tt>.
+ * Hold the <tt>DtlsControl</tt> of different <tt>MediaType</tt>.
  * 
  * @author lishunyang
- * @see SrtpControlManager
  */
-public class DtlsControlManagerImpl
-    implements SrtpControlManager
+public class DtlsControlManager
 {
     /**
      * The map between <tt>MediaType</tt> and <tt>DtlsControl</tt>.
@@ -38,9 +34,13 @@ public class DtlsControlManagerImpl
     private String hashFunction;
 
     /**
-     * {@inheritDoc}
+     * Add a specified <tt>MediaType</tt> finger print of a remote peer. If
+     * there is a finger print with same <tt>MediaType</tt>, the old finger
+     * print will be replaced.
+     * 
+     * @param mediaType The <tt>MediaType</tt> of the finger print.
+     * @param fingerprint The finger print.
      */
-    @Override
     public void addRemoteFingerprint(MediaType mediaType, String fingerprint)
     {
         final DtlsControl dtlsControl = getDtlsControl(mediaType);
@@ -50,40 +50,37 @@ public class DtlsControlManagerImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Get the specified <tt>MediaType</tt> local finger print.
+     * 
+     * @param mediaType The <tt>MediaType</tt> of the finger print.
+     * @return The local finger print.
      */
-    @Override
     public String getLocalFingerprint(MediaType mediaType)
     {
         return getDtlsControl(mediaType).getLocalFingerprint();
     }
 
     /**
-     * {@inheritDoc}
+     * Get the hash function name of specified <tt>MediaType</tt> local finger
+     * print.
+     * 
+     * @param mediaType The <tt>MediaType</tt> of the finger print.
+     * @return The hash function name.
      */
-    @Override
     public String getLocalFingerprintHashFunction(MediaType mediaType)
     {
         return getDtlsControl(mediaType).getLocalFingerprintHashFunction();
     }
 
     /**
-     * {@inheritDoc}
+     * Get all <tt>DtlsControl</tt> of this manager.
+     * 
+     * @return The map between <tt>MediaType</tt> and <tt>DtlsControl</tt>.
      */
-    @Override
-    public SrtpControl getSrtpControl(MediaType mediaType)
+    public Map<MediaType, DtlsControl> getAllDtlsControl()
     {
-        return getDtlsControl(mediaType);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Map<MediaType, SrtpControl> getAllSrtpControl()
-    {
-        Map<MediaType, SrtpControl> controls =
-            new HashMap<MediaType, SrtpControl>();
+        Map<MediaType, DtlsControl> controls =
+            new HashMap<MediaType, DtlsControl>();
         
         for (MediaType mediaType : MediaType.values())
         {
@@ -94,18 +91,21 @@ public class DtlsControlManagerImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Specify hash function of <tt>DtlsControl</tt>
+     * 
+     * @param hash The hash function
      */
-    @Override
     public void setHashFunction(String hash)
     {
         this.hashFunction = hash;
     }
 
     /**
-     * {@inheritDoc}
+     * Get Fingerprint packet extension from <tt>DtlsControlManager</tt>.
+     * 
+     * @param mediaType The <tt>MediaType</tt> of the fingerprint.
+     * @return Fingerprint packet extension.
      */
-    @Override
     public AbstractPacketExtension getFingerprintPacketExt(MediaType mediaType)
     {
         DtlsFingerprintPacketExtension fingerprintPE =
@@ -119,26 +119,28 @@ public class DtlsControlManagerImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Start DTLS control.
      * <p>
      * This method hasn't been used, because <tt>MediaStream</tt> will start
      * DTLS control.
+     * 
+     * @param mediaType
      */
-    @Override
-    public void startSrtpControl(MediaType mediaType)
+    public void startDtlsControl(MediaType mediaType)
     {
         dtlsControls.get(mediaType).start(mediaType);
     }
 
     /**
-     * {@inheritDoc}
+     * Stop SRTP control.
      * <p>
      * Note: <tt>MediaStream</tt> will clean DTLS control by the way, so if you
      * add srtp controller to <tt>MediaStream</tt>, you don't need to call this
      * method.
+     * 
+     * @param mediaType
      */
-    @Override
-    public void stopSrtpControl(MediaType mediaType)
+    public void stopDtlsControl(MediaType mediaType)
     {
         final DtlsControl control = getDtlsControl(mediaType);
 
@@ -155,7 +157,7 @@ public class DtlsControlManagerImpl
      * @param mediaType
      * @return
      */
-    private DtlsControl getDtlsControl(MediaType mediaType)
+    public DtlsControl getDtlsControl(MediaType mediaType)
     {
         DtlsControl control = dtlsControls.get(mediaType);
 
