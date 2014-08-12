@@ -19,7 +19,7 @@ import org.jivesoftware.smack.provider.*;
 
 import junit.framework.TestCase;
 
-public class TestJireconTaskImpl
+public class TestTask
     extends TestCase
 {
     private static Task task;

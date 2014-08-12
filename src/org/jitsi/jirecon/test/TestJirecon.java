@@ -12,7 +12,7 @@ import org.jitsi.jirecon.*;
 
 import junit.framework.TestCase;
 
-public class TestJireconImpl
+public class TestJirecon
     extends TestCase
 {
     public void testStart()
