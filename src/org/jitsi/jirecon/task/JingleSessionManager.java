@@ -6,15 +6,14 @@
 package org.jitsi.jirecon.task;
 
 import java.util.*;
-
 import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.SourcePacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.*;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
 import net.java.sip.communicator.util.Logger;
-
 import org.jitsi.jirecon.protocol.extension.*;
+import org.jitsi.jirecon.task.TaskEvent.*;
 import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;

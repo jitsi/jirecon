@@ -17,6 +17,7 @@ import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.recording.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
+import org.jitsi.jirecon.task.TaskEvent.*;
 import org.jitsi.sctp4j.*;
 import org.jitsi.sctp4j.SctpSocket.*;
 import org.jitsi.service.libjitsi.*;

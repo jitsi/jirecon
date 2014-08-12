@@ -106,7 +106,7 @@ public class Jirecon
         final ConfigurationService configuration = LibJitsi.getConfigurationService();
         
         baseOutputDir =
-            configuration.getString(JireconConfigurationKey.SAVING_DIR_KEY);
+            configuration.getString(ConfigurationKey.SAVING_DIR_KEY);
         if (baseOutputDir.isEmpty())
         {
             logger.info("Failed to initialize Jirecon, output directory was not set.");
@@ -122,9 +122,9 @@ public class Jirecon
         }
 
         final String xmppHost =
-            configuration.getString(JireconConfigurationKey.XMPP_HOST_KEY);
+            configuration.getString(ConfigurationKey.XMPP_HOST_KEY);
         final int xmppPort =
-            configuration.getInt(JireconConfigurationKey.XMPP_PORT_KEY, -1);
+            configuration.getInt(ConfigurationKey.XMPP_PORT_KEY, -1);
         
         try
         {

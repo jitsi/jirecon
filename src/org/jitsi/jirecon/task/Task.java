@@ -13,6 +13,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketE
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.JireconEvent.*;
+import org.jitsi.jirecon.task.TaskEvent.*;
 import org.jitsi.jirecon.utils.*;
 import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.LibJitsi;
@@ -112,7 +113,7 @@ public class Task
 
         info.setMucJid(mucJid);
         info.setNickname(configuration
-            .getString(JireconConfigurationKey.NICK_KEY));
+            .getString(ConfigurationKey.NICK_KEY));
 
         executorService =
             Executors.newSingleThreadExecutor(new HandlerThreadFactory());
@@ -121,7 +122,7 @@ public class Task
 
         dtlsControl = new DtlsControlManager();
         dtlsControl.setHashFunction(configuration
-            .getString(JireconConfigurationKey.HASH_FUNCTION_KEY));
+            .getString(ConfigurationKey.HASH_FUNCTION_KEY));
 
         session = new JingleSessionManager();
         session.addTaskEventListener(this);

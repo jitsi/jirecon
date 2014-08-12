@@ -76,4 +76,21 @@ public class TaskEvent
             return name;
         }
     }
+    
+    /**
+     * <tt>TaskEvent</tt> listener.
+     * 
+     * @author lishunyang
+     * @see TaskEvent
+     * 
+     */
+    public interface TaskEventListener
+    {
+        /**
+         * Handle the event.
+         * 
+         * @param event
+         */
+        public void handleTaskEvent(TaskEvent event);
+    }
 }

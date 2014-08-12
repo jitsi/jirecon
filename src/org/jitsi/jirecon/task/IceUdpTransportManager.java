@@ -95,10 +95,10 @@ public class IceUdpTransportManager
         
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         MIN_STREAM_PORT =
-            configuration.getInt(JireconConfigurationKey.MIN_STREAM_PORT_KEY,
+            configuration.getInt(ConfigurationKey.MIN_STREAM_PORT_KEY,
                 -1);
         MAX_STREAM_PORT =
-            configuration.getInt(JireconConfigurationKey.MAX_STREAM_PORT_KEY,
+            configuration.getInt(ConfigurationKey.MAX_STREAM_PORT_KEY,
                 -1);
     }
 

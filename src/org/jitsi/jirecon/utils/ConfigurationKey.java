@@ -13,7 +13,7 @@ package org.jitsi.jirecon.utils;
  * @author lishunyang
  * 
  */
-public class JireconConfigurationKey
+public class ConfigurationKey
 {
     /**
      * The nick name of <tt>Jirecon</tt> when join the MUC.
