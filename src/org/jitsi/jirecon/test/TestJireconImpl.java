@@ -57,7 +57,7 @@ public class TestJireconImpl
             result = false;
         }
 
-        String mucJid = "u3b7r2slzgrb2o6r@conference.example.com";
+        String mucJid = "y1fidk9q49dlsor@conference.example.com";
         j.startJireconTask(mucJid);
 
         try

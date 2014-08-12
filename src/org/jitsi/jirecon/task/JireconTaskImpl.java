@@ -57,7 +57,7 @@ public class JireconTaskImpl
     /**
      * The instance of <tt>JireconSession</tt>.
      */
-    private JireconSession session;
+    private JingleSessionManager session;
 
     /**
      * The instance of <tt>JireconTransportManager</tt>.
@@ -125,7 +125,7 @@ public class JireconTaskImpl
         dtlsControl.setHashFunction(configuration
             .getString(JireconConfigurationKey.HASH_FUNCTION_KEY));
 
-        session = new JireconSessionImpl();
+        session = new JingleSessionManager();
         session.addTaskEventListener(this);
         session.init(connection);
 

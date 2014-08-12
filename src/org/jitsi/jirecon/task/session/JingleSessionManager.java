@@ -28,19 +28,19 @@ import org.jivesoftware.smackx.packet.MUCUser;
 import org.jivesoftware.smackx.packet.Nick;
 
 /**
- * An implementation of <tt>JireconSessoin</tt>.
+ * <tt>JireconSession</tt> is a session manager which is responsible for joining
+ * specified XMPP MUC and building Jingle session.
  * 
  * @author lishunyang
  * 
  */
-public class JireconSessionImpl
-    implements JireconSession
+public class JingleSessionManager
 {
     /**
      * The <tt>Logger</tt>, used to log messages to standard output.
      */
     private static final Logger logger = Logger
-        .getLogger(JireconSessionImpl.class.getName());
+        .getLogger(JingleSessionManager.class.getName());
     
     /**
      * Maximum wait time(microsecond).
@@ -98,9 +98,13 @@ public class JireconSessionImpl
     private PacketListener receivingListener;
     
     /**
-     * {@inheritDoc}
+     * Initialize <tt>JireconSession</tt>.
+     * <p>
+     * <strong>Warning:</strong> LibJitsi must be started before calling this
+     * method.
+     * 
+     * @param connection is used for send/receive XMPP packet.
      */
-    @Override
     public void init(XMPPConnection connection)
     {
         this.connection = connection;
@@ -126,9 +130,11 @@ public class JireconSessionImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Disconnect with XMPP server and terminate the Jingle session.
+     * 
+     * @param reason <tt>Reason</tt> type of disconnecting.
+     * @param reasonText The human-read reasons.
      */
-    @Override
     public void disconnect(Reason reason, String reasonText)
     {
         sendByePacket(reason, reasonText);
@@ -138,9 +144,12 @@ public class JireconSessionImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Join a Multi-User-Chat of specified MUC jid.
+     * 
+     * @param mucJid The specified MUC jid.
+     * @param nickname The name in MUC.
+     * @throws OperationFailedException if failed to join MUC.
      */
-    @Override
     public void joinMUC(String mucJid, String nickname)
         throws OperationFailedException
     {
@@ -186,10 +195,13 @@ public class JireconSessionImpl
     }
 
     /**
-     * {@inheritDoc}
-     * @throws OperationFailedException 
+     * Send Jingle session-accept packet to the remote peer.
+     * 
+     * @param formatAndPTs
+     * @param localSsrcs
+     * @param transportPEs
+     * @param fingerprintPEs
      */
-    @Override
     public void sendAcceptPacket(
         Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
         Map<MediaType, Long> localSsrcs,
@@ -243,11 +255,16 @@ public class JireconSessionImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Wait for Jingle session-init packet after join the MUC.
+     * <p>
+     * <strong>Warning:</strong> This method will block for at most
+     * <tt>MAX_WAIT_TIME</tt> ms if there isn't init packet.
      * <p>
      * Once We got session-init packet, send back ack packet.
+     * 
+     * @return Jingle session-init packet that we get.
+     * @throws OperationFailedException if the method time out.
      */
-    @Override
     public JingleIQ waitForInitPacket() 
         throws OperationFailedException
     {
@@ -272,7 +289,7 @@ public class JireconSessionImpl
                             .getAction()))
                         {
                             resultList.add(jiq);
-                            JireconSessionImpl.this.removePacketListener(this);
+                            JingleSessionManager.this.removePacketListener(this);
 
                             synchronized (waitForInitPacketSyncRoot)
                             {
@@ -320,9 +337,11 @@ public class JireconSessionImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Wait for ack packet.
+     * <p>
+     * <strong>Warning:</strong> This method will block for at most
+     * <tt>MAX_WAIT_TIME</tt> ms if there isn't ack packet.
      */
-    @Override
     public void waitForResultPacket() 
     {
         logger.info("waitForAckPacket");
@@ -631,9 +650,10 @@ public class JireconSessionImpl
     }
     
     /**
-     * {@inheritDoc}
+     * Add <tt>JireconTaskEvent</tt> listener.
+     * 
+     * @param listener
      */
-    @Override
     public void addTaskEventListener(JireconTaskEventListener listener)
     {
         synchronized (listeners)
@@ -643,9 +663,10 @@ public class JireconSessionImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Remove <tt>JireconTaskEvent</tt> listener.
+     * 
+     * @param listener
      */
-    @Override
     public void removeTaskEventListener(JireconTaskEventListener listener)
     {
         synchronized (listeners)
@@ -782,7 +803,6 @@ public class JireconSessionImpl
     /**
      * {@inheritDoc}
      */
-    @Override
     public List<JireconEndpoint> getEndpoints()
     {
         return endpoints;
