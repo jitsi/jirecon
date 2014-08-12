@@ -163,7 +163,7 @@ public class XMPPComponent
     /**
      * Main part of <tt>JireconComponent</tt>.
      */
-    private Jirecon jirecon = new JireconImpl();
+    private Jirecon jirecon = new Jirecon();
 
     /**
      * Recording sessions. It is used for caching some information.

@@ -83,7 +83,7 @@ public class JireconLauncher
         if (null == conf)
             conf = "jirecon.properties";
 
-        final Jirecon jirecon = new JireconImpl();
+        final Jirecon jirecon = new Jirecon();
         
         jirecon.addEventListener(new JireconEventListener()
         {

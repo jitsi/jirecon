@@ -19,7 +19,7 @@ public class TestJirecon
     {
         final Object syncRoot = new Object();
         
-        Jirecon j = new JireconImpl();
+        Jirecon j = new Jirecon();
         j.addEventListener(new JireconEventListener()
         {
 
@@ -57,7 +57,7 @@ public class TestJirecon
             result = false;
         }
 
-        String mucJid = "ehjynv240di8jjor@conference.example.com";
+        String mucJid = "jegl1vwqyrbsatt9@conference.example.com";
         j.startJireconTask(mucJid);
 
         try
