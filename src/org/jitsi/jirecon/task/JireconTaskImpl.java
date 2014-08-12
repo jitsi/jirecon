@@ -62,7 +62,7 @@ public class JireconTaskImpl
     /**
      * The instance of <tt>JireconTransportManager</tt>.
      */
-    private JireconTransportManager transport;
+    private IceUdpTransportManager transport;
 
     /**
      * The instance of <tt>DtlsControlManager</tt>.
@@ -119,7 +119,7 @@ public class JireconTaskImpl
         executorService =
             Executors.newSingleThreadExecutor(new HandlerThreadFactory());
 
-        transport = new JireconIceUdpTransportManagerImpl();
+        transport = new IceUdpTransportManager();
 
         dtlsControl = new DtlsControlManager();
         dtlsControl.setHashFunction(configuration

@@ -36,14 +36,13 @@ import org.jitsi.util.Logger;
  * @see JireconTransportManager
  * 
  */
-public class JireconIceUdpTransportManagerImpl
-    implements JireconTransportManager
+public class IceUdpTransportManager
 {
     /**
      * The <tt>Logger</tt>, used to log messages to standard output.
      */
     private static final Logger logger = Logger
-        .getLogger(JireconIceUdpTransportManagerImpl.class.getName());
+        .getLogger(IceUdpTransportManager.class.getName());
 
     /**
      * The minimum time (second) when wait for something.
@@ -87,7 +86,7 @@ public class JireconIceUdpTransportManagerImpl
     /**
      * The construction method.
      */
-    public JireconIceUdpTransportManagerImpl()
+    public IceUdpTransportManager()
     {
         logger.info("init");
         
@@ -104,18 +103,20 @@ public class JireconIceUdpTransportManagerImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Free the resources holded by <tt>JireconTransportManager</tt>.
      */
-    @Override
     public void free()
     {
         iceAgent.free();
     }
 
     /**
-     * {@inheritDoc}
+     * Get a <tt>IceUdpTransportPacketExtension</tt> created by
+     * <tt>JireconTransportManager</tt>.
+     * 
+     * @param mediaType
+     * @return <tt>IceUdpTransportPacketExtension</tt>
      */
-    @Override
     public AbstractPacketExtension getTransportPacketExt(MediaType mediaType)
     {
         logger.info("getTransportPacketExt");
@@ -135,8 +136,7 @@ public class JireconIceUdpTransportManagerImpl
     }
 
     /**
-     * {@inheritDoc}
-     * 
+     * Start establish ICE connectivity.
      * <p>
      * <strong>Warning:</strong> This method is asynchronous, it will return
      * immediately while it doesn't means the ICE connectivity has been
@@ -144,8 +144,8 @@ public class JireconIceUdpTransportManagerImpl
      * finished and it doesn't matter only if at least one selected candidate
      * pair has been gotten.
      * 
+     * @throws OperationFailedException
      */
-    @Override
     public void startConnectivityEstablishment()
     {
         logger.info("startConnectivityEstablishment");
@@ -245,9 +245,11 @@ public class JireconIceUdpTransportManagerImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Harvest local candidates of specified <tt>MediaType</tt>.
+     * 
+     * @mediaType
+     * @throws OperationFailedException if some thing failed.
      */
-    @Override
     public void harvestLocalCandidates(MediaType mediaType) 
         throws OperationFailedException
     {
@@ -279,9 +281,12 @@ public class JireconIceUdpTransportManagerImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Parse and harvest remote candidates from a
+     * <tt>IceUdpTransportPacketExtension</tt>.
+     * 
+     * @param transportPEs The <tt>IceUdpTransportPacketExtension</tt> to be
+     *            parsed.
      */
-    @Override
     public void harvestRemoteCandidates(
         Map<MediaType, IceUdpTransportPacketExtension> transportPEs)
     {
@@ -418,9 +423,12 @@ public class JireconIceUdpTransportManagerImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Get <tt>MediaStreamTarget</tt> of specified <tt>MediaType</tt> created by
+     * <tt>JireconTransportManager</tt>.
+     * 
+     * @param mediaType The specified <tt>MediaType</tt>
+     * @return <tt>MediaStreamTarget</tt>
      */
-    @Override
     public MediaStreamTarget getStreamTarget(MediaType mediaType)
     {
         logger.info("getStreamTarget");
@@ -475,15 +483,19 @@ public class JireconIceUdpTransportManagerImpl
     }
 
     /**
-     * {@inheritDoc}
+     * Get <tt>StreamConnector</tt> of specified <tt>MediaType</tt> created by
+     * <tt>JireconTransportManager</tt>.
      * <p>
      * <strong>Warning:</strong> This method will wait for the selected
      * candidate pair which should be generated during establish ICE
      * connectivity. If selected candidate pair hasn'e been generated, it will
      * wait for at most MAX_WAIT_TIME. After that it will break and throw and
      * exception.
+     * 
+     * @param mediaType The specified <tt>MediaType</tt>
+     * @return <tt>StreamConnector</tt>
+     * @throws OperationFailedException if some operation failed.
      */
-    @Override
     public StreamConnector getStreamConnector(MediaType mediaType)
         throws OperationFailedException
     {
