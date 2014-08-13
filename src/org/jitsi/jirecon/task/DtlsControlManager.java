@@ -29,23 +29,20 @@ public class DtlsControlManager
         new HashMap<MediaType, DtlsControl>();
 
     /**
-     * Indicate which kind of hash function is used by <tt>DtlsContrl</tt>.
-     */
-    private String hashFunction;
-
-    /**
      * Add a specified <tt>MediaType</tt> finger print of a remote peer. If
      * there is a finger print with same <tt>MediaType</tt>, the old finger
      * print will be replaced.
      * 
      * @param mediaType The <tt>MediaType</tt> of the finger print.
-     * @param fingerprint The finger print.
+     * @param fingerprintPE
      */
-    public void addRemoteFingerprint(MediaType mediaType, String fingerprint)
+    public void addRemoteFingerprint(MediaType mediaType, DtlsFingerprintPacketExtension fingerprintPE)
     {
         final DtlsControl dtlsControl = getDtlsControl(mediaType);
         final Map<String, String> fingerprints = new HashMap<String, String>();
-        fingerprints.put(hashFunction, fingerprint);
+        
+        fingerprints.put(fingerprintPE.getHash(),
+            fingerprintPE.getFingerprint());
         dtlsControl.setRemoteFingerprints(fingerprints);
     }
 
@@ -91,22 +88,12 @@ public class DtlsControlManager
     }
 
     /**
-     * Specify hash function of <tt>DtlsControl</tt>
-     * 
-     * @param hash The hash function
-     */
-    public void setHashFunction(String hash)
-    {
-        this.hashFunction = hash;
-    }
-
-    /**
      * Get Fingerprint packet extension from <tt>DtlsControlManager</tt>.
      * 
      * @param mediaType The <tt>MediaType</tt> of the fingerprint.
      * @return Fingerprint packet extension.
      */
-    public AbstractPacketExtension getFingerprintPacketExt(MediaType mediaType)
+    public DtlsFingerprintPacketExtension getFingerprintPacketExt(MediaType mediaType)
     {
         DtlsFingerprintPacketExtension fingerprintPE =
             new DtlsFingerprintPacketExtension();
@@ -174,6 +161,8 @@ public class DtlsControlManager
             }
             else
             {
+                LibJitsi.start();
+                
                 MediaService mediaService = LibJitsi.getMediaService();
                 control =
                     (DtlsControl) mediaService

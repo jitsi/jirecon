@@ -20,7 +20,7 @@ fi
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
-mainClass="org.jitsi.jirecon.component.JireconComponentLauncher"
+mainClass="org.jitsi.jirecon.xmppcomponent.ComponentLauncher"
 cp=$(JARS=($SCRIPT_DIR/jirecon.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo "${JARS[*]}")
 libs="$SCRIPT_DIR/lib/native/linux-64"
 

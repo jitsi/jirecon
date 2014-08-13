@@ -48,10 +48,4 @@ public class ConfigurationKey
      */
     public final static String MAX_STREAM_PORT_KEY =
         "org.jitsi.jirecon.MAX_STREAM_PORT";
-
-    /**
-     * Hash function which will be used in DTLS.
-     */
-    public final static String HASH_FUNCTION_KEY =
-        "org.jitsi.jirecon.DTLS_HASH_FUNTION";
 }

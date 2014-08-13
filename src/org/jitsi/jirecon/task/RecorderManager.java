@@ -129,8 +129,8 @@ public class RecorderManager
         logger.setLevelAll();
 
         /*
-         * NOTE: SrtpControl will be managed by MediaStream. So we don't need to
-         * open/close SctpControl addtionally.
+         * NOTE: DtlsControl will be managed by MediaStream. So we don't need to
+         * open/close DtlsControl addtionally.
          */
         createMediaStreams(dtlsControls);
         createDataChannel(dtlsControls.get(MediaType.DATA));

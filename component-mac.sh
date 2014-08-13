@@ -20,7 +20,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-mainClass="org.jitsi.jirecon.component.JireconComponentLauncher"
+mainClass="org.jitsi.jirecon.xmppcomponent.ComponentLauncher"
 cp=$(JARS=(src/ $SCRIPT_DIR/jirecon.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo "${JARS[*]}")
 libs="$SCRIPT_DIR/lib/native/macosx"
 

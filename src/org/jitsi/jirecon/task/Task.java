@@ -9,8 +9,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
+
 import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+
 import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.JireconEvent.*;
 import org.jitsi.jirecon.task.TaskEvent.*;
@@ -51,27 +53,27 @@ public class Task
     /**
      * The instance of <tt>JireconSession</tt>.
      */
-    private JingleSessionManager session;
+    private JingleSessionManager jingleSessionMgr;
 
     /**
      * The instance of <tt>JireconTransportManager</tt>.
      */
-    private IceUdpTransportManager transport;
+    private IceUdpTransportManager transportMgr;
 
     /**
      * The instance of <tt>DtlsControlManager</tt>.
      */
-    private DtlsControlManager dtlsControl;
+    private DtlsControlManager dtlsControlMgr;
     
     /**
      * The instance of <tt>RecorderManager</tt>.
      */
-    private RecorderManager recorder;
+    private RecorderManager recorderMgr;
 
     /**
      * The thread pool to make the method "start" to be asynchronous.
      */
-    private ExecutorService executorService;
+    private ExecutorService taskExecutor;
 
     /**
      * Indicate whether this task has stopped.
@@ -115,22 +117,20 @@ public class Task
         info.setNickname(configuration
             .getString(ConfigurationKey.NICK_KEY));
 
-        executorService =
+        taskExecutor =
             Executors.newSingleThreadExecutor(new HandlerThreadFactory());
 
-        transport = new IceUdpTransportManager();
+        transportMgr = new IceUdpTransportManager();
 
-        dtlsControl = new DtlsControlManager();
-        dtlsControl.setHashFunction(configuration
-            .getString(ConfigurationKey.HASH_FUNCTION_KEY));
+        dtlsControlMgr = new DtlsControlManager();
 
-        session = new JingleSessionManager();
-        session.addTaskEventListener(this);
-        session.init(connection);
+        jingleSessionMgr = new JingleSessionManager();
+        jingleSessionMgr.addTaskEventListener(this);
+        jingleSessionMgr.init(connection);
 
-        recorder = new RecorderManager();
-        recorder.addTaskEventListener(this);
-        recorder.init(savingDir, dtlsControl.getAllDtlsControl());
+        recorderMgr = new RecorderManager();
+        recorderMgr.addTaskEventListener(this);
+        recorderMgr.init(savingDir, dtlsControlMgr.getAllDtlsControl());
     }
 
     /**
@@ -172,7 +172,7 @@ public class Task
      */
     public void start()
     {
-        executorService.execute(this);
+        taskExecutor.execute(this);
     }
 
     /**
@@ -183,9 +183,9 @@ public class Task
         if (!isStopped)
         {
             logger.info(this.getClass() + " stop.");
-            transport.free();
-            recorder.stopRecording();
-            session.disconnect(Reason.SUCCESS, "OK, gotta go.");
+            transportMgr.free();
+            recorderMgr.stopRecording();
+            jingleSessionMgr.disconnect(Reason.SUCCESS, "OK, gotta go.");
             isStopped = true;
             
             /*
@@ -210,10 +210,10 @@ public class Task
         try
         {
             /* 1. Join MUC. */
-            session.joinMUC(info.getMucJid(), info.getNickname());
+            jingleSessionMgr.joinMUC(info.getMucJid(), info.getNickname());
             
             /* 2. Wait for session-init packet. */
-            JingleIQ initIq = session.waitForInitPacket();
+            JingleIQ initIq = jingleSessionMgr.waitForInitPacket();
             List<MediaType> supportedMediaTypes =
                 JinglePacketParser.getSupportedMediaTypes(initIq);
             
@@ -223,7 +223,7 @@ public class Task
              */
             for (MediaType mediaType : supportedMediaTypes)
             {
-                transport.harvestLocalCandidates(mediaType);
+                transportMgr.harvestLocalCandidates(mediaType);
             }
 
             /*
@@ -236,7 +236,7 @@ public class Task
                     .getFormatAndDynamicPTs(initIq, mediaType));
             }
 
-            Map<MediaType, Long> localSsrcs = recorder.getLocalSsrcs();
+            Map<MediaType, Long> localSsrcs = recorderMgr.getLocalSsrcs();
             
             // Transport packet extension.
             Map<MediaType, AbstractPacketExtension> transportPEs =
@@ -244,24 +244,29 @@ public class Task
             for (MediaType mediaType : supportedMediaTypes)
             {
                 transportPEs.put(mediaType,
-                    transport.getTransportPacketExt(mediaType));
+                    transportMgr.getTransportPacketExt(mediaType));
             }
 
             // Fingerprint packet extension.
+            for (MediaType mediaType : supportedMediaTypes)
+            {
+                dtlsControlMgr.addRemoteFingerprint(mediaType,
+                    JinglePacketParser.getFingerprint(initIq, mediaType));
+            }
             Map<MediaType, AbstractPacketExtension> fingerprintPEs =
                 new HashMap<MediaType, AbstractPacketExtension>();
             for (MediaType mediaType : supportedMediaTypes)
             {
                 fingerprintPEs.put(mediaType,
-                    dtlsControl.getFingerprintPacketExt(mediaType));
+                    dtlsControlMgr.getFingerprintPacketExt(mediaType));
             }
 
             /* 4.2 Send session-accept packet. */
-            session.sendAcceptPacket(formatAndPTs, localSsrcs, transportPEs,
+            jingleSessionMgr.sendAcceptPacket(formatAndPTs, localSsrcs, transportPEs,
                 fingerprintPEs);
 
             /* 4.3 Wait for session-ack packet. */
-            session.waitForResultPacket();
+            jingleSessionMgr.waitForResultPacket();
 
             /*
              * 5.1 Prepare for ICE connectivity establishment. Harvest remote
@@ -272,13 +277,13 @@ public class Task
             {
                 remoteTransportPEs.put(mediaType, JinglePacketParser.getTransportPacketExt(initIq, mediaType));
             }
-            transport.harvestRemoteCandidates(remoteTransportPEs);
+            transportMgr.harvestRemoteCandidates(remoteTransportPEs);
 
             /*
              * 5.2 Start establishing ICE connectivity. Warning: that this
              * method is asynchronous method.
              */
-            transport.startConnectivityEstablishment();
+            transportMgr.startConnectivityEstablishment();
 
             /*
              * 6.1 Prepare for recording. Once transport manager has selected
@@ -294,16 +299,16 @@ public class Task
             for (MediaType mediaType : supportedMediaTypes)
             {
                 StreamConnector streamConnector =
-                    transport.getStreamConnector(mediaType);
+                    transportMgr.getStreamConnector(mediaType);
                 streamConnectors.put(mediaType, streamConnector);
 
                 MediaStreamTarget mediaStreamTarget =
-                    transport.getStreamTarget(mediaType);
+                    transportMgr.getStreamTarget(mediaType);
                 mediaStreamTargets.put(mediaType, mediaStreamTarget);
             }
             
             /* 6.2 Start recording. */
-            recorder.startRecording(formatAndPTs, streamConnectors,
+            recorderMgr.startRecording(formatAndPTs, streamConnectors,
                 mediaStreamTargets);
             
             fireEvent(new JireconEvent(info.getMucJid(),
@@ -370,14 +375,14 @@ public class Task
         if (event.getType() == TaskEvent.Type.PARTICIPANT_CAME)
         {
             List<Endpoint> endpoints =
-                session.getEndpoints();
-            recorder.setEndpoints(endpoints);
+                jingleSessionMgr.getEndpoints();
+            recorderMgr.setEndpoints(endpoints);
         }
 
         else if (event.getType() == TaskEvent.Type.PARTICIPANT_LEFT)
         {
             List<Endpoint> endpoints =
-                session.getEndpoints();
+                jingleSessionMgr.getEndpoints();
             // Oh, it seems that all participants have left the MUC(except Jirecon
             // or other participants which only receive data). It's time to
             // finish the recording.
@@ -389,7 +394,7 @@ public class Task
             }
             else
             {
-                recorder.setEndpoints(endpoints);
+                recorderMgr.setEndpoints(endpoints);
             }
         }
     }

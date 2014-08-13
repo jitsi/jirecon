@@ -181,8 +181,9 @@ public class JinglePacketParser
 
         for (MediaType mediaType : MediaType.values())
         {
-            IceUdpTransportPacketExtension transportPE = getTransportPacketExt(jiq, mediaType);
-            
+            IceUdpTransportPacketExtension transportPE =
+                getTransportPacketExt(jiq, mediaType);
+
             if (null != transportPE)
             {
                 transportPEs.put(mediaType, transportPE);
@@ -191,7 +192,7 @@ public class JinglePacketParser
 
         return transportPEs;
     }
-    
+
     /**
      * Get ufrag from a <tt>JingleIQ</tt> of specified <tt>MediaType</tt>.
      * 
@@ -304,9 +305,11 @@ public class JinglePacketParser
      * @param jiq
      * @return map between <tt>MediaFormat</tt> and dynamic payload type id.
      */
-    public static Map<MediaFormat, Byte> getFormatAndDynamicPTs(JingleIQ jiq, MediaType mediaType)
+    public static Map<MediaFormat, Byte> getFormatAndDynamicPTs(JingleIQ jiq,
+        MediaType mediaType)
     {
-        final Map<MediaFormat, Byte> formatAndPTs = new HashMap<MediaFormat, Byte>();
+        final Map<MediaFormat, Byte> formatAndPTs =
+            new HashMap<MediaFormat, Byte>();
         final MediaFormatFactoryImpl fmtFactory = new MediaFormatFactoryImpl();
 
         // TODO: Video format only support RED only at present.
@@ -342,16 +345,29 @@ public class JinglePacketParser
 
         return fingerprints;
     }
-    
+
+    public static DtlsFingerprintPacketExtension getFingerprint(JingleIQ jiq,
+        MediaType mediaType)
+    {
+        IceUdpTransportPacketExtension transport = null;
+
+        transport = getTransportPacketExt(jiq, mediaType);
+        if (null == transport)
+            return null;
+
+        return transport
+            .getFirstChildOfType(DtlsFingerprintPacketExtension.class);
+    }
+
     public static List<MediaType> getSupportedMediaTypes(JingleIQ jiq)
     {
         List<MediaType> mediaTypes = new ArrayList<MediaType>();
-        
+
         for (ContentPacketExtension c : jiq.getContentList())
         {
             mediaTypes.add(MediaType.parseString(c.getName()));
         }
-        
+
         return mediaTypes;
     }
 }
