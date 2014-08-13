@@ -6,7 +6,6 @@
 package org.jitsi.jirecon.xmppcomponent;
 
 import java.util.*;
-import net.java.sip.communicator.service.protocol.OperationFailedException;
 import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.JireconEvent.*;
 import org.jitsi.util.Logger;
@@ -221,7 +220,7 @@ public class XMPPComponent
         {
             jirecon.init(configurationPath);
         }
-        catch (OperationFailedException e)
+        catch (Exception e)
         {
             e.printStackTrace();
             isStarted = false;

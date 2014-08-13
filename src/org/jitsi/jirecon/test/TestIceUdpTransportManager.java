@@ -1,7 +1,6 @@
 package org.jitsi.jirecon.test;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.IceUdpTransportPacketExtension;
-import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.jitsi.jirecon.task.IceUdpTransportManager;
 import org.jitsi.service.neomedia.MediaType;
@@ -21,7 +20,7 @@ public class TestIceUdpTransportManager
             {
                 mgr.harvestLocalCandidates(mediaType);
             }
-            catch (OperationFailedException e)
+            catch (Exception e)
             {
                 e.printStackTrace();
             }

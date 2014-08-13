@@ -9,7 +9,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.service.protocol.*;
 
 import org.jitsi.jirecon.JireconEvent.*;
 import org.jitsi.jirecon.protocol.extension.*;
@@ -81,11 +80,11 @@ public class Jirecon
      * server.
      * 
      * @param configurationPath is the configuration file path.
-     * @throws OperationFailedException if failed to initialize Jirecon.
+     * @throws Exception if failed to initialize Jirecon.
      * 
      */
     public void init(String configurationPath) 
-        throws OperationFailedException
+        throws Exception
     {
         if (isInitialized) 
         {
@@ -110,9 +109,8 @@ public class Jirecon
         if (baseOutputDir.isEmpty())
         {
             logger.info("Failed to initialize Jirecon, output directory was not set.");
-            throw new OperationFailedException(
-                "Failed to initialize Jirecon, ouput directory was not set.",
-                OperationFailedException.GENERAL_ERROR);
+            throw new Exception(
+                "Failed to initialize Jirecon, ouput directory was not set.");
         }
         // Remove the suffix '/' in SAVE_DIR
         if ('/' == baseOutputDir.charAt(baseOutputDir.length() - 1))
@@ -135,9 +133,8 @@ public class Jirecon
         {
             logger.info("Failed to initialize Jirecon, " + e.getXMPPError());
             uninit();
-            throw new OperationFailedException(
-                "Failed to initialize Jirecon, " + e.getMessage(),
-                OperationFailedException.GENERAL_ERROR);
+            throw new Exception("Failed to initialize Jirecon, "
+                + e.getMessage());
         }
         
         isInitialized = true;

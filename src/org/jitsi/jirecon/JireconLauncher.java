@@ -9,7 +9,6 @@ package org.jitsi.jirecon;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import org.jitsi.jirecon.JireconEvent.*;
-import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 
 /**
@@ -112,7 +111,7 @@ public class JireconLauncher
         {
             jirecon.init(conf);
         }
-        catch (OperationFailedException e)
+        catch (Exception e)
         {
             e.printStackTrace();
             return;

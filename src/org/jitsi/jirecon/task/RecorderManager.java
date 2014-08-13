@@ -12,7 +12,6 @@ import java.util.*;
 import java.util.Map.*;
 import java.util.concurrent.*;
 import javax.media.rtp.*;
-import net.java.sip.communicator.service.protocol.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.recording.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
@@ -147,14 +146,14 @@ public class RecorderManager
      * @param targets is the map between <tt>MediaType</tt> and
      *            <tt>MediaStreamTarget</tt>. Every target indicates a media
      *            source.
-     * @throws OperationFailedException if some operation failed and the
+     * @throws Exception if some operation failed and the
      *             recording is aborted.
      */
     public void startRecording(
         Map<MediaType, Map<MediaFormat, Byte>> formatAndDynamicPTs,
         Map<MediaType, StreamConnector> connectors,
         Map<MediaType, MediaStreamTarget> targets)
-        throws OperationFailedException
+        throws Exception
     {
         /*
          * Here we don't garuantee whether file path is available.
@@ -212,14 +211,14 @@ public class RecorderManager
      * @param targets is the map between <tt>MediaType</tt> and
      *            <tt>MediaStreamTarget</tt>. The target indicate media stream
      *            source.
-     * @throws OperationFailedException if some operation failed and the
+     * @throws Exception if some operation failed and the
      *             preparation is aborted.
      */
     private void prepareMediaStreams(
         Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
         Map<MediaType, StreamConnector> connectors,
         Map<MediaType, MediaStreamTarget> targets)
-        throws OperationFailedException
+        throws Exception
     {
         logger.debug("prepareMediaStreams");
 
@@ -247,10 +246,10 @@ public class RecorderManager
      * Make the <tt>JireconRecorderImpl</tt> ready to start recording media
      * streams.
      * 
-     * @throws OperationFailedException if some operation failed and the
+     * @throws Exception if some operation failed and the
      *             preparation is aborted.
      */
-    private void prepareRecorders() throws OperationFailedException
+    private void prepareRecorders() throws Exception
     {
         logger.debug("prepareRecorders");
 
@@ -284,10 +283,10 @@ public class RecorderManager
     /**
      * Start receiving media streams.
      * 
-     * @throws OperationFailedException if some operation failed and the
+     * @throws Exception if some operation failed and the
      *             receiving is aborted.
      */
-    private void startReceivingStreams() throws OperationFailedException
+    private void startReceivingStreams() throws Exception
     {
         logger.debug("startReceiving");
 
@@ -306,9 +305,7 @@ public class RecorderManager
         // If any media stream failed to start, the starting procedure failed.
         if (streams.size() != startCount)
         {
-            throw new OperationFailedException(
-                "Could not start receiving streams",
-                OperationFailedException.GENERAL_ERROR);
+            throw new Exception("Could not start receiving streams");
         }
         isReceiving = true;
     }
@@ -316,24 +313,22 @@ public class RecorderManager
     /**
      * Start recording media streams.
      * 
-     * @throws OperationFailedException if some operation failed and the
+     * @throws Exception if some operation failed and the
      *             recording is aborted.
      */
-    private void startRecordingStreams() throws OperationFailedException
+    private void startRecordingStreams() throws Exception
     {
         logger.debug("startRecording");
         
         if (!isReceiving)
         {
-            throw new OperationFailedException(
-                "Could not start recording streams, media streams are not receiving.",
-                OperationFailedException.GENERAL_ERROR);
+            throw new Exception(
+                "Could not start recording streams, media streams are not receiving.");
         }
         if (isRecording)
         {
-            throw new OperationFailedException(
-                "Could not start recording streams, recorders are already recording.",
-                OperationFailedException.GENERAL_ERROR);
+            throw new Exception(
+                "Could not start recording streams, recorders are already recording.");
         }
 
         for (Entry<MediaType, Recorder> entry : recorders.entrySet())
@@ -346,9 +341,7 @@ public class RecorderManager
             }
             catch (Exception e)
             {
-                throw new OperationFailedException(
-                    "Could not start recording streams, " + e.getMessage(),
-                    OperationFailedException.GENERAL_ERROR);
+                throw new Exception("Could not start recording streams, " + e.getMessage());
             }
         }
         isRecording = true;
@@ -638,10 +631,10 @@ public class RecorderManager
          * <tt>JireconRecorderEventHandler</tt>.
          * 
          * @param filename the meta data file's name.
-         * @throws OperationFailedException if failed to create handler
+         * @throws Exception if failed to create handler
          */
         public RecorderEventHandlerImpl(String filename)
-            throws OperationFailedException
+            throws Exception
         {
             // If there is an existed file with "filename", add suffix to
             // "filename". For instance, from "metadata.json" to
@@ -667,9 +660,8 @@ public class RecorderManager
                     }
                     else
                     {
-                        throw new OperationFailedException(
-                            "Could not create event handler, no write permission to meta file.",
-                            OperationFailedException.GENERAL_ERROR);
+                        throw new Exception(
+                            "Could not create event handler, no write permission to meta file.");
                     }
                 }
             }

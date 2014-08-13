@@ -10,7 +10,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketE
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.SourcePacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.*;
-import net.java.sip.communicator.service.protocol.OperationFailedException;
 import net.java.sip.communicator.util.Logger;
 import org.jitsi.jirecon.protocol.extension.*;
 import org.jitsi.jirecon.task.TaskEvent.*;
@@ -145,10 +144,10 @@ public class JingleSessionManager
      * 
      * @param mucJid The specified MUC jid.
      * @param nickname The name in MUC.
-     * @throws OperationFailedException if failed to join MUC.
+     * @throws Exception if failed to join MUC.
      */
     public void joinMUC(String mucJid, String nickname)
-        throws OperationFailedException
+        throws Exception
     {
         logger.info("joinMUC");
 
@@ -169,8 +168,7 @@ public class JingleSessionManager
                     finalNickname = nickname + "_" + suffix++;
                     continue;
                 }
-                throw new OperationFailedException("Could not join MUC, "
-                    + e.getMessage(), OperationFailedException.GENERAL_ERROR);
+                throw new Exception("Could not join MUC, " + e.getMessage());
             }
         }
 
@@ -260,10 +258,10 @@ public class JingleSessionManager
      * Once We got session-init packet, send back ack packet.
      * 
      * @return Jingle session-init packet that we get.
-     * @throws OperationFailedException if the method time out.
+     * @throws Exception if the method time out.
      */
     public JingleIQ waitForInitPacket() 
-        throws OperationFailedException
+        throws Exception
     {
         logger.info("waitForInitPacket");
 
@@ -321,9 +319,8 @@ public class JingleSessionManager
         removePacketListener(packetListener);
         if (resultList.isEmpty())
         {
-            throw new OperationFailedException(
-                "Could not get session-init packet, maybe the MUC has locked.",
-                OperationFailedException.GENERAL_ERROR);
+            throw new Exception(
+                "Could not get session-init packet, maybe the MUC has locked.");
         }
 
         final JingleIQ initIq = resultList.get(0);
@@ -389,8 +386,8 @@ public class JingleSessionManager
         removePacketListener(packetListener);
         if (resultList.isEmpty())
         {
-//            throw new OperationFailedException("Could not get ack packet",
-//                OperationFailedException.GENERAL_ERROR);
+//            throw new Exception("Could not get ack packet",
+//                Exception.GENERAL_ERROR);
             logger.warn("Couldn't receive result packet from remote peer.");
         }
     }
@@ -463,7 +460,7 @@ public class JingleSessionManager
      * @param transportManager is used for creating transport packet extension.
      * @param srtpControlManager is used to set fingerprint.
      * @return Jingle session-accept packet.
-     * @throws OperationFailedException if something failed and session-accept
+     * @throws Exception if something failed and session-accept
      *             packet can not be created.
      */
     private JingleIQ createAcceptPacket(

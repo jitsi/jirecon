@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
-import net.java.sip.communicator.service.protocol.OperationFailedException;
 
 import org.ice4j.*;
 import org.ice4j.ice.*;
@@ -141,7 +140,7 @@ public class IceUdpTransportManager
      * finished and it doesn't matter only if at least one selected candidate
      * pair has been gotten.
      * 
-     * @throws OperationFailedException
+     * @throws Exception
      */
     public void startConnectivityEstablishment()
     {
@@ -154,10 +153,10 @@ public class IceUdpTransportManager
      * Harvest local candidates of specified <tt>MediaType</tt>.
      * 
      * @mediaType
-     * @throws OperationFailedException if some thing failed.
+     * @throws Exception if some thing failed.
      */
     public void harvestLocalCandidates(MediaType mediaType) 
-        throws OperationFailedException
+        throws Exception
     {
         logger.info("harvestLocalCandidates");
 
@@ -180,9 +179,8 @@ public class IceUdpTransportManager
         }
         catch (Exception e)
         {
-            throw new OperationFailedException(
-                "Could not create ICE component, " + e.getMessage(),
-                OperationFailedException.GENERAL_ERROR);
+            throw new Exception("Could not create ICE component, "
+                + e.getMessage());
         }
     }
 
@@ -400,10 +398,10 @@ public class IceUdpTransportManager
      * 
      * @param mediaType The specified <tt>MediaType</tt>
      * @return <tt>StreamConnector</tt>
-     * @throws OperationFailedException if some operation failed.
+     * @throws Exception if some operation failed.
      */
     public StreamConnector getStreamConnector(MediaType mediaType)
-        throws OperationFailedException
+        throws Exception
     {
         logger.info("getStreamConnector " + mediaType);
         
@@ -431,18 +429,17 @@ public class IceUdpTransportManager
         }
         if (IceProcessingState.TERMINATED != iceAgent.getState())
         {
-            throw new OperationFailedException(
-                "Could not get stream connector, it seems that ICE connectivity establishment hung",
-                OperationFailedException.GENERAL_ERROR);
+            throw new Exception(
+                "Could not get stream connector, it seems that ICE connectivity establishment hung"
+                );
         }
 
         StreamConnector streamConnector = null;
         IceMediaStream stream = getIceMediaStream(mediaType);
         if (null == stream)
         {
-            throw new OperationFailedException(
-                "Could not get stream connector, ICE media stream was not prepared.",
-                OperationFailedException.GENERAL_ERROR);
+            throw new Exception(
+                "Could not get stream connector, ICE media stream was not prepared.");
         }
 
         CandidatePair rtpPair = null;

@@ -6,7 +6,6 @@
 package org.jitsi.jirecon.test;
 
 
-import net.java.sip.communicator.service.protocol.OperationFailedException;
 import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.JireconEvent.*;
 import junit.framework.TestCase;
@@ -50,13 +49,13 @@ public class TestJirecon
         {
             j.init("jirecon.properties");
         }
-        catch (OperationFailedException e)
+        catch (Exception e)
         {
             e.printStackTrace();
             result = false;
         }
 
-        String mucJid = "y7iwfcc35xoxyldi@conference.example.com";
+        String mucJid = "szn5dmkekpqzolxr@conference.example.com";
         j.startJireconTask(mucJid);
 
         try
