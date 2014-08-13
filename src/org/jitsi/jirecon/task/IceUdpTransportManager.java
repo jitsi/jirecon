@@ -5,12 +5,10 @@
  */
 package org.jitsi.jirecon.task;
 
-import java.beans.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
 import net.java.sip.communicator.service.protocol.OperationFailedException;
@@ -88,11 +86,10 @@ public class IceUdpTransportManager
      */
     public IceUdpTransportManager()
     {
-        logger.info("init");
-        
         iceAgent = new Agent();
         iceAgent.setControlling(false);
         
+        LibJitsi.start();
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         MIN_STREAM_PORT =
             configuration.getInt(ConfigurationKey.MIN_STREAM_PORT_KEY,
@@ -117,7 +114,7 @@ public class IceUdpTransportManager
      * @param mediaType
      * @return <tt>IceUdpTransportPacketExtension</tt>
      */
-    public AbstractPacketExtension getTransportPacketExt(MediaType mediaType)
+    public IceUdpTransportPacketExtension getTransportPacketExt(MediaType mediaType)
     {
         logger.info("getTransportPacketExt");
         
@@ -150,98 +147,7 @@ public class IceUdpTransportManager
     {
         logger.info("startConnectivityEstablishment");
         
-        new Thread(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                try
-                {
-                    startConnectivityCheck();
-                }
-                catch (OperationFailedException e)
-                {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-        
         iceAgent.startConnectivityEstablishment();
-    }
-
-    /**
-     * Check whether the ICE connectivity has been established successfully.
-     * This method seems meaningless.
-     * 
-     * @throws OperationFailedException if some fatal error occurs.
-     */
-    private void startConnectivityCheck() 
-        throws OperationFailedException
-    {
-        logger.info("waitForCheckFinished");
-
-        final Object iceProcessingStateSyncRoot = new Object();
-        PropertyChangeListener stateChangeListener =
-            new PropertyChangeListener()
-            {
-                public void propertyChange(PropertyChangeEvent evt)
-                {
-                    Object newValue = evt.getNewValue();
-
-                    if (IceProcessingState.COMPLETED.equals(newValue)
-                        || IceProcessingState.FAILED.equals(newValue)
-                        || IceProcessingState.TERMINATED.equals(newValue))
-                    {
-                        if (logger.isTraceEnabled())
-                            logger.info("ICE " + newValue);
-
-                        Agent iceAgent = (Agent) evt.getSource();
-
-                        iceAgent.removeStateChangeListener(this);
-
-                        synchronized (iceProcessingStateSyncRoot)
-                        {
-                            iceProcessingStateSyncRoot.notify();
-                        }
-                    }
-                }
-            };
-
-        iceAgent.addStateChangeListener(stateChangeListener);
-
-        // Wait for the connectivity checks to finish if they have been started.
-        boolean interrupted = false;
-
-        synchronized (iceProcessingStateSyncRoot)
-        {
-            while (IceProcessingState.RUNNING.equals(iceAgent.getState()))
-            {
-                try
-                {
-                    iceProcessingStateSyncRoot.wait(1000);
-                }
-                catch (InterruptedException ie)
-                {
-                    interrupted = true;
-                }
-            }
-        }
-        if (interrupted)
-            Thread.currentThread().interrupt();
-
-        /*
-         * Make sure stateChangeListener is removed from iceAgent in case its
-         * #propertyChange(PropertyChangeEvent) has never been executed.
-         */
-        iceAgent.removeStateChangeListener(stateChangeListener);
-
-        /* check the state of ICE processing and throw exception if failed */
-        if (IceProcessingState.FAILED.equals(iceAgent.getState()))
-        {
-            throw new OperationFailedException(
-                "Could not establish connection (ICE failed)",
-                OperationFailedException.GENERAL_ERROR);
-        }
     }
 
     /**
