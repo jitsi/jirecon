@@ -5,10 +5,8 @@
  */
 package org.jitsi.jirecon.task;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.jitsi.service.neomedia.MediaType;
+import java.util.*;
+import org.jitsi.service.neomedia.*;
 
 public class Endpoint
 {

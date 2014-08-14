@@ -5,23 +5,20 @@
  */
 package org.jitsi.jirecon.task;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
-
-import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-
 import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.JireconEvent.*;
 import org.jitsi.jirecon.task.TaskEvent.*;
 import org.jitsi.jirecon.utils.*;
-import org.jitsi.service.configuration.ConfigurationService;
-import org.jitsi.service.libjitsi.LibJitsi;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.format.MediaFormat;
-import org.jitsi.util.Logger;
+import org.jitsi.service.neomedia.format.*;
+import org.jitsi.util.*;
 import org.jivesoftware.smack.*;
 
 /**

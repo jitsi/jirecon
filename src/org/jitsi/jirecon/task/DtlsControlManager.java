@@ -3,15 +3,12 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-
 package org.jitsi.jirecon.task;
 
 import java.util.*;
-
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.DtlsFingerprintPacketExtension;
-
-import org.jitsi.impl.neomedia.transform.dtls.DtlsControlImpl;
-import org.jitsi.service.libjitsi.LibJitsi;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jitsi.impl.neomedia.transform.dtls.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 
 /**

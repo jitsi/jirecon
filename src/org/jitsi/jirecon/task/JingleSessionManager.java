@@ -6,24 +6,21 @@
 package org.jitsi.jirecon.task;
 
 import java.util.*;
-
-import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.SourcePacketExtension;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.*;
-import net.java.sip.communicator.util.Logger;
-
+import net.java.sip.communicator.util.*;
 import org.jitsi.jirecon.protocol.extension.*;
 import org.jitsi.jirecon.task.TaskEvent.*;
-import org.jitsi.service.libjitsi.LibJitsi;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jivesoftware.smack.*;
-import org.jivesoftware.smack.filter.PacketFilter;
+import org.jivesoftware.smack.filter.*;
 import org.jivesoftware.smack.packet.*;
-import org.jivesoftware.smackx.muc.MultiUserChat;
-import org.jivesoftware.smackx.packet.MUCUser;
-import org.jivesoftware.smackx.packet.Nick;
+import org.jivesoftware.smackx.muc.*;
+import org.jivesoftware.smackx.packet.*;
 
 /**
  * <tt>JireconSession</tt> is a session manager which is responsible for joining

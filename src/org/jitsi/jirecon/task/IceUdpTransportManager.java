@@ -7,18 +7,16 @@ package org.jitsi.jirecon.task;
 
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
-
+import java.util.concurrent.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
-
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.jitsi.jirecon.utils.*;
-import org.jitsi.service.configuration.ConfigurationService;
-import org.jitsi.service.libjitsi.LibJitsi;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.util.Logger;
+import org.jitsi.util.*;
 
 /**
  * An implementation of <tt>JireconTransportManager</tt>.

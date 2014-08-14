@@ -7,7 +7,7 @@ package org.jitsi.jirecon.task;
 
 import java.io.*;
 import java.net.*;
-import java.nio.ByteBuffer;
+import java.nio.*;
 import java.util.*;
 import java.util.Map.*;
 import java.util.concurrent.*;

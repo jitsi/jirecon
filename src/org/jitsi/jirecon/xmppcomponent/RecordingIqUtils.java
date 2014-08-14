@@ -6,7 +6,7 @@
 package org.jitsi.jirecon.xmppcomponent;
 
 import org.dom4j.*;
-import org.xmpp.packet.IQ;
+import org.xmpp.packet.*;
 
 /**
  * Static tool for operating Recording IQ extension.

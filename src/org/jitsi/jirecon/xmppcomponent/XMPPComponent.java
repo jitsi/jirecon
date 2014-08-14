@@ -8,8 +8,8 @@ package org.jitsi.jirecon.xmppcomponent;
 import java.util.*;
 import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.JireconEvent.*;
-import org.jitsi.util.Logger;
-import org.xmpp.component.AbstractComponent;
+import org.jitsi.util.*;
+import org.xmpp.component.*;
 import org.xmpp.packet.*;
 
 /**

@@ -5,11 +5,9 @@
  */
 package org.jitsi.jirecon;
 
-import java.text.SimpleDateFormat;
+import java.text.*;
 import java.util.*;
-
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-
 import org.jitsi.jirecon.JireconEvent.*;
 import org.jitsi.jirecon.protocol.extension.*;
 import org.jitsi.jirecon.task.*;

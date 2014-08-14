@@ -5,10 +5,9 @@
  */
 package org.jitsi.jirecon.xmppcomponent;
 
-import java.util.concurrent.TimeUnit;
-
-import org.jivesoftware.whack.ExternalComponentManager;
-import org.xmpp.component.ComponentException;
+import java.util.concurrent.*;
+import org.jivesoftware.whack.*;
+import org.xmpp.component.*;
 
 /**
  * A launch application which is used to run <tt>Jirecon</tt>.

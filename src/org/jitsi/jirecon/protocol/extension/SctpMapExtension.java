@@ -5,7 +5,7 @@
  */
 package org.jitsi.jirecon.protocol.extension;
 
-import org.jivesoftware.smack.packet.PacketExtension;
+import org.jivesoftware.smack.packet.*;
 
 /**
  * SctpMap extension in transport packet extension.

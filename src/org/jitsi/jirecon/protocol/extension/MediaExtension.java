@@ -7,8 +7,7 @@ package org.jitsi.jirecon.protocol.extension;
 
 import java.util.*;
 import java.util.Map.*;
-
-import org.jivesoftware.smack.packet.PacketExtension;
+import org.jivesoftware.smack.packet.*;
 
 /**
  * Media extension in presence packet.

@@ -8,7 +8,7 @@ package org.jitsi.jirecon.utils;
 /**
  * A list of configuration key used by <tt>Jirecon</tt>.
  * <p>
- * <strong>Warning:</strong> They are keys, not values:D
+ * <strong>Warning:</strong> They are keys, not values :D
  * 
  * @author lishunyang
  * 

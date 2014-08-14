@@ -5,7 +5,7 @@
  */
 package org.jitsi.jirecon;
 
-import java.util.EventListener;
+import java.util.*;
 
 /**
  * Running event of <tt>Jirecon</tt>, which means some important things

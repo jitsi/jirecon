@@ -5,7 +5,6 @@
  */
 package org.jitsi.jirecon.test;
 
-
 import org.jitsi.jirecon.*;
 import org.jitsi.jirecon.JireconEvent.*;
 import junit.framework.TestCase;

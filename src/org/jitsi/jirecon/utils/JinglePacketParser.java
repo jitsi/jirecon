@@ -6,11 +6,9 @@
 package org.jitsi.jirecon.utils;
 
 import java.util.*;
-
-import org.jitsi.impl.neomedia.format.MediaFormatFactoryImpl;
+import org.jitsi.impl.neomedia.format.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
-
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 /**
