@@ -19,7 +19,7 @@ public class TestDtlsControlManager
         assertEquals("sha-1", mgr.getLocalFingerprintHashFunction(MediaType.AUDIO));
         
         DtlsFingerprintPacketExtension fp = null;
-        fp = mgr.getFingerprintPacketExt(MediaType.AUDIO);
+        fp = mgr.createFingerprintPacketExt(MediaType.AUDIO);
         
         assertNotNull(fp);
         

@@ -6,11 +6,13 @@
 package org.jitsi.jirecon.task;
 
 import java.util.*;
+
 import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.SourcePacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.*;
 import net.java.sip.communicator.util.Logger;
+
 import org.jitsi.jirecon.protocol.extension.*;
 import org.jitsi.jirecon.task.TaskEvent.*;
 import org.jitsi.service.libjitsi.LibJitsi;
@@ -124,6 +126,12 @@ public class JingleSessionManager
 
         addPacketListener(packetListener);
     }
+    
+    public void connect(String mucJid, String nickname) 
+        throws Exception
+    {
+        joinMUC(mucJid, nickname);
+    }
 
     /**
      * Disconnect with XMPP server and terminate the Jingle session.
@@ -146,7 +154,7 @@ public class JingleSessionManager
      * @param nickname The name in MUC.
      * @throws Exception if failed to join MUC.
      */
-    public void joinMUC(String mucJid, String nickname)
+    private void joinMUC(String mucJid, String nickname)
         throws Exception
     {
         logger.info("joinMUC");
@@ -253,7 +261,8 @@ public class JingleSessionManager
      * Wait for Jingle session-init packet after join the MUC.
      * <p>
      * <strong>Warning:</strong> This method will block for at most
-     * <tt>MAX_WAIT_TIME</tt> ms if there isn't init packet.
+     * <tt>MAX_WAIT_TIME</tt> ms to wait for session-init packet. If time out,
+     * throws exception.
      * <p>
      * Once We got session-init packet, send back ack packet.
      * 
@@ -386,8 +395,6 @@ public class JingleSessionManager
         removePacketListener(packetListener);
         if (resultList.isEmpty())
         {
-//            throw new Exception("Could not get ack packet",
-//                Exception.GENERAL_ERROR);
             logger.warn("Couldn't receive result packet from remote peer.");
         }
     }

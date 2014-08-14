@@ -27,7 +27,7 @@ public class TestIceUdpTransportManager
         }
         
         IceUdpTransportPacketExtension pe = null;
-        pe = mgr.getTransportPacketExt(MediaType.AUDIO);
+        pe = mgr.createTransportPacketExt(MediaType.AUDIO);
         assertNotNull(pe);
         System.out.println(pe.toXML());
     }

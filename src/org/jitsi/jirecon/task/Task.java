@@ -210,13 +210,13 @@ public class Task
         try
         {
             /* 1. Join MUC. */
-            jingleSessionMgr.joinMUC(info.getMucJid(), info.getNickname());
+            jingleSessionMgr.connect(info.getMucJid(), info.getNickname());
             
             /* 2. Wait for session-init packet. */
             JingleIQ initIq = jingleSessionMgr.waitForInitPacket();
-            List<MediaType> supportedMediaTypes =
+            MediaType[] supportedMediaTypes =
                 JinglePacketParser.getSupportedMediaTypes(initIq);
-            
+
             /*
              * 3. Harvest local candidates. (audio type, video type and data
              * type.)
@@ -244,21 +244,21 @@ public class Task
             for (MediaType mediaType : supportedMediaTypes)
             {
                 transportPEs.put(mediaType,
-                    transportMgr.getTransportPacketExt(mediaType));
+                    transportMgr.createTransportPacketExt(mediaType));
             }
 
             // Fingerprint packet extension.
             for (MediaType mediaType : supportedMediaTypes)
             {
                 dtlsControlMgr.addRemoteFingerprint(mediaType,
-                    JinglePacketParser.getFingerprint(initIq, mediaType));
+                    JinglePacketParser.getFingerprintPacketExt(initIq, mediaType));
             }
             Map<MediaType, AbstractPacketExtension> fingerprintPEs =
                 new HashMap<MediaType, AbstractPacketExtension>();
             for (MediaType mediaType : supportedMediaTypes)
             {
                 fingerprintPEs.put(mediaType,
-                    dtlsControlMgr.getFingerprintPacketExt(mediaType));
+                    dtlsControlMgr.createFingerprintPacketExt(mediaType));
             }
 
             /* 4.2 Send session-accept packet. */

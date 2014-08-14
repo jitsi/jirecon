@@ -8,7 +8,6 @@ package org.jitsi.jirecon.task;
 
 import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.AbstractPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.DtlsFingerprintPacketExtension;
 
 import org.jitsi.impl.neomedia.transform.dtls.DtlsControlImpl;
@@ -93,7 +92,7 @@ public class DtlsControlManager
      * @param mediaType The <tt>MediaType</tt> of the fingerprint.
      * @return Fingerprint packet extension.
      */
-    public DtlsFingerprintPacketExtension getFingerprintPacketExt(MediaType mediaType)
+    public DtlsFingerprintPacketExtension createFingerprintPacketExt(MediaType mediaType)
     {
         DtlsFingerprintPacketExtension fingerprintPE =
             new DtlsFingerprintPacketExtension();

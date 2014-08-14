@@ -113,7 +113,7 @@ public class IceUdpTransportManager
      * @param mediaType
      * @return <tt>IceUdpTransportPacketExtension</tt>
      */
-    public IceUdpTransportPacketExtension getTransportPacketExt(MediaType mediaType)
+    public IceUdpTransportPacketExtension createTransportPacketExt(MediaType mediaType)
     {
         logger.info("getTransportPacketExt");
         
@@ -201,18 +201,15 @@ public class IceUdpTransportManager
             final MediaType mediaType = e.getKey();
             final IceUdpTransportPacketExtension transportPE = e.getValue();
             final IceMediaStream stream = getIceMediaStream(mediaType);
-            final String ufrag =
-                JinglePacketParser.getTransportUfrag(transportPE);
+            final String ufrag = transportPE.getUfrag();
             if (null != ufrag)
                 stream.setRemoteUfrag(ufrag);
 
-            final String password =
-                JinglePacketParser.getTransportPassword(transportPE);
+            final String password = transportPE.getPassword();
             if (null != password)
                 stream.setRemotePassword(password);
 
-            List<CandidatePacketExtension> candidates =
-                JinglePacketParser.getCandidatePacketExt(transportPE);
+            List<CandidatePacketExtension> candidates = transportPE.getCandidateList();
             // Sort the remote candidates (host < reflexive < relayed) in order
             // to create first the host, then the reflexive, the relayed
             // candidates and thus be able to set the relative-candidate
