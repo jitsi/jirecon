@@ -8,15 +8,27 @@ package org.jitsi.jirecon.task;
 import java.util.*;
 import org.jitsi.service.neomedia.*;
 
-public class Endpoint
+/**
+ * Data structure that encapsulates endpoint.
+ * <p>
+ * An endpoint represents a participant in the meeting. It contains id and
+ * ssrcs.
+ * 
+ * @author lishunyang
+ * 
+ */
+public class EndpointInfo
 {
+    /**
+     * Map between <tt>MediaType</tt> and ssrc. Notice that only audio or video
+     * has ssrc.
+     */
     private Map<MediaType, Long> ssrcs = new HashMap<MediaType, Long>();
 
+    /**
+     * Endpoint id.
+     */
     private String id;
-
-    public Endpoint()
-    {
-    }
 
     public void setId(String id)
     {

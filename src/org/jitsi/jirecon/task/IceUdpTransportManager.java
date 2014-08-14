@@ -19,17 +19,13 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
 /**
- * An implementation of <tt>JireconTransportManager</tt>.
- * <p>
- * It mainly used for:
+ * Transport manager that under ICE/UDP protocol.
  * <p>
  * 1. Establish ICE connectivity.
  * <p>
  * 2. Create <tt>IceUdpTransportPacketExtension</tt>
  * 
  * @author lishunyang
- * @see JireconTransportManager
- * 
  */
 public class IceUdpTransportManager
 {
@@ -78,12 +74,15 @@ public class IceUdpTransportManager
      */
     private final int MAX_STREAM_PORT;
 
-    /**
-     * The construction method.
-     */
     public IceUdpTransportManager()
     {
         iceAgent = new Agent();
+        /*
+         * We should set "controlling" to "false", becase iceAgent is act as an
+         * client. See Interactive Connectivity Establishment (ICE): A Protocol
+         * for Network Address Translator (NAT) Traversal for Offer/Answer
+         * Protocols(http://tools.ietf.org/html/rfc5245#section-7.1.2.2)
+         */
         iceAgent.setControlling(false);
         
         LibJitsi.start();
@@ -105,23 +104,20 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Get a <tt>IceUdpTransportPacketExtension</tt> created by
-     * <tt>JireconTransportManager</tt>.
+     * Create a <tt>IceUdpTransportPacketExtension</tt>.
      * 
-     * @param mediaType
-     * @return <tt>IceUdpTransportPacketExtension</tt>
+     * @param mediaType Indicate which media type do you want.
+     * @return
      */
     public IceUdpTransportPacketExtension createTransportPacketExt(MediaType mediaType)
     {
-        logger.info("getTransportPacketExt");
-        
         IceUdpTransportPacketExtension transportPE =
             new IceUdpTransportPacketExtension();
         
         transportPE.setPassword(iceAgent.getLocalPassword());
         transportPE.setUfrag(iceAgent.getLocalUfrag());
 
-        for (CandidatePacketExtension candidatePE : getLocalCandidatePacketExts(mediaType))
+        for (CandidatePacketExtension candidatePE : createLocalCandidatePacketExts(mediaType))
         {
             transportPE.addCandidate(candidatePE);
         }
@@ -130,19 +126,19 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Start establish ICE connectivity.
+     * Start establishing ICE connectivity.
      * <p>
      * <strong>Warning:</strong> This method is asynchronous, it will return
      * immediately while it doesn't means the ICE connectivity has been
      * established successfully. On the contrary, sometime it will never
-     * finished and it doesn't matter only if at least one selected candidate
-     * pair has been gotten.
+     * finished. Fortunately, we need only one selected candidate pair, so we
+     * don't care whether it terminates.
      * 
-     * @throws Exception
+     * @throws Exception If any internal error happens.
      */
     public void startConnectivityEstablishment()
     {
-        logger.info("startConnectivityEstablishment");
+        logger.debug("startConnectivityEstablishment");
         
         iceAgent.startConnectivityEstablishment();
     }
@@ -151,24 +147,26 @@ public class IceUdpTransportManager
      * Harvest local candidates of specified <tt>MediaType</tt>.
      * 
      * @mediaType
-     * @throws Exception if some thing failed.
+     * @throws Exception if we can't create ice component.
      */
     public void harvestLocalCandidates(MediaType mediaType) 
         throws Exception
     {
-        logger.info("harvestLocalCandidates");
+        logger.debug("harvestLocalCandidates");
 
         final IceMediaStream stream = getIceMediaStream(mediaType);
 
         try
         {
+            /*
+             * As for "data" type, we only need to create one component for
+             * establish connection, while as for "audio" and "video", we need
+             * two components, one for RTP transmission and one for RTCP
+             * transmission.
+             */
             iceAgent.createComponent(stream, Transport.UDP, MIN_STREAM_PORT,
                 MIN_STREAM_PORT, MAX_STREAM_PORT);
 
-            /*
-             * Only audio and video type need 2 component, one for RTP
-             * transmission and one for RTCP transmission.
-             */
             if (MediaType.AUDIO == mediaType || MediaType.VIDEO == mediaType)
             {
                 iceAgent.createComponent(stream, Transport.UDP,
@@ -183,7 +181,7 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Parse and harvest remote candidates from a
+     * Parse and harvest remote candidates from an incoming
      * <tt>IceUdpTransportPacketExtension</tt>.
      * 
      * @param transportPEs The <tt>IceUdpTransportPacketExtension</tt> to be
@@ -192,7 +190,8 @@ public class IceUdpTransportManager
     public void harvestRemoteCandidates(
         Map<MediaType, IceUdpTransportPacketExtension> transportPEs)
     {
-        logger.info("harvestRemoteCandidates");
+        logger.debug("harvestRemoteCandidates");
+        
         for (java.util.Map.Entry<MediaType, IceUdpTransportPacketExtension> e : transportPEs
             .entrySet())
         {
@@ -208,11 +207,14 @@ public class IceUdpTransportManager
                 stream.setRemotePassword(password);
 
             List<CandidatePacketExtension> candidates = transportPE.getCandidateList();
-            // Sort the remote candidates (host < reflexive < relayed) in order
-            // to create first the host, then the reflexive, the relayed
-            // candidates and thus be able to set the relative-candidate
-            // matching the rel-addr/rel-port attribute.
+            /*
+             * Sort the remote candidates (host < reflexive < relayed) in order
+             * to create first the host, then the reflexive, the relayed
+             * candidates and thus be able to set the relative-candidate
+             * matching the rel-addr/rel-port attribute.
+             */
             Collections.sort(candidates);
+            
             for (CandidatePacketExtension candidate : candidates)
             {
                 if (candidate.getGeneration() != iceAgent.getGeneration())
@@ -246,8 +248,6 @@ public class IceUdpTransportManager
                             .toString()), candidate.getFoundation(),
                         candidate.getPriority(), relatedCandidate);
 
-                if (!canReach(component, remoteCandidate))
-                    continue;
                 component.addRemoteCandidate(remoteCandidate);
             }
         }
@@ -255,9 +255,12 @@ public class IceUdpTransportManager
 
     /**
      * Get <tt>IceMediaStream</tt> of specified <tt>MediaType</tt>.
+     * <p>
+     * If there is no specified <tt>IceMediaStream</tt>, we will create a new
+     * one.
      * 
      * @param mediaType
-     * @return <tt>IceMediaStream</tt>
+     * @return
      */
     private IceMediaStream getIceMediaStream(MediaType mediaType)
     {
@@ -265,6 +268,7 @@ public class IceUdpTransportManager
         {
             iceAgent.createMediaStream(mediaType.toString());
         }
+        
         return iceAgent.getStream(mediaType.toString());
     }
 
@@ -274,7 +278,7 @@ public class IceUdpTransportManager
      * @param mediaType
      * @return List of <tt>CandidatePacketExtension</tt>
      */
-    private List<CandidatePacketExtension> getLocalCandidatePacketExts(MediaType mediaType)
+    private List<CandidatePacketExtension> createLocalCandidatePacketExts(MediaType mediaType)
     {
         List<CandidatePacketExtension> candidatePEs =
             new ArrayList<CandidatePacketExtension>();
@@ -282,21 +286,21 @@ public class IceUdpTransportManager
         int id = 1;
         for (LocalCandidate candidate : getLocalCandidates(mediaType))
         {
-            CandidatePacketExtension candidatePE =
+            CandidatePacketExtension packetExt =
                 new CandidatePacketExtension();
-            candidatePE.setComponent(candidate.getParentComponent()
+            packetExt.setComponent(candidate.getParentComponent()
                 .getComponentID());
-            candidatePE.setFoundation(candidate.getFoundation());
-            candidatePE.setGeneration(iceAgent.getGeneration());
-            candidatePE.setID(String.valueOf(id++));
-            candidatePE.setNetwork(0); // Why it is 0?
-            candidatePE.setIP(candidate.getTransportAddress().getHostAddress());
-            candidatePE.setPort(candidate.getTransportAddress().getPort());
-            candidatePE.setPriority(candidate.getPriority());
-            candidatePE.setProtocol(candidate.getTransport().toString());
-            candidatePE.setType(CandidateType.valueOf(candidate.getType()
+            packetExt.setFoundation(candidate.getFoundation());
+            packetExt.setGeneration(iceAgent.getGeneration());
+            packetExt.setID(String.valueOf(id++));
+            packetExt.setNetwork(0); // Why it is 0?
+            packetExt.setIP(candidate.getTransportAddress().getHostAddress());
+            packetExt.setPort(candidate.getTransportAddress().getPort());
+            packetExt.setPriority(candidate.getPriority());
+            packetExt.setProtocol(candidate.getTransport().toString());
+            packetExt.setType(CandidateType.valueOf(candidate.getType()
                 .toString()));
-            candidatePEs.add(candidatePE);
+            candidatePEs.add(packetExt);
         }
 
         return candidatePEs;
@@ -322,15 +326,17 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Get <tt>MediaStreamTarget</tt> of specified <tt>MediaType</tt> created by
-     * <tt>JireconTransportManager</tt>.
+     * Get <tt>MediaStreamTarget</tt> of specified <tt>MediaType</tt>.
+     * <p>
+     * If there is no specified <tt>MediaStreamTarget</tt>, we will create a new one.
      * 
-     * @param mediaType The specified <tt>MediaType</tt>
-     * @return <tt>MediaStreamTarget</tt>
+     * @param mediaType The specified <tt>MediaType</tt>.
+     * @return
      */
     public MediaStreamTarget getStreamTarget(MediaType mediaType)
     {
-        logger.info("getStreamTarget");
+        logger.debug("getStreamTarget");
+        
         if (mediaStreamTargets.containsKey(mediaType))
             return mediaStreamTargets.get(mediaType);
 
@@ -372,7 +378,7 @@ public class IceUdpTransportManager
             {
                 streamTarget =
                     new MediaStreamTarget(
-                        streamTargetAddresses.get(0) /* RTP */,
+                        streamTargetAddresses.get(0),
                         null);
                 mediaStreamTargets.put(mediaType, streamTarget);
             }
@@ -388,17 +394,17 @@ public class IceUdpTransportManager
      * <strong>Warning:</strong> This method will wait for the selected
      * candidate pair which should be generated during establish ICE
      * connectivity. If selected candidate pair hasn'e been generated, it will
-     * wait for at most MAX_WAIT_TIME. After that it will break and throw and
+     * wait for at most MAX_WAIT_TIME. After that it will break and throw an
      * exception.
      * 
      * @param mediaType The specified <tt>MediaType</tt>
      * @return <tt>StreamConnector</tt>
-     * @throws Exception if some operation failed.
+     * @throws Exception if we can't get <tt>StreamConnector</tt>.
      */
     public StreamConnector getStreamConnector(MediaType mediaType)
         throws Exception
     {
-        logger.info("getStreamConnector " + mediaType);
+        logger.debug("getStreamConnector " + mediaType);
         
         if (streamConnectors.containsKey(mediaType))
             return streamConnectors.get(mediaType);
@@ -412,7 +418,7 @@ public class IceUdpTransportManager
                     break;
 
                 logger
-                    .info("Could not get stream connector, sleep for a while. Already sleep for "
+                    .debug("Could not get stream connector, sleep for a while. Already sleep for "
                         + sumWaitTime + " seconds");
                 sumWaitTime += MIN_WAIT_TIME;
                 TimeUnit.SECONDS.sleep(MIN_WAIT_TIME);
@@ -445,6 +451,10 @@ public class IceUdpTransportManager
         rtpPair = stream.getComponent(Component.RTP).getSelectedPair();
         rtpSocket = rtpPair.getLocalCandidate().getDatagramSocket();
         
+        /*
+         * Yeah, only "audio" and "video" type need the second candidate pair
+         * for RTCP conenction.
+         */
         if (MediaType.AUDIO == mediaType || MediaType.VIDEO == mediaType)
         {
             rtcpPair = stream.getComponent(Component.RTCP).getSelectedPair();
@@ -456,24 +466,5 @@ public class IceUdpTransportManager
         streamConnectors.put(mediaType, streamConnector);
 
         return streamConnector;
-    }
-
-    /**
-     * Test whether the remote candidate can reach any local candidate in
-     * <tt>Component</tt>.
-     * 
-     * @param component
-     * @param remoteCandidate
-     * @return
-     */
-    private boolean canReach(Component component,
-        RemoteCandidate remoteCandidate)
-    {
-        for (LocalCandidate localCandidate : component.getLocalCandidates())
-        {
-            if (localCandidate.canReach(remoteCandidate))
-                return true;
-        }
-        return false;
     }
 }

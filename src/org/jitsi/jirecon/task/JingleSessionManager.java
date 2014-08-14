@@ -78,8 +78,8 @@ public class JingleSessionManager
     /**
      * <tt>Endpoint</tt>s in the meeting.
      */
-    private List<Endpoint> endpoints =
-        new ArrayList<Endpoint>();
+    private List<EndpointInfo> endpoints =
+        new ArrayList<EndpointInfo>();
 
     /**
      * The list of <tt>JireconSessionPacketListener</tt> which is used for
@@ -801,7 +801,7 @@ public class JingleSessionManager
     /**
      * {@inheritDoc}
      */
-    public List<Endpoint> getEndpoints()
+    public List<EndpointInfo> getEndpoints()
     {
         return endpoints;
     }
@@ -810,7 +810,7 @@ public class JingleSessionManager
     {
         synchronized (endpoints)
         {
-            Endpoint endpoint = new Endpoint();
+            EndpointInfo endpoint = new EndpointInfo();
             
             endpoint.setId(jid);
             for (MediaType mediaType : new MediaType[]
@@ -819,7 +819,7 @@ public class JingleSessionManager
                 endpoint.setSsrc(mediaType, ssrcs.get(mediaType));
             }
             
-            Iterator<Endpoint> iter = endpoints.iterator();
+            Iterator<EndpointInfo> iter = endpoints.iterator();
             while (iter.hasNext())
             {
                 if (0 == iter.next().getId().compareTo(jid))
@@ -839,7 +839,7 @@ public class JingleSessionManager
         
         synchronized (endpoints)
         {
-            Iterator<Endpoint> iter = endpoints.iterator();
+            Iterator<EndpointInfo> iter = endpoints.iterator();
             while (iter.hasNext())
             {
                 if (0 == iter.next().getId().compareTo(jid))

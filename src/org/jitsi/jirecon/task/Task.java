@@ -247,7 +247,7 @@ public class Task
             // Fingerprint packet extension.
             for (MediaType mediaType : supportedMediaTypes)
             {
-                dtlsControlMgr.addRemoteFingerprint(mediaType,
+                dtlsControlMgr.setRemoteFingerprint(mediaType,
                     JinglePacketParser.getFingerprintPacketExt(initIq, mediaType));
             }
             Map<MediaType, AbstractPacketExtension> fingerprintPEs =
@@ -371,14 +371,14 @@ public class Task
 
         if (event.getType() == TaskEvent.Type.PARTICIPANT_CAME)
         {
-            List<Endpoint> endpoints =
+            List<EndpointInfo> endpoints =
                 jingleSessionMgr.getEndpoints();
             recorderMgr.setEndpoints(endpoints);
         }
 
         else if (event.getType() == TaskEvent.Type.PARTICIPANT_LEFT)
         {
-            List<Endpoint> endpoints =
+            List<EndpointInfo> endpoints =
                 jingleSessionMgr.getEndpoints();
             // Oh, it seems that all participants have left the MUC(except Jirecon
             // or other participants which only receive data). It's time to

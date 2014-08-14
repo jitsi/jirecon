@@ -28,7 +28,7 @@ public class TestDtlsControlManager
         
         System.out.println(fp.toXML());
         
-        mgr.addRemoteFingerprint(MediaType.AUDIO, fp);
+        mgr.setRemoteFingerprint(MediaType.AUDIO, fp);
         
         assertNotNull(mgr.getDtlsControl(MediaType.VIDEO));
         

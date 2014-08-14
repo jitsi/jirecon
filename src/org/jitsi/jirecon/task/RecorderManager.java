@@ -88,7 +88,7 @@ public class RecorderManager
     /**
      * Active endpoints in the meeting currently.
      */
-    private List<Endpoint> endpoints = new ArrayList<Endpoint>();
+    private List<EndpointInfo> endpoints = new ArrayList<EndpointInfo>();
 
     /**
      * Map between <tt>MediaType</tt> and local recorder's ssrc.
@@ -391,6 +391,9 @@ public class RecorderManager
 
     /**
      * Stop the RTP translators.
+     * <p>
+     * Actually we don't stop <tt>RTPTranslator</tt> manually, because it will
+     * be closed in recorder.
      */
     private void stopTranslators()
     {
@@ -478,7 +481,7 @@ public class RecorderManager
     {
         synchronized (endpoints)
         {
-            for (Endpoint endpoint : endpoints)
+            for (EndpointInfo endpoint : endpoints)
             {
                 Map<MediaType, Long> ssrcs = endpoint.getSsrcs();
 
@@ -510,7 +513,7 @@ public class RecorderManager
     {
         synchronized (endpoints)
         {
-            for (Endpoint endpoint : endpoints)
+            for (EndpointInfo endpoint : endpoints)
             {
                 if (0 == endpoint.getId().compareTo(endpointId)
                     || 0 == endpoint.getBareId().compareTo(endpointId))
@@ -526,12 +529,12 @@ public class RecorderManager
     /**
      * {@inheritDoc}
      */
-    public void setEndpoints(List<Endpoint> newEndpoints)
+    public void setEndpoints(List<EndpointInfo> newEndpoints)
     {
         synchronized (endpoints)
         {
             endpoints = newEndpoints;
-            for (Endpoint endpoint : endpoints)
+            for (EndpointInfo endpoint : endpoints)
             {
                 final String endpointId = endpoint.getId();
                 for (Entry<MediaType, Long> ssrc : endpoint.getSsrcs()
