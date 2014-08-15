@@ -11,7 +11,9 @@ import java.nio.*;
 import java.util.*;
 import java.util.Map.*;
 import java.util.concurrent.*;
+
 import javax.media.rtp.*;
+
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.recording.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
@@ -392,8 +394,8 @@ public class RecorderManager
     /**
      * Stop the RTP translators.
      * <p>
-     * Actually we don't stop <tt>RTPTranslator</tt> manually, because it will
-     * be closed in recorder.
+     * Actually we don't stop <tt>RTPTranslator</tt>s manually, because it will
+     * be closed automatically by recorders.
      */
     private void stopTranslators()
     {
@@ -929,14 +931,6 @@ public class RecorderManager
         public void onSctpPacket(byte[] data, int sid, int ssn, int tsn,
             long ppid, int context, int flags)
         {
-            System.out.println("Everybody freeze! " + ppid);
-            for (byte b : data)
-            {
-                // System.out.printf("%03d ", b);
-                System.out.printf("%x ", b);
-            }
-            System.out.println();
-
             if (ppid == WEB_RTC_PPID_CTRL)
             {
                 // Channel control PPID
@@ -970,6 +964,7 @@ public class RecorderManager
                         json.get("dominantSpeakerEndpoint").toString();
 
                     logger.debug("Hey! " + endpointId);
+                    System.out.println("Event: " + dataStr);
                     System.out.println("Hey! " + endpointId);
 
                     RecorderEvent event = new RecorderEvent();
@@ -978,6 +973,8 @@ public class RecorderManager
                     event.setEndpointId(endpointId);
                     event.setAudioSsrc(getEndpointSsrc(endpointId,
                         MediaType.AUDIO));
+                    event.setInstant(System.currentTimeMillis());
+                    
                     eventHandler.handleEvent(event);
                 }
                 catch (ParseException e)
@@ -1029,13 +1026,6 @@ public class RecorderManager
         private void onCtrlPacket(byte[] data, int sid)
             throws IOException
         {
-            System.out.print("Control Packet");
-            for (byte b : data)
-            {
-                System.out.printf("%03d ", b);
-            }
-            System.out.println();
-            
             ByteBuffer buffer = ByteBuffer.wrap(data);
             int messageType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
 

@@ -6,11 +6,13 @@
 package org.jitsi.jirecon.task;
 
 import java.util.*;
+
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.*;
 import net.java.sip.communicator.util.*;
+
 import org.jitsi.jirecon.protocol.extension.*;
 import org.jitsi.jirecon.task.TaskEvent.*;
 import org.jitsi.service.libjitsi.*;
@@ -23,8 +25,7 @@ import org.jivesoftware.smackx.muc.*;
 import org.jivesoftware.smackx.packet.*;
 
 /**
- * <tt>JireconSession</tt> is a session manager which is responsible for joining
- * specified XMPP MUC and building Jingle session.
+ * Manage Jingle session, join MUC, build Jingle session etc.
  * 
  * @author lishunyang
  * 
@@ -94,14 +95,15 @@ public class JingleSessionManager
     
     /**
      * Initialize <tt>JireconSession</tt>.
-     * <p>
-     * <strong>Warning:</strong> LibJitsi must be started before calling this
-     * method.
      * 
      * @param connection is used for send/receive XMPP packet.
      */
     public void init(XMPPConnection connection)
     {
+        /*
+         * We must make sure Libjitsi has bee nstarted.
+         */
+        LibJitsi.start();
         this.connection = connection;
 
         addPacketSendingListener();
@@ -124,6 +126,13 @@ public class JingleSessionManager
         addPacketListener(packetListener);
     }
     
+    /**
+     * Join a Multi-User-Chat of specified MUC jid.
+     * 
+     * @param mucJid The specified MUC jid.
+     * @param nickname The name in MUC.
+     * @throws Exception if failed to join MUC.
+     */
     public void connect(String mucJid, String nickname) 
         throws Exception
     {
@@ -197,10 +206,10 @@ public class JingleSessionManager
     /**
      * Send Jingle session-accept packet to the remote peer.
      * 
-     * @param formatAndPTs
-     * @param localSsrcs
-     * @param transportPEs
-     * @param fingerprintPEs
+     * @param formatAndPTs Map between <tt>MediaFormat</tt> and payload type id.
+     * @param localSsrcs Local sscrs of audio and video.
+     * @param transportPEs DtlsTransport packet extensions.
+     * @param fingerprintPEs Fingerprint packet extensions.
      */
     public void sendAcceptPacket(
         Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,
@@ -410,8 +419,8 @@ public class JingleSessionManager
         MUCUser userExt = (MUCUser) p.getExtension(name, namespace);
         
         /*
-         * In case of presence packet isn't sent by participant, here I get
-         * participant id from p.getFrom()
+         * In case of presence packet isn't sent by participant, so we can't get
+         * participant id from p.getFrom().
          */ 
         String participantJid = userExt.getItem().getJid();
 
@@ -580,6 +589,15 @@ public class JingleSessionManager
         return content;
     }
 
+    /**
+     * Create <tt>RtpDescriptionPacketExtension</tt> with specified mediatype,
+     * media formats, payload type ids and ssrcs.
+     * 
+     * @param mediaType
+     * @param formatAndPayloadTypes
+     * @param localSsrc
+     * @return
+     */
     private RtpDescriptionPacketExtension createDescriptionPacketExt(
         MediaType mediaType, Map<MediaFormat, Byte> formatAndPayloadTypes,
         Long localSsrc)
@@ -647,11 +665,6 @@ public class JingleSessionManager
         return description;
     }
     
-    /**
-     * Add <tt>JireconTaskEvent</tt> listener.
-     * 
-     * @param listener
-     */
     public void addTaskEventListener(TaskEventListener listener)
     {
         synchronized (listeners)
@@ -660,11 +673,6 @@ public class JingleSessionManager
         }
     }
 
-    /**
-     * Remove <tt>JireconTaskEvent</tt> listener.
-     * 
-     * @param listener
-     */
     public void removeTaskEventListener(TaskEventListener listener)
     {
         synchronized (listeners)
@@ -674,7 +682,7 @@ public class JingleSessionManager
     }
 
     /**
-     * Fire a <tt>JireconTaskEvent</tt>, notify listeners we've made new
+     * Fire a <tt>TaskEvent</tt>, notify listeners we've made new
      * progress which they may interest in.
      * 
      * @param event
@@ -806,6 +814,15 @@ public class JingleSessionManager
         return endpoints;
     }
 
+    /**
+     * Record a newly found endpoint.
+     * <p>
+     * If there is an existed endpoint with same id, then we will override the
+     * old enpoint.
+     * 
+     * @param jid The endpoint id.
+     * @param ssrcs The endpoint ssrcs.
+     */
     private void addEndpoint(String jid, Map<MediaType, Long> ssrcs)
     {
         synchronized (endpoints)
@@ -833,6 +850,11 @@ public class JingleSessionManager
         }
     }
 
+    /**
+     * Remove a specified endpoint.
+     * 
+     * @param jid Indicate which endpoint do you want to remove.
+     */
     private void removeEndpoint(String jid)
     {
         logger.debug("Remove Endpoint " + jid);
