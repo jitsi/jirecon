@@ -26,6 +26,7 @@ import org.jitsi.sctp4j.SctpNotification;
 import org.jitsi.sctp4j.SctpSocket;
 import org.jitsi.service.neomedia.DtlsControl;
 import org.jitsi.service.neomedia.MediaStreamTarget;
+import org.jitsi.service.neomedia.MediaType;
 import org.jitsi.service.neomedia.StreamConnector;
 import org.jitsi.util.ExecutorUtils;
 
@@ -143,13 +144,14 @@ public class WebRtcDataStreamManager
         try
         {
             uinitSctp();
+            Sctp.finish();
         }
         catch (IOException e)
         {
             logger.error("Failed to stop sctp socket", e);
         }
     }
-
+    
     private void initSctp(StreamConnector connector,
         MediaStreamTarget streamTarget, DtlsControl dtlsControl)
         throws Exception
@@ -161,6 +163,8 @@ public class WebRtcDataStreamManager
         }
 
         Sctp.init();
+        
+        dtlsControl.start(MediaType.DATA);
 
         RTPConnectorUDPImpl rtpConnector = new RTPConnectorUDPImpl(connector);
 
@@ -315,7 +319,7 @@ public class WebRtcDataStreamManager
         return assocIsUp && peerAddrIsConfirmed;
     }
 
-    private synchronized WebRtcDataStream getChannel(int sid)
+    public synchronized WebRtcDataStream getChannel(int sid)
     {
         WebRtcDataStream channel = null;
 
