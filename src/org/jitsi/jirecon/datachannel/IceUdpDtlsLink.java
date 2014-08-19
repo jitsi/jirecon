@@ -1,3 +1,8 @@
+/*
+ * Jirecon, the Jitsi recorder container.
+ * 
+ * Distributable under LGPL license. See terms of license at gnu.org.
+ */
 package org.jitsi.jirecon.datachannel;
 
 import java.io.*;
@@ -72,6 +77,10 @@ public class IceUdpDtlsLink
 
                 try
                 {
+                    /*
+                     * Once SctpSocket is closed, this loop will be broken down,
+                     * so we don't have to worry about closing this link.
+                     */
                     do
                     {
                         datagramSocket.receive(rcvPacket);

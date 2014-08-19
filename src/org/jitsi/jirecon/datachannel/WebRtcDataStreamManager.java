@@ -7,9 +7,7 @@ package org.jitsi.jirecon.datachannel;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,20 +18,15 @@ import javax.media.rtp.SessionAddress;
 import net.java.sip.communicator.util.Logger;
 
 import org.jitsi.impl.neomedia.RTPConnectorUDPImpl;
-import org.jitsi.impl.neomedia.RawPacket;
 import org.jitsi.impl.neomedia.transform.dtls.DtlsPacketTransformer;
 import org.jitsi.impl.neomedia.transform.dtls.DtlsTransformEngine;
-import org.jitsi.sctp4j.NetworkLink;
 import org.jitsi.sctp4j.Sctp;
 import org.jitsi.sctp4j.SctpDataCallback;
 import org.jitsi.sctp4j.SctpNotification;
 import org.jitsi.sctp4j.SctpSocket;
-import org.jitsi.service.configuration.ConfigurationService;
-import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.DtlsControl;
 import org.jitsi.service.neomedia.MediaStreamTarget;
 import org.jitsi.service.neomedia.StreamConnector;
-import org.jitsi.service.packetlogging.PacketLoggingService;
 import org.jitsi.util.ExecutorUtils;
 
 public class WebRtcDataStreamManager
@@ -60,6 +53,12 @@ public class WebRtcDataStreamManager
     private static final String WEBRTC_DATA_CHANNEL_PROTOCOL =
         "http://jitsi.org/protocols/colibri";
 
+    /**
+     * The pool of <tt>Thread</tt>s which run <tt>SctpConnection</tt>s.
+     */
+    private static final ExecutorService threadPool = ExecutorUtils
+        .newCachedThreadPool(true, WebRtcDataStreamManager.class.getName());
+
     private static final Logger logger = Logger
         .getLogger(WebRtcDataStreamManager.class);
 
@@ -84,26 +83,112 @@ public class WebRtcDataStreamManager
 
     private Map<Integer, WebRtcDataStream> channels =
         new HashMap<Integer, WebRtcDataStream>();
-    
-    private SctpPacketReceiver packetDispatcher = new SctpPacketReceiver();
+
+    private SctpPacketReceiver packetReceiver = new SctpPacketReceiver();
 
     public WebRtcDataStreamManager(String endpointId)
     {
         this.endpointId = endpointId;
     }
-    
-    public void runAsServer()
+
+    public void runAsServer(StreamConnector connector,
+        MediaStreamTarget streamTarget, DtlsControl dtlsControl)
     {
-        /*
-         * TODO: Create SctpSocket and accept.
-         */
+        try
+        {
+            initSctp(connector, streamTarget, dtlsControl);
+
+            // FIXME manage threads
+            threadPool.execute(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    try
+                    {
+                        while (!sctpSocket.accept())
+                        {
+                            Thread.sleep(100);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        logger.error("Error accepting SCTP connection", e);
+                    }
+                }
+            });
+        }
+        catch (Exception e)
+        {
+            logger.error("Failed to start WebRtcDataStreamManager", e);
+        }
     }
-    
-    public void runAsClient()
+
+    public void runAsClient(StreamConnector connector,
+        MediaStreamTarget streamTarget, DtlsControl dtlsControl)
     {
-        /*
-         * TODO: Create SctpSocket and connect.
-         */
+        try
+        {
+            initSctp(connector, streamTarget, dtlsControl);
+            sctpSocket.connect(5000);
+        }
+        catch (Exception e)
+        {
+            logger.error("Failed to start WebRtcDataStreamManager", e);
+        }
+    }
+
+    public void shutdown()
+    {
+        try
+        {
+            uinitSctp();
+        }
+        catch (IOException e)
+        {
+            logger.error("Failed to stop sctp socket", e);
+        }
+    }
+
+    private void initSctp(StreamConnector connector,
+        MediaStreamTarget streamTarget, DtlsControl dtlsControl)
+        throws Exception
+    {
+        if (null != sctpSocket)
+        {
+            logger.warn("Sctp stuff has already been started.");
+            return;
+        }
+
+        Sctp.init();
+
+        RTPConnectorUDPImpl rtpConnector = new RTPConnectorUDPImpl(connector);
+
+        rtpConnector.addTarget(new SessionAddress(streamTarget.getDataAddress()
+            .getAddress(), streamTarget.getDataAddress().getPort()));
+
+        dtlsControl.setConnector(rtpConnector);
+
+        final DtlsTransformEngine engine =
+            (DtlsTransformEngine) dtlsControl.getTransformEngine();
+        final DtlsPacketTransformer transformer =
+            (DtlsPacketTransformer) engine.getRTPTransformer();
+
+        final DatagramSocket iceUdpSocket = rtpConnector.getDataSocket();
+
+        sctpSocket = Sctp.createSocket(5000);
+        sctpSocket.setLink(new IceUdpDtlsLink(sctpSocket, iceUdpSocket,
+            transformer));
+        sctpSocket.setNotificationListener(packetReceiver);
+        sctpSocket.setDataCallback(packetReceiver);
+    }
+
+    private void uinitSctp() throws IOException
+    {
+        sctpSocket.close();
+        // TODO: Don't we need to remove callback from SctpSocket?
+        sctpSocket = null;
+        Sctp.finish();
     }
 
     /**
@@ -155,13 +240,13 @@ public class WebRtcDataStreamManager
         {
             int channelType = /* 1 byte unsigned integer */0xFF & buffer.get();
             int priority =
-                /* 2 bytes unsigned integer */0xFFFF & buffer.getShort();
+            /* 2 bytes unsigned integer */0xFFFF & buffer.getShort();
             long reliability =
-                /* 4 bytes unsigned integer */0xFFFFFFFFL & buffer.getInt();
+            /* 4 bytes unsigned integer */0xFFFFFFFFL & buffer.getInt();
             int labelLength =
-                /* 2 bytes unsigned integer */0xFFFF & buffer.getShort();
+            /* 2 bytes unsigned integer */0xFFFF & buffer.getShort();
             int protocolLength =
-                /* 2 bytes unsigned integer */0xFFFF & buffer.getShort();
+            /* 2 bytes unsigned integer */0xFFFF & buffer.getShort();
             String label;
             String protocol;
 
@@ -208,7 +293,8 @@ public class WebRtcDataStreamManager
             sendOpenChannelAck(sid);
 
             /*
-             * TODO: Should we notify someone that a data channel has been built?
+             * TODO: Should we notify someone that a data channel has been
+             * built?
              */
         }
         else
