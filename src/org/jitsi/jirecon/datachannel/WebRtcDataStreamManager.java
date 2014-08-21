@@ -5,33 +5,33 @@
  */
 package org.jitsi.jirecon.datachannel;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.DatagramSocket;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
+import java.io.*;
+import java.net.*;
+import java.nio.*;
+import java.util.*;
+import java.util.concurrent.*;
+import javax.media.rtp.*;
+import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.transform.dtls.*;
+import org.jitsi.sctp4j.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 
-import javax.media.rtp.SessionAddress;
-
-import net.java.sip.communicator.util.Logger;
-
-import org.jitsi.impl.neomedia.RTPConnectorUDPImpl;
-import org.jitsi.impl.neomedia.transform.dtls.DtlsPacketTransformer;
-import org.jitsi.impl.neomedia.transform.dtls.DtlsTransformEngine;
-import org.jitsi.sctp4j.Sctp;
-import org.jitsi.sctp4j.SctpDataCallback;
-import org.jitsi.sctp4j.SctpNotification;
-import org.jitsi.sctp4j.SctpSocket;
-import org.jitsi.service.neomedia.DtlsControl;
-import org.jitsi.service.neomedia.MediaStreamTarget;
-import org.jitsi.service.neomedia.MediaType;
-import org.jitsi.service.neomedia.StreamConnector;
-import org.jitsi.util.ExecutorUtils;
-
+/**
+ * Manage all <tt>WebRtcDataStream</tt>s in one SCTP sonnection.
+ * <p>
+ * See WebRTC Data Channel Establishment Protocol:
+ * <p>
+ * http://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-07
+ * 
+ * @author lishunyang
+ * 
+ */
 public class WebRtcDataStreamManager
 {
+    private static final Logger logger = Logger
+        .getLogger(WebRtcDataStreamManager.class);
+    
     /**
      * Message type used to acknowledge WebRTC data channel allocation on SCTP
      * stream ID on which <tt>MSG_OPEN_CHANNEL</tt> message arrives.
@@ -60,9 +60,6 @@ public class WebRtcDataStreamManager
     private static final ExecutorService threadPool = ExecutorUtils
         .newCachedThreadPool(true, WebRtcDataStreamManager.class.getName());
 
-    private static final Logger logger = Logger
-        .getLogger(WebRtcDataStreamManager.class);
-
     /**
      * Indicates whether the STCP association is ready and has not been ended by
      * a subsequent state change.
@@ -80,18 +77,43 @@ public class WebRtcDataStreamManager
      */
     private SctpSocket sctpSocket;
 
+    /**
+     * Owner endpoint id.
+     */
     private String endpointId;
 
+    /**
+     * Map of "sid" and <tt>WebRtcDataStream</tt>.
+     */
     private Map<Integer, WebRtcDataStream> channels =
         new HashMap<Integer, WebRtcDataStream>();
 
+    /**
+     * This receiver is used for handling control packets and forward message
+     * packet to associated <tt>WebRtcDataStream</tt>.
+     */
     private SctpPacketReceiver packetReceiver = new SctpPacketReceiver();
 
+    /**
+     * 
+     * @param endpointId The ownder's endpoint id.
+     */
     public WebRtcDataStreamManager(String endpointId)
     {
         this.endpointId = endpointId;
     }
 
+    /**
+     * Start <tt>WebRtcDataStreamManager</tt> as a SCTP server side. It will
+     * start SCTP connection and wait for SCTP handshake packet sent from client
+     * side.
+     * <p>
+     * This method will start DtlsControl.
+     * 
+     * @param connector We need this to receive packets.
+     * @param streamTarget Indicate where should we send packet to.
+     * @param dtlsControl
+     */
     public void runAsServer(StreamConnector connector,
         MediaStreamTarget streamTarget, DtlsControl dtlsControl)
     {
@@ -125,6 +147,16 @@ public class WebRtcDataStreamManager
         }
     }
 
+    /**
+     * Start <tt>WebRtcDataStreamManager</tt> as a client side. It will start
+     * SCTP connection and send SCTP handshake packet to server side.
+     * <p>
+     * This method will start DtlsControl.
+     * 
+     * @param connector We need this to receive packets.
+     * @param streamTarget Indicate where should we send packet to.
+     * @param dtlsControl
+     */
     public void runAsClient(StreamConnector connector,
         MediaStreamTarget streamTarget, DtlsControl dtlsControl)
     {
@@ -139,6 +171,9 @@ public class WebRtcDataStreamManager
         }
     }
 
+    /**
+     * Shutdown the <tt>WebRtcDataStream</tt> and close SCTP connection.
+     */
     public void shutdown()
     {
         try
@@ -152,6 +187,46 @@ public class WebRtcDataStreamManager
         }
     }
     
+    /**
+     * Returns <tt>true</tt> if this <tt>SctpConnection</tt> is connected to
+     * other peer and operational.
+     * 
+     * @return <tt>true</tt> if this <tt>SctpConnection</tt> is connected to
+     *         other peer and operational.
+     */
+    public boolean isReady()
+    {
+        return assocIsUp && peerAddrIsConfirmed;
+    }
+
+    /**
+     * Get <tt>WebRtcDataStream</tt> with specified "sid". Null will be returned
+     * if no <tt>WebRtcDataStream</tt> was found.
+     * 
+     * @param sid
+     * @return
+     */
+    public synchronized WebRtcDataStream getChannel(int sid)
+    {
+        WebRtcDataStream channel = null;
+
+        channel = channels.get(sid);
+        if (null == channel)
+        {
+            logger.error("No channel found for sid: " + sid);
+        }
+
+        return channel;
+    }
+    
+    /**
+     * Create <tt>SctpSocket</tt> and initialize it.
+     * 
+     * @param connector We need this to receive packets.
+     * @param streamTarget Indicate where to send packet.
+     * @param dtlsControl
+     * @throws Exception
+     */
     private void initSctp(StreamConnector connector,
         MediaStreamTarget streamTarget, DtlsControl dtlsControl)
         throws Exception
@@ -308,144 +383,6 @@ public class WebRtcDataStreamManager
     }
 
     /**
-     * Returns <tt>true</tt> if this <tt>SctpConnection</tt> is connected to
-     * other peer and operational.
-     * 
-     * @return <tt>true</tt> if this <tt>SctpConnection</tt> is connected to
-     *         other peer and operational.
-     */
-    public boolean isReady()
-    {
-        return assocIsUp && peerAddrIsConfirmed;
-    }
-
-    public synchronized WebRtcDataStream getChannel(int sid)
-    {
-        WebRtcDataStream channel = null;
-
-        channel = channels.get(sid);
-        if (null == channel)
-        {
-            logger.error("No channel found for sid: " + sid);
-        }
-
-        return channel;
-    }
-
-    private class SctpPacketReceiver
-        implements SctpDataCallback, SctpSocket.NotificationListener
-    {
-        @Override
-        public void onSctpPacket(byte[] data, int sid, int ssn, int tsn,
-            long ppid, int context, int flags)
-        {
-            if (WebRtcDataStream.WEB_RTC_PPID_CTRL == ppid)
-            {
-                // Channel control PPID
-                try
-                {
-                    onCtrlPacket(data, sid);
-                }
-                catch (IOException e)
-                {
-                    logger.error("IOException when processing ctrl packet", e);
-                    e.printStackTrace();
-                }
-            }
-            else if (WebRtcDataStream.WEB_RTC_PPID_STRING == ppid)
-            {
-                WebRtcDataStream channel = getChannel(sid);
-
-                if (null == channel)
-                    return;
-
-                // WebRTC String
-                String str;
-                String charsetName = "UTF-8";
-
-                try
-                {
-                    str = new String(data, charsetName);
-                }
-                catch (UnsupportedEncodingException uee)
-                {
-                    logger.error("Unsupported charset encoding/name "
-                        + charsetName, uee);
-                    str = null;
-                }
-                channel.onStringMsg(str);
-            }
-            else if (WebRtcDataStream.WEB_RTC_PPID_BIN == ppid)
-            {
-                WebRtcDataStream channel = getChannel(sid);
-
-                if (null == channel)
-                    return;
-
-                // WebRTC Binary
-                channel.onBinaryMsg(data);
-            }
-            else
-            {
-                logger.warn("Got message on unsupported PPID: " + ppid);
-            }
-        }
-
-        @Override
-        public void onSctpNotification(SctpSocket socket,
-            SctpNotification notification)
-        {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("socket=" + socket + "; notification="
-                    + notification);
-            }
-            switch (notification.sn_type)
-            {
-            case SctpNotification.SCTP_ASSOC_CHANGE:
-                SctpNotification.AssociationChange assocChange =
-                    (SctpNotification.AssociationChange) notification;
-
-                switch (assocChange.state)
-                {
-                case SctpNotification.AssociationChange.SCTP_COMM_UP:
-                    if (!assocIsUp)
-                    {
-                        assocIsUp = true;
-                    }
-                    break;
-
-                case SctpNotification.AssociationChange.SCTP_COMM_LOST:
-                    break;
-                case SctpNotification.AssociationChange.SCTP_SHUTDOWN_COMP:
-                    break;
-                case SctpNotification.AssociationChange.SCTP_CANT_STR_ASSOC:
-                    sctpSocket.close();
-                    break;
-                }
-                break;
-
-            case SctpNotification.SCTP_PEER_ADDR_CHANGE:
-                SctpNotification.PeerAddressChange peerAddrChange =
-                    (SctpNotification.PeerAddressChange) notification;
-
-                switch (peerAddrChange.state)
-                {
-                case SctpNotification.PeerAddressChange.SCTP_ADDR_AVAILABLE:
-                case SctpNotification.PeerAddressChange.SCTP_ADDR_CONFIRMED:
-                    if (!peerAddrIsConfirmed)
-                    {
-                        peerAddrIsConfirmed = true;
-                    }
-                    break;
-                }
-                break;
-            }
-        }
-
-    }
-
-    /**
      * Opens new WebRTC data channel using specified parameters.
      * @param type channel type as defined in control protocol description.
      *             Use 0 for "reliable".
@@ -588,5 +525,129 @@ public class WebRtcDataStreamManager
         {
             logger.error("Failed to send open channel confirmation");
         }
+    }
+    
+    /**
+     * Class in <tt>WebRtcDataStreamManager</tt> which is used for receiving
+     * packets from <tt>SctpSocket</tt>. So all <tt>SctpSocket</tt> will be
+     * captured by this receiver only. If it gets a control message, it will
+     * forward the message to <tt>WebRtcDataStreamManager</tt> to handle it. If
+     * it gets a string message or binary message, it will forward the message
+     * to associated <tt>WebRtcDataStream</tt> according to "sid".
+     * 
+     * @author lishunyang
+     * 
+     */
+    private class SctpPacketReceiver
+        implements SctpDataCallback, SctpSocket.NotificationListener
+    {
+        @Override
+        public void onSctpPacket(byte[] data, int sid, int ssn, int tsn,
+            long ppid, int context, int flags)
+        {
+            if (WebRtcDataStream.WEB_RTC_PPID_CTRL == ppid)
+            {
+                // Channel control PPID
+                try
+                {
+                    onCtrlPacket(data, sid);
+                }
+                catch (IOException e)
+                {
+                    logger.error("IOException when processing ctrl packet", e);
+                    e.printStackTrace();
+                }
+            }
+            else if (WebRtcDataStream.WEB_RTC_PPID_STRING == ppid)
+            {
+                WebRtcDataStream channel = getChannel(sid);
+
+                if (null == channel)
+                    return;
+
+                // WebRTC String
+                String str;
+                String charsetName = "UTF-8";
+
+                try
+                {
+                    str = new String(data, charsetName);
+                }
+                catch (UnsupportedEncodingException uee)
+                {
+                    logger.error("Unsupported charset encoding/name "
+                        + charsetName, uee);
+                    str = null;
+                }
+                channel.onStringMsg(str);
+            }
+            else if (WebRtcDataStream.WEB_RTC_PPID_BIN == ppid)
+            {
+                WebRtcDataStream channel = getChannel(sid);
+
+                if (null == channel)
+                    return;
+
+                // WebRTC Binary
+                channel.onBinaryMsg(data);
+            }
+            else
+            {
+                logger.warn("Got message on unsupported PPID: " + ppid);
+            }
+        }
+
+        @Override
+        public void onSctpNotification(SctpSocket socket,
+            SctpNotification notification)
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("socket=" + socket + "; notification="
+                    + notification);
+            }
+            switch (notification.sn_type)
+            {
+            case SctpNotification.SCTP_ASSOC_CHANGE:
+                SctpNotification.AssociationChange assocChange =
+                    (SctpNotification.AssociationChange) notification;
+
+                switch (assocChange.state)
+                {
+                case SctpNotification.AssociationChange.SCTP_COMM_UP:
+                    if (!assocIsUp)
+                    {
+                        assocIsUp = true;
+                    }
+                    break;
+
+                case SctpNotification.AssociationChange.SCTP_COMM_LOST:
+                    break;
+                case SctpNotification.AssociationChange.SCTP_SHUTDOWN_COMP:
+                    break;
+                case SctpNotification.AssociationChange.SCTP_CANT_STR_ASSOC:
+                    sctpSocket.close();
+                    break;
+                }
+                break;
+
+            case SctpNotification.SCTP_PEER_ADDR_CHANGE:
+                SctpNotification.PeerAddressChange peerAddrChange =
+                    (SctpNotification.PeerAddressChange) notification;
+
+                switch (peerAddrChange.state)
+                {
+                case SctpNotification.PeerAddressChange.SCTP_ADDR_AVAILABLE:
+                case SctpNotification.PeerAddressChange.SCTP_ADDR_CONFIRMED:
+                    if (!peerAddrIsConfirmed)
+                    {
+                        peerAddrIsConfirmed = true;
+                    }
+                    break;
+                }
+                break;
+            }
+        }
+
     }
 }

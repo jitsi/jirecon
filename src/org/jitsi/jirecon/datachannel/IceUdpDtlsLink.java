@@ -8,12 +8,11 @@ package org.jitsi.jirecon.datachannel;
 import java.io.*;
 import java.net.*;
 import java.util.concurrent.*;
-
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.sctp4j.*;
-import org.jitsi.service.libjitsi.LibJitsi;
-import org.jitsi.service.packetlogging.PacketLoggingService;
+import org.jitsi.service.libjitsi.*;
+import org.jitsi.service.packetlogging.*;
 
 public class IceUdpDtlsLink
     implements NetworkLink
