@@ -14,6 +14,15 @@ import org.jitsi.sctp4j.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.packetlogging.*;
 
+/**
+ * An implementation of <tt>NetworkLink</tt> which is used for receiving and
+ * sending packet under SCTP connection.
+ * <p>
+ * This link will use ICE-UDP and DTLS protocol.
+ * 
+ * @author lishunyang
+ * 
+ */
 public class IceUdpDtlsLink
     implements NetworkLink
 {
@@ -32,8 +41,14 @@ public class IceUdpDtlsLink
      */
     private SctpSocket sctpSocket;
 
+    /**
+     * ICE-UDP socket, used for receiving packets.
+     */
     private DatagramSocket datagramSocket;
 
+    /**
+     * DTLS transform engine, used for sending packets.
+     */
     private DtlsPacketTransformer transformer;
 
     private ExecutorService executorService = Executors
@@ -54,6 +69,12 @@ public class IceUdpDtlsLink
      */
     private int debugId = generateDebugId();
 
+    /**
+     * 
+     * @param sctpSocket Indicate which <tt>SctpSocket</tt> this link will bind to.
+     * @param datagramSocket ICE-UDP socket which is used for receiving packets.
+     * @param transformer DTLS transformer which is used for sending packets.
+     */
     public IceUdpDtlsLink(SctpSocket sctpSocket, DatagramSocket datagramSocket,
         DtlsPacketTransformer transformer)
     {

@@ -51,9 +51,13 @@ public class JireconLauncher
      * 
      * @param args <tt>JireconLauncher</tt> only cares about two arguments:
      *            <p>
-     *            1. --conf=CONF FILE PATH
+     *            1. --conf=CONFIGURATION FILE PATH. Indicate the path of
+     *            configuration file.
      *            <p>
-     *            2. --time=RECORDING SECONDS
+     *            2. --time=RECORDING SECONDS. Indicate how many seconds will
+     *            the recording task last. If you didn't specify this parameter,
+     *            Jirecon will continue recording forever unless all
+     *            participants has left the meeting.
      */
     public static void main(String[] args)
     {
@@ -104,7 +108,6 @@ public class JireconLauncher
                     }
                 }
             }
-            
         });
 
         try

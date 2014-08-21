@@ -28,14 +28,15 @@ public class JinglePacketParser
      * 
      * @param jiq <tt>JingleIQ</tt>
      * @param mediaType <tt>MediaType</tt>
-     * @return <tt>ContentPacketExtension</tt>
+     * @return <tt>ContentPacketExtension</tt>. Null if no associated packet was
+     *         found.
      */
     public static ContentPacketExtension getContentPacketExt(JingleIQ jiq,
         MediaType mediaType)
     {
         if (null == jiq || null == mediaType)
             return null;
-        
+
         for (ContentPacketExtension c : jiq.getContentList())
         {
             if (mediaType.toString().equalsIgnoreCase(c.getName()))
@@ -50,12 +51,14 @@ public class JinglePacketParser
      * <tt>ContentPacketExtension</tt>.
      * 
      * @param content <tt>ContentPacketExtension</tt>
-     * @return <tt>RtpDescriptionPacketExtension</tt>
+     * @return <tt>RtpDescriptionPacketExtension</tt>. Null if no associated
+     *         packet was found.
      */
     public static RtpDescriptionPacketExtension getDescriptionPacketExt(
         ContentPacketExtension content)
     {
-        return content == null ? null : content.getFirstChildOfType(RtpDescriptionPacketExtension.class);
+        return content == null ? null : content
+            .getFirstChildOfType(RtpDescriptionPacketExtension.class);
     }
 
     /**
@@ -64,14 +67,15 @@ public class JinglePacketParser
      * 
      * @param jiq The Jingle packet.
      * @param mediaType is the specified <tt>MediaType</tt>.
-     * @return <tt>IceUdpTransportPacketExtension</tt>.
+     * @return <tt>IceUdpTransportPacketExtension</tt>. Null if no associated
+     *         packet was found.
      */
     public static IceUdpTransportPacketExtension getTransportPacketExt(
         JingleIQ jiq, MediaType mediaType)
     {
         if (null == jiq || null == mediaType)
             return null;
-        
+
         for (ContentPacketExtension c : jiq.getContentList())
         {
             if (mediaType.toString().equalsIgnoreCase(c.getName()))
@@ -92,18 +96,18 @@ public class JinglePacketParser
      * 
      * @param jiq
      * @return map between <tt>MediaFormat</tt> and dynamic payload type id.
+     *         Null if no associated packet was found.
      */
     public static Map<MediaFormat, Byte> getFormatAndDynamicPTs(JingleIQ jiq,
         MediaType mediaType)
     {
         if (null == jiq || null == mediaType)
             return null;
-        
+
         final Map<MediaFormat, Byte> formatAndPTs =
             new HashMap<MediaFormat, Byte>();
         final MediaFormatFactoryImpl fmtFactory = new MediaFormatFactoryImpl();
 
-        // TODO: Video format only support RED only at present.
         for (PayloadTypePacketExtension payloadTypePacketExt : getPayloadTypePacketExts(
             jiq, mediaType))
         {
@@ -118,12 +122,20 @@ public class JinglePacketParser
         return formatAndPTs;
     }
 
-    public static DtlsFingerprintPacketExtension getFingerprintPacketExt(JingleIQ jiq,
-        MediaType mediaType)
+    /**
+     * Get <tt>DtlsFingerprintPacketExtension</tt> from a <tt>JingleIQ</tt> with
+     * specified <tt>MediaType</tt>.
+     * 
+     * @param jiq
+     * @param mediaType
+     * @return Null if no associated packet was found.
+     */
+    public static DtlsFingerprintPacketExtension getFingerprintPacketExt(
+        JingleIQ jiq, MediaType mediaType)
     {
         if (null == jiq || null == mediaType)
             return null;
-        
+
         IceUdpTransportPacketExtension transport = null;
 
         transport = getTransportPacketExt(jiq, mediaType);
@@ -134,11 +146,18 @@ public class JinglePacketParser
             .getFirstChildOfType(DtlsFingerprintPacketExtension.class);
     }
 
+    /**
+     * Get <tt>MediaType</tt>s that appeared in <tt>JingleIQ</tt>, we think
+     * those appeared <tt>MediaType</tt>s are supported by remote peer.
+     * 
+     * @param jiq
+     * @return Null if no associated packet was found.
+     */
     public static MediaType[] getSupportedMediaTypes(JingleIQ jiq)
     {
         if (null == jiq)
             return null;
-        
+
         MediaType[] mediaTypes = new MediaType[jiq.getContentList().size()];
 
         for (int i = 0; i < mediaTypes.length; i++)
@@ -155,7 +174,8 @@ public class JinglePacketParser
      * <tt>RtpDescriptionPacketExtension</tt>.
      * 
      * @param description The description packet extension.
-     * @return List of payloadtype packet extensions.
+     * @return List of payloadtype packet extensions. Null if no associated
+     *         packet was found.
      */
     private static List<PayloadTypePacketExtension> getPayloadTypePacketExts(
         RtpDescriptionPacketExtension description)
@@ -169,21 +189,23 @@ public class JinglePacketParser
      * 
      * @param jiq The Jingle packet.
      * @param mediaType The media type.
-     * @return List of payloadtype packet extensions.
+     * @return List of payloadtype packet extensions. Null if no associated
+     *         packet was found.
      */
     private static List<PayloadTypePacketExtension> getPayloadTypePacketExts(
         JingleIQ jiq, MediaType mediaType)
     {
         return getPayloadTypePacketExts(getDescriptionPacketExt(jiq, mediaType));
     }
-    
+
     /**
      * Get the <tt>RtpDescriptionPacketExtension</tt> from a <tt>JingleIQ</tt>
      * of specified <tt>MediaType</tt>.
      * 
      * @param jiq The Jingle packet.
      * @param mediaType The media type.
-     * @return Description packet extension.
+     * @return Description packet extension. Null if no associated packet was
+     *         found.
      */
     private static RtpDescriptionPacketExtension getDescriptionPacketExt(
         JingleIQ jiq, MediaType mediaType)

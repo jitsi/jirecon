@@ -12,7 +12,7 @@ import org.xmpp.component.*;
 /**
  * A launch application which is used to run <tt>Jirecon</tt>.
  * <p>
- * Usually there will be a associated Shell script to start this application.
+ * Usually there will be a associated shell script to start this application.
  * 
  * @author lishunyang
  * 
@@ -119,6 +119,10 @@ public class ComponentLauncher
             System.exit(-1);
         }
 
+        /*
+         * Once we started the component, sleep and wake up every 10 second to
+         * recuce CPU load.
+         */
         while (true)
         {
             try

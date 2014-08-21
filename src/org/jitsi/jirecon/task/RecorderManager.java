@@ -75,8 +75,6 @@ public class RecorderManager
      * SCTP data channel. It's used for receiving some event packets, such as
      * SPEAKER_CHANGE event.
      */
-//    private SctpConnection dataChannel;
-    
     private DataChannelAdapter dataChannel;
 
     /**
@@ -203,6 +201,10 @@ public class RecorderManager
         stopRecordingStreams();
         stopReceivingStreams();
         closeDataChannel();
+        /*
+         * NOTE: We don't need to stop translators because those media streams
+         * will do it.
+         */
         // stopTranslators();
     }
 
@@ -417,7 +419,6 @@ public class RecorderManager
      */
     private void createDataChannel(DtlsControl dtlsControl)
     {
-//        dataChannel = new SctpConnection(dtlsControl);
         dataChannel = new DataChannelAdapter(dtlsControl);
     }
 
@@ -464,8 +465,10 @@ public class RecorderManager
         else
         {
             translator = mediaService.createRTPTranslator();
-            // I have to do the casting, because RTPTranslator interface doesn't
-            // have that method.
+            /*
+             * We have to do the casting, because RTPTranslator interface doesn't
+             * have that method.
+             */
             ((RTPTranslatorImpl) translator).setLocalSSRC(localSsrcs
                 .get(mediaType));
             rtpTranslators.put(mediaType, translator);
@@ -646,9 +649,11 @@ public class RecorderManager
         public RecorderEventHandlerImpl(String filename)
             throws Exception
         {
-            // If there is an existed file with "filename", add suffix to
-            // "filename". For instance, from "metadata.json" to
-            // "metadata.json-1".
+            /*
+             * If there is an existed file with "filename", add suffix to
+             * "filename". For instance, from "metadata.json" to
+             * "metadata.json-1".
+             */
             int count = 1;
             String filenameAvailable = filename;
             File file = null;
@@ -725,442 +730,63 @@ public class RecorderManager
         }
     }
 
-//    /**
-//     * SCTP connection, which is used for receiving packets from data channel.
-//     * 
-//     * @author lishunyang
-//     * 
-//     */
-//    private class SctpConnection
-//        implements SctpDataCallback, NotificationListener
-//    {
-//        /**
-//         * Message type used to acknowledge WebRTC data channel allocation on SCTP
-//         * stream ID on which <tt>MSG_OPEN_CHANNEL</tt> message arrives.
-//         */
-//        private static final int MSG_CHANNEL_ACK = 0x2;
-//        
-//        /**
-//         * Message with this type sent over control PPID in order to open new WebRTC
-//         * data channel on SCTP stream ID that this message is sent.
-//         */
-//        private static final int MSG_OPEN_CHANNEL = 0x3;
-//        
-//        private final byte[] MSG_CHANNEL_ACK_BYTES
-//        = new byte[] { MSG_CHANNEL_ACK };
-//        
-//        /**
-//         * Payload protocol id for control data. Used for <tt>WebRtcDataStream</tt>
-//         * allocation.
-//         */
-//        static final int WEB_RTC_PPID_CTRL = 50;
-//        
-//        /**
-//         * Payload protocol id that identifies text data UTF8 encoded in WebRTC data
-//         * channels.
-//         */
-//        static final int WEB_RTC_PPID_STRING = 51;
-//        
-//        /**
-//         * Payload protocol id that identifies binary data in WebRTC data channel.
-//         */
-//        static final int WEB_RTC_PPID_BIN = 53;
-//        
-//        private ExecutorService sctpExecutor;
-//
-//        private DtlsControl dtlsControl;
-//
-//        private SctpSocket sctpSocket;
-//
-//        /**
-//         * Construction method.
-//         * 
-//         * @param dtlsControl
-//         */
-//        public SctpConnection(DtlsControl dtlsControl)
-//        {
-//            this.dtlsControl = dtlsControl;
-//
-//            sctpExecutor =
-//                Executors.newSingleThreadExecutor(new HandlerThreadFactory());
-//        }
-//
-//        /**
-//         * Build SCTP connection with remote SCTP server.
-//         * 
-//         * @param connector
-//         * @param streamTarget
-//         */
-//        public void connect(final StreamConnector connector,
-//            final MediaStreamTarget streamTarget)
-//        {
-//            logger.debug(connector.getDataSocket().getLocalAddress()
-//                .getHostName()
-//                + ", "
-//                + connector.getDataSocket().getLocalPort()
-//                + "----->"
-//                + streamTarget.getDataAddress().getHostName()
-//                + ", "
-//                + streamTarget.getDataAddress().getPort());
-//
-//            dtlsControl.start(MediaType.DATA);
-//
-//            sctpExecutor.execute(new Runnable()
-//            {
-//                @Override
-//                public void run()
-//                {
-//                    DatagramSocket iceUdpSocket = null;
-//                    
-//                    try
-//                    {
-//                        Sctp.init();
-//
-//                        RTPConnectorUDPImpl rtpConnector =
-//                            new RTPConnectorUDPImpl(connector);
-//
-//                        rtpConnector.addTarget(new SessionAddress(streamTarget
-//                            .getDataAddress().getAddress(), streamTarget
-//                            .getDataAddress().getPort()));
-//
-//                        dtlsControl.setConnector(rtpConnector);
-//
-//                        DtlsTransformEngine engine =
-//                            (DtlsTransformEngine) dtlsControl
-//                                .getTransformEngine();
-//                        final DtlsPacketTransformer transformer =
-//                            (DtlsPacketTransformer) engine.getRTPTransformer();
-//
-//                        sctpSocket = Sctp.createSocket(5000);
-//                        sctpSocket.setNotificationListener(SctpConnection.this);
-//                        sctpSocket.setDataCallback(SctpConnection.this);
-//
-//                        // Receive loop, breaks when SCTP socket is closed
-//                        iceUdpSocket =
-//                            rtpConnector.getDataSocket();
-//                        byte[] receiveBuffer = new byte[2035];
-//                        DatagramPacket rcvPacket =
-//                            new DatagramPacket(receiveBuffer, 0,
-//                                receiveBuffer.length);
-//
-//                        sctpSocket.setLink(new NetworkLink()
-//                        {
-//                            private final RawPacket rawPacket = new RawPacket();
-//
-//                            @Override
-//                            public void onConnOut(
-//                                org.jitsi.sctp4j.SctpSocket s, byte[] packet)
-//                                throws IOException
-//                            {
-//                                // Send through DTLS transport
-//                                rawPacket.setBuffer(packet);
-//                                rawPacket.setLength(packet.length);
-//
-//                                transformer.transform(rawPacket);
-//                            }
-//                        });
-//
-//                        /*
-//                         * Actually the port can be any number, but let's keep
-//                         * it 5000.
-//                         */
-//                        final int port = 5000;
-//                        /*
-//                         * NOTE: This method is asynchronrous and it may take
-//                         * some time to build connection.
-//                         */
-//                        sctpSocket.connect(port);
-//
-//                        
-//                        while (!iceUdpSocket.isClosed())
-//                        {
-//                            iceUdpSocket.receive(rcvPacket);
-//
-//                            RawPacket raw =
-//                                new RawPacket(rcvPacket.getData(), rcvPacket
-//                                    .getOffset(), rcvPacket.getLength());
-//
-//                            raw = transformer.reverseTransform(raw);
-//
-//                            // Check for app data
-//                            if (raw == null)
-//                                continue;
-//
-//                            // Pass network packet to SCTP stack
-//                            sctpSocket.onConnIn(raw.getBuffer(),
-//                                raw.getOffset(), raw.getLength());
-//                        }
-//
-//                    }
-//                    catch (IOException e)
-//                    {
-//                        /*
-//                         * We need to guarentee that socket is opened, becase
-//                         * when someone stop the recording task, udp socket will
-//                         * be closed, and this will cause an exception thrown by
-//                         * receive method. But in this case, we shouldn't throw
-//                         * exception.
-//                         */
-//                        if (!iceUdpSocket.isClosed())
-//                        {
-//                            e.printStackTrace();
-//                            fireEvent(new TaskEvent(
-//                                TaskEvent.Type.RECORDER_ABORTED));
-//                        }
-//                    }
-//                }
-//            });
-//        }
-//
-//        /**
-//         * Shut down SCTP connection.
-//         */
-//        public void disconnect()
-//        {
-//            if (sctpSocket != null)
-//                sctpSocket.close();
-//
-//            dtlsControl.cleanup();
-//
-//            /*
-//             * NOTE: We shouldn't shutdown SCTP, because other JireconTask may be using
-//             * it. SCTP util is global.
-//             */
-//        }
-//
-//        /**
-//         * {@inheritDoc} Receive the SCTP packets and parse into event string,
-//         * then record them.
-//         */
-//        @Override
-//        public void onSctpPacket(byte[] data, int sid, int ssn, int tsn,
-//            long ppid, int context, int flags)
-//        {
-//            if (ppid == WEB_RTC_PPID_CTRL)
-//            {
-//                // Channel control PPID
-//                try
-//                {
-//                    onCtrlPacket(data, sid);
-//                }
-//                catch (IOException e)
-//                {
-//                    logger.error("IOException when processing ctrl packet", e);
-//                }
-//            }
-//            else if (ppid == WEB_RTC_PPID_STRING || ppid == WEB_RTC_PPID_BIN)
-//            {
-//
-//                ByteBuffer buffer = ByteBuffer.wrap(data);
-//                int messageType =
-//                    /* 1 byte unsigned integer */0xFF & buffer.get();
-//                System.out.println(messageType);
-//
-//                /*
-//                 * We only care about SPEAKER_CHANGE event.
-//                 */
-//
-//                try
-//                {
-//                    String dataStr = new String(data, "UTF-8");
-//                    JSONParser parser = new JSONParser();
-//                    JSONObject json = (JSONObject) parser.parse(dataStr);
-//                    String endpointId =
-//                        json.get("dominantSpeakerEndpoint").toString();
-//
-//                    logger.debug("Hey! " + endpointId);
-//                    System.out.println("Event: " + dataStr);
-//                    System.out.println("Hey! " + endpointId);
-//
-//                    RecorderEvent event = new RecorderEvent();
-//                    event.setMediaType(MediaType.AUDIO);
-//                    event.setType(RecorderEvent.Type.SPEAKER_CHANGED);
-//                    event.setEndpointId(endpointId);
-//                    event.setAudioSsrc(getEndpointSsrc(endpointId,
-//                        MediaType.AUDIO));
-//                    event.setInstant(System.currentTimeMillis());
-//                    
-//                    eventHandler.handleEvent(event);
-//                }
-//                catch (ParseException e)
-//                {
-//                    e.printStackTrace();
-//                }
-//                catch (UnsupportedEncodingException e)
-//                {
-//                    e.printStackTrace();
-//                }
-//            }
-//        }
-//
-//        /**
-//         * {@inheritDoc}
-//         */
-//        @Override
-//        public void onSctpNotification(SctpSocket socket,
-//            SctpNotification notification)
-//        {
-//            logger.debug("SCTP Notification: " + notification);
-//            System.out.println("SCTP Notification: " + notification);
-//
-//            if (notification.sn_type == SctpNotification.SCTP_ASSOC_CHANGE)
-//            {
-//                SctpNotification.AssociationChange assocChange =
-//                    (SctpNotification.AssociationChange) notification;
-//
-//                switch (assocChange.state)
-//                {
-//                case SctpNotification.AssociationChange.SCTP_COMM_UP:
-//                    logger.debug("SCTP connection established successfully.");
-//                    System.out
-//                        .println("SCTP connection established successfully.");
-//                    break;
-//                case SctpNotification.AssociationChange.SCTP_COMM_LOST:
-//                case SctpNotification.AssociationChange.SCTP_SHUTDOWN_COMP:
-//                case SctpNotification.AssociationChange.SCTP_CANT_STR_ASSOC:
-//                    break;
-//                }
-//            }
-//        }
-//        
-//        /**
-//         * Handles control packet.
-//         * @param data raw packet data that arrived on control PPID.
-//         * @param sid SCTP stream id on which the data has arrived.
-//         */
-//        private void onCtrlPacket(byte[] data, int sid)
-//            throws IOException
-//        {
-//            ByteBuffer buffer = ByteBuffer.wrap(data);
-//            int messageType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
-//
-//            if(messageType == MSG_OPEN_CHANNEL)
-//            {
-//                int channelType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
-//                int priority
-//                    = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
-//                long reliability
-//                    = /* 4 bytes unsigned integer */ 0xFFFFFFFFL & buffer.getInt();
-//                int labelLength
-//                    = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
-//                int protocolLength
-//                    = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
-//                String label;
-//                String protocol;
-//
-//                if (labelLength == 0)
-//                {
-//                    label = "";
-//                }
-//                else
-//                {
-//                    byte[] labelBytes = new byte[labelLength];
-//
-//                    buffer.get(labelBytes);
-//                    label = new String(labelBytes, "UTF-8");
-//                }
-//                if (protocolLength == 0)
-//                {
-//                    protocol = "";
-//                }
-//                else
-//                {
-//                    byte[] protocolBytes = new byte[protocolLength];
-//
-//                    buffer.get(protocolBytes);
-//                    protocol = new String(protocolBytes, "UTF-8");
-//                }
-//
-//                System.out.println("!!! "
-//                    + " data channel open request on SID: " + sid + " type: "
-//                    + channelType + " prio: " + priority + " reliab: "
-//                    + reliability + " label: " + label + " proto: " + protocol);
-//
-//                sendOpenChannelAck(sid);
-//            }
-//        }
-//        
-//        /**
-//         * Sends acknowledgment for open channel request on given SCTP stream ID.
-//         * @param sid SCTP stream identifier to be used for sending ack.
-//         */
-//        private void sendOpenChannelAck(int sid)
-//            throws IOException
-//        {
-//            // Send ACK
-//            byte[] ack = MSG_CHANNEL_ACK_BYTES;
-//            int sendAck = sctpSocket.send(ack, true, sid, WEB_RTC_PPID_CTRL);
-//
-//            if(sendAck != ack.length)
-//            {
-//                logger.error("Failed to send open channel confirmation");
-//            }
-//        }
-//    }
-//
-//    /**
-//     * Thread exception handler, in order to catch exceptions of the task
-//     * thread.
-//     * 
-//     * @author lishunyang
-//     * 
-//     */
-//    private class ThreadExceptionHandler
-//        implements Thread.UncaughtExceptionHandler
-//    {
-//        @Override
-//        public void uncaughtException(Thread t, Throwable e)
-//        {
-//            /*
-//             * If Sctp data channel crashed, fire an aborted event to notify
-//             * upper class.
-//             */
-//            fireEvent(new TaskEvent(
-//                TaskEvent.Type.RECORDER_ABORTED));
-//        }
-//    }
-//
-//    /**
-//     * Handler factory, in order to create thread with
-//     * <tt>ThreadExceptionHandler</tt>
-//     * 
-//     * @author lishunyang
-//     * 
-//     */
-//    private class HandlerThreadFactory
-//        implements ThreadFactory
-//    {
-//        @Override
-//        public Thread newThread(Runnable r)
-//        {
-//            Thread t = new Thread(r);
-//            t.setUncaughtExceptionHandler(new ThreadExceptionHandler());
-//            return t;
-//        }
-//    }
-    
+    /**
+     * This inner class is acting as an adaptor, so we can use
+     * <tt>WebRtcDataStreamManager</tt> and <tt>WebRtcDataStream</tt> easily.
+     * 
+     * @author lishunyang
+     * 
+     */
     private class DataChannelAdapter
     {
+        /**
+         * We have to keep this <tt>DtlsControl</tt> for a while, because
+         * <tt>WebRtcDataStreamManager</tt> need this when we start it.
+         */
         private DtlsControl dtlsControl;
+        
+        /**
+         * Encapsulate the <tt>WebRtcDataStreamManager</tt>.
+         */
         private WebRtcDataStreamManager streamManager;
+        
+        /**
+         * Encapsulate the <tt>WebRtcDataStreamManager</tt>.
+         */
         private WebRtcDataStream dataChannel;
+        
+        private ExecutorService executorService = Executors
+            .newSingleThreadExecutor();
         
         public DataChannelAdapter(DtlsControl dtlsControl)
         {
             this.dtlsControl = dtlsControl;
-            this.streamManager = new WebRtcDataStreamManager("TODO");
+            this.streamManager = new WebRtcDataStreamManager("We don't need the endpointId");
         }
-        
+
+        /**
+         * Start <tt>WebRtcDataStreamManager</tt> and wait for videobridge
+         * create a default <tt>WebRtcDataStream</tt> whose sid is "0".
+         * 
+         * @param connector
+         * @param streamTarget
+         */
         public void connect(StreamConnector connector,
             MediaStreamTarget streamTarget)
         {
             streamManager.runAsClient(connector, streamTarget, dtlsControl);
 
-            new Thread(new Runnable()
+            executorService.execute(new Runnable()
             {
                 @Override
                 public void run()
                 {
+                    /*
+                     * NOTE: Videobridge will open a default data channel(ssid
+                     * is 0) once the SCTP connection has been built. Because
+                     * videobridge will create WebRtcDataStream initially, so we
+                     * can only wait for it. Well, this is pretty ugly :(
+                     */
                     while (null == (dataChannel = streamManager.getChannel(0)))
                     {
                         try
@@ -1174,7 +800,7 @@ public class RecorderManager
                     }
 
                     System.out.println("Get dataChannel! Good job!");
-                    
+
                     dataChannel
                         .setDataCallback(new WebRtcDataStream.DataCallback()
                         {
@@ -1182,19 +808,14 @@ public class RecorderManager
                             public void onStringData(WebRtcDataStream src,
                                 String msg)
                             {
-                                ByteBuffer buffer =
-                                    ByteBuffer.wrap(msg.getBytes());
-                                int messageType = 0xFF & buffer.get();
-                                /* 1 byte unsigned integer */
-
-                                System.out.println(messageType);
-
-                                /*
-                                 * We only care about SPEAKER_CHANGE event.
-                                 */
-
                                 try
                                 {
+                                    /*
+                                     * Once we got an legal
+                                     * message(SPEAKER_CHANGE event), we create
+                                     * a RecorderEvent and let event handler to
+                                     * handle it.
+                                     */
                                     JSONParser parser = new JSONParser();
                                     JSONObject json =
                                         (JSONObject) parser.parse(msg);
@@ -1231,7 +852,7 @@ public class RecorderManager
                         });
                 }
 
-            }).start();
+            });
         }
 
         public void disconnect()

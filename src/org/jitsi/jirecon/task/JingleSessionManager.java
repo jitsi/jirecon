@@ -436,7 +436,6 @@ public class JingleSessionManager
         
         for (MediaType mediaType : new MediaType[] {MediaType.AUDIO, MediaType.VIDEO})
         {
-            // TODO: What if someone only sends audio? this could be changed. 
             MediaDirection direction =
                 MediaDirection.parseString(mediaExt.getDirection(mediaType
                     .toString()));
