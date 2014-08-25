@@ -6,23 +6,14 @@
 package org.jitsi.jirecon.task;
 
 import java.io.*;
-import java.net.*;
-import java.nio.*;
 import java.util.*;
 import java.util.Map.*;
 import java.util.concurrent.*;
 
-import javax.media.rtp.*;
-
-import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.recording.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
-import org.jitsi.impl.neomedia.transform.dtls.*;
-import org.jitsi.jirecon.datachannel.WebRtcDataStream;
-import org.jitsi.jirecon.datachannel.WebRtcDataStreamManager;
+import org.jitsi.jirecon.datachannel.*;
 import org.jitsi.jirecon.task.TaskEvent.*;
-import org.jitsi.sctp4j.*;
-import org.jitsi.sctp4j.SctpSocket.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -738,6 +729,7 @@ public class RecorderManager
      * 
      */
     private class DataChannelAdapter
+        implements WebRtcDataStreamListener
     {
         /**
          * We have to keep this <tt>DtlsControl</tt> for a while, because
@@ -758,10 +750,13 @@ public class RecorderManager
         private ExecutorService executorService = Executors
             .newSingleThreadExecutor();
         
+        private Object syncRoot = new Object();
+        
         public DataChannelAdapter(DtlsControl dtlsControl)
         {
             this.dtlsControl = dtlsControl;
             this.streamManager = new WebRtcDataStreamManager("We don't need the endpointId");
+            this.streamManager.setListener(this);
         }
 
         /**
@@ -781,75 +776,22 @@ public class RecorderManager
                 @Override
                 public void run()
                 {
-                    /*
-                     * NOTE: Videobridge will open a default data channel(ssid
-                     * is 0) once the SCTP connection has been built. Because
-                     * videobridge will create WebRtcDataStream initially, so we
-                     * can only wait for it. Well, this is pretty ugly :(
-                     */
-                    while (null == (dataChannel = streamManager.getChannel(0)))
+                    synchronized (syncRoot)
                     {
                         try
                         {
-                            TimeUnit.SECONDS.sleep(1);
+                            syncRoot.wait();
                         }
                         catch (InterruptedException e)
                         {
+                            // TODO Auto-generated catch block
                             e.printStackTrace();
                         }
                     }
 
                     System.out.println("Get dataChannel! Good job!");
 
-                    dataChannel
-                        .setDataCallback(new WebRtcDataStream.DataCallback()
-                        {
-                            @Override
-                            public void onStringData(WebRtcDataStream src,
-                                String msg)
-                            {
-                                try
-                                {
-                                    /*
-                                     * Once we got an legal
-                                     * message(SPEAKER_CHANGE event), we create
-                                     * a RecorderEvent and let event handler to
-                                     * handle it.
-                                     */
-                                    JSONParser parser = new JSONParser();
-                                    JSONObject json =
-                                        (JSONObject) parser.parse(msg);
-                                    String endpointId =
-                                        json.get("dominantSpeakerEndpoint")
-                                            .toString();
-
-                                    logger.debug("Hey! " + endpointId);
-                                    System.out.println("Event: " + msg);
-                                    System.out.println("Hey! " + endpointId);
-
-                                    RecorderEvent event = new RecorderEvent();
-                                    event.setMediaType(MediaType.AUDIO);
-                                    event
-                                        .setType(RecorderEvent.Type.SPEAKER_CHANGED);
-                                    event.setEndpointId(endpointId);
-                                    event.setAudioSsrc(getEndpointSsrc(
-                                        endpointId, MediaType.AUDIO));
-                                    event.setInstant(System.currentTimeMillis());
-
-                                    eventHandler.handleEvent(event);
-                                }
-                                catch (ParseException e)
-                                {
-                                    e.printStackTrace();
-                                }
-                            }
-
-                            @Override
-                            public void onBinaryData(WebRtcDataStream src,
-                                byte[] data)
-                            {
-                            }
-                        });
+                    prepareDataChannel();
                 }
 
             });
@@ -859,6 +801,66 @@ public class RecorderManager
         {
             streamManager.shutdown();
             dtlsControl.cleanup();
+        }
+
+        @Override
+        public void onChannelOpened(WebRtcDataStream channel)
+        {
+            dataChannel = channel;
+            
+            synchronized (syncRoot)
+            {
+                syncRoot.notify();
+            }
+        }
+        
+        private void prepareDataChannel()
+        {
+            dataChannel.setDataCallback(new WebRtcDataStream.DataCallback()
+            {
+                @Override
+                public void onStringData(WebRtcDataStream src, String msg)
+                {
+                    try
+                    {
+                        /*
+                         * Once we got an legal message(SPEAKER_CHANGE event),
+                         * we create a RecorderEvent and let event handler to
+                         * handle it.
+                         */
+                        JSONParser parser = new JSONParser();
+                        JSONObject json = (JSONObject) parser.parse(msg);
+                        String endpointId =
+                            json.get("dominantSpeakerEndpoint").toString();
+
+                        logger.debug("Hey! " + endpointId);
+                        System.out.println("Event: " + msg);
+                        System.out.println("Hey! " + endpointId);
+
+                        RecorderEvent event = new RecorderEvent();
+                        event.setMediaType(MediaType.AUDIO);
+                        event.setType(RecorderEvent.Type.SPEAKER_CHANGED);
+                        event.setEndpointId(endpointId);
+                        event.setAudioSsrc(getEndpointSsrc(endpointId,
+                            MediaType.AUDIO));
+                        event.setInstant(System.currentTimeMillis());
+
+                        eventHandler.handleEvent(event);
+                    }
+                    catch (ParseException e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onBinaryData(WebRtcDataStream src, byte[] data)
+                {
+                    /*
+                     * We don't care about binary data.
+                     */
+                }
+            });
         }
     }
 }

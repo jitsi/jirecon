@@ -93,6 +93,8 @@ public class WebRtcDataStreamManager
      * packet to associated <tt>WebRtcDataStream</tt>.
      */
     private SctpPacketReceiver packetReceiver = new SctpPacketReceiver();
+    
+    private WebRtcDataStreamListener listener;
 
     /**
      * 
@@ -108,7 +110,7 @@ public class WebRtcDataStreamManager
      * start SCTP connection and wait for SCTP handshake packet sent from client
      * side.
      * <p>
-     * This method will start DtlsControl.
+     * This method will start <tt>DtlsControl</tt>.
      * 
      * @param connector We need this to receive packets.
      * @param streamTarget Indicate where should we send packet to.
@@ -151,7 +153,7 @@ public class WebRtcDataStreamManager
      * Start <tt>WebRtcDataStreamManager</tt> as a client side. It will start
      * SCTP connection and send SCTP handshake packet to server side.
      * <p>
-     * This method will start DtlsControl.
+     * This method will start <tt>DtlsControl</tt>.
      * 
      * @param connector We need this to receive packets.
      * @param streamTarget Indicate where should we send packet to.
@@ -172,14 +174,14 @@ public class WebRtcDataStreamManager
     }
 
     /**
-     * Shutdown the <tt>WebRtcDataStream</tt> and close SCTP connection.
+     * Shutdown the <tt>WebRtcDataStream</tt> and close SCTP connection. It will
+     * *NOT* close <tt>DtlsControl</tt>.
      */
     public void shutdown()
     {
         try
         {
             uinitSctp();
-            Sctp.finish();
         }
         catch (IOException e)
         {
@@ -217,6 +219,11 @@ public class WebRtcDataStreamManager
         }
 
         return channel;
+    }
+    
+    public synchronized void setListener(WebRtcDataStreamListener listener)
+    {
+        this.listener = listener;
     }
     
     /**
@@ -372,9 +379,10 @@ public class WebRtcDataStreamManager
             sendOpenChannelAck(sid);
 
             /*
-             * TODO: Should we notify someone that a data channel has been
-             * built?
+             * Notify listener that we have built a new channel
              */
+            if (null != listener)
+                listener.onChannelOpened(newChannel);
         }
         else
         {
