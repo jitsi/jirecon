@@ -22,6 +22,11 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
 mainClass="org.jitsi.jirecon.xmppcomponent.ComponentLauncher"
 cp=$(JARS=($SCRIPT_DIR/jirecon.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo "${JARS[*]}")
-libs="$SCRIPT_DIR/lib/native/linux-64"
+if [ `uname -o` == "GNU/Linux" ]
+then
+    libs="$SCRIPT_DIR/lib/native/linux-64"
+else
+    libs="$SCRIPT_DIR/lib/native/macosx"
+fi
 
 java -Djava.library.path=$libs -cp $cp $mainClass $@
