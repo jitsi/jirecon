@@ -6,13 +6,14 @@
 package org.jitsi.jirecon.test;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jitsi.jirecon.JingleSessionManager;
 import org.jitsi.jirecon.protocol.extension.*;
-import org.jitsi.jirecon.task.*;
 import org.jitsi.jirecon.utils.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.provider.*;
+
 import junit.framework.TestCase;
 
 public class TestJinglePacketParser

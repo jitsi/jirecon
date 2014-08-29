@@ -7,13 +7,14 @@ package org.jitsi.jirecon.test;
 
 import java.util.concurrent.TimeUnit;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jitsi.jirecon.Task;
 import org.jitsi.jirecon.protocol.extension.*;
-import org.jitsi.jirecon.task.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.provider.*;
+
 import junit.framework.TestCase;
 
 public class TestTask

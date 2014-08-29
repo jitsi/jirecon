@@ -8,18 +8,18 @@ package org.jitsi.jirecon;
 
 import java.util.*;
 import java.util.concurrent.*;
-import org.jitsi.jirecon.JireconEvent.*;
+import org.jitsi.jirecon.TaskManagerEvent.*;
 
 
 /**
- * A launch application which is used to run <tt>Jirecon</tt>.
+ * A launch application which is used to run <tt>TaskManager</tt>.
  * <p>
  * Usually there will be a associated Shell script to start this application.
  * 
  * @author lishunyang
  * 
  */
-public class JireconLauncher
+public class Main
 {
     /**
      * Prefix of configuration parameter.
@@ -86,15 +86,15 @@ public class JireconLauncher
         if (null == conf)
             conf = "jirecon.properties";
 
-        final Jirecon jirecon = new Jirecon();
+        final TaskManager jirecon = new TaskManager();
         
         jirecon.addEventListener(new JireconEventListener()
         {
             @Override
-            public void handleEvent(JireconEvent evt)
+            public void handleEvent(TaskManagerEvent evt)
             {
-                if (evt.getType() == JireconEvent.Type.TASK_ABORTED
-                    || evt.getType() == JireconEvent.Type.TASK_FINISED)
+                if (evt.getType() == TaskManagerEvent.Type.TASK_ABORTED
+                    || evt.getType() == TaskManagerEvent.Type.TASK_FINISED)
                 {
                     taskCount--;
                     System.out.println("Task: " + evt.getMucJid() + " " + evt.getType());

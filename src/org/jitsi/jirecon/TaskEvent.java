@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.task;
+package org.jitsi.jirecon;
 
 /**
  * Task event which can be used by <tt>JireconSession</tt> and

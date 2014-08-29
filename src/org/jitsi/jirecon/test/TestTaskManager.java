@@ -6,24 +6,24 @@
 package org.jitsi.jirecon.test;
 
 import org.jitsi.jirecon.*;
-import org.jitsi.jirecon.JireconEvent.*;
+import org.jitsi.jirecon.TaskManagerEvent.*;
 import junit.framework.TestCase;
 
-public class TestJirecon
+public class TestTaskManager
     extends TestCase
 {
     public void testStart()
     {
         final Object syncRoot = new Object();
         
-        Jirecon j = new Jirecon();
+        TaskManager j = new TaskManager();
         j.addEventListener(new JireconEventListener()
         {
 
             @Override
-            public void handleEvent(JireconEvent evt)
+            public void handleEvent(TaskManagerEvent evt)
             {
-                if (evt.getType() == JireconEvent.Type.TASK_ABORTED)
+                if (evt.getType() == TaskManagerEvent.Type.TASK_ABORTED)
                 {
                     synchronized (syncRoot)
                     {
@@ -31,7 +31,7 @@ public class TestJirecon
                     }
                 }
                 
-                else if (evt.getType() == JireconEvent.Type.TASK_FINISED)
+                else if (evt.getType() == TaskManagerEvent.Type.TASK_FINISED)
                 {
                     synchronized (syncRoot)
                     {
@@ -54,7 +54,7 @@ public class TestJirecon
             result = false;
         }
 
-        String mucJid = "dpjqei4mlyqlg14i@conference.example.com";
+        String mucJid = "jyo0q5djqijdobt9@conference.example.com";
         j.startJireconTask(mucJid);
 
         try

@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.task;
+package org.jitsi.jirecon;
 
 import java.io.*;
 import java.util.*;
@@ -12,8 +12,8 @@ import java.util.concurrent.*;
 
 import org.jitsi.impl.neomedia.recording.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
+import org.jitsi.jirecon.TaskEvent.*;
 import org.jitsi.jirecon.datachannel.*;
-import org.jitsi.jirecon.task.TaskEvent.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
@@ -23,18 +23,18 @@ import org.json.simple.*;
 import org.json.simple.parser.*;
 
  /**
- * <tt>RecorderManager</tt> is used to record media
+ * <tt>StreamRecorderManager</tt> is used to record media
  * streams and save them into local files.
  * 
  * @author lishunyang
  */
-public class RecorderManager
+public class StreamRecorderManager
 {
     /**
      * The <tt>Logger</tt>, used to log messages to standard output.
      */
     private static final Logger logger = Logger
-        .getLogger(RecorderManager.class);
+        .getLogger(StreamRecorderManager.class);
 
     /**
      * The map between <tt>MediaType</tt> and <tt>MediaStream</tt>. Those are

@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.task;
+package org.jitsi.jirecon;
 
 import java.util.*;
 import org.jitsi.service.neomedia.*;

@@ -3,7 +3,7 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.task;
+package org.jitsi.jirecon;
 
 import java.util.*;
 
@@ -13,8 +13,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.ContentPacketExtension.*;
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.jirecon.TaskEvent.*;
 import org.jitsi.jirecon.protocol.extension.*;
-import org.jitsi.jirecon.task.TaskEvent.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;

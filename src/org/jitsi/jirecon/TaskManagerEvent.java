@@ -8,13 +8,13 @@ package org.jitsi.jirecon;
 import java.util.*;
 
 /**
- * Running event of <tt>Jirecon</tt>, which means some important things
+ * Running event of <tt>TaskManager</tt>, which means some important things
  * happened.
  * 
  * @author lishunyang
  * 
  */
-public class JireconEvent
+public class TaskManagerEvent
 {
     /**
      * Event type.
@@ -32,7 +32,7 @@ public class JireconEvent
      * @param source indicates where this event comes from.
      * @param type indicates the event type.
      */
-    public JireconEvent(String mucJid, Type type)
+    public TaskManagerEvent(String mucJid, Type type)
     {
         this.mucJid = mucJid;
         this.type = type;
@@ -99,7 +99,7 @@ public class JireconEvent
      * Listener interface of <tt>JireconEvent</tt>.
      * 
      * @author lishunyang
-     * @see JireconEvent
+     * @see TaskManagerEvent
      */
     public interface JireconEventListener
         extends EventListener
@@ -109,6 +109,6 @@ public class JireconEvent
          * 
          * @param evt is the specified event.
          */
-        void handleEvent(JireconEvent evt);
+        void handleEvent(TaskManagerEvent evt);
     }
 }

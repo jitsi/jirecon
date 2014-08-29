@@ -3,16 +3,18 @@
  * 
  * Distributable under LGPL license. See terms of license at gnu.org.
  */
-package org.jitsi.jirecon.task;
+package org.jitsi.jirecon;
 
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
+
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+
 import org.jitsi.jirecon.*;
-import org.jitsi.jirecon.JireconEvent.*;
-import org.jitsi.jirecon.task.TaskEvent.*;
+import org.jitsi.jirecon.TaskEvent.*;
+import org.jitsi.jirecon.TaskManagerEvent.*;
 import org.jitsi.jirecon.utils.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -65,7 +67,7 @@ public class Task
     /**
      * The instance of <tt>RecorderManager</tt>.
      */
-    private RecorderManager recorderMgr;
+    private StreamRecorderManager recorderMgr;
 
     /**
      * The thread pool to make the method "start" to be asynchronous.
@@ -125,7 +127,7 @@ public class Task
         jingleSessionMgr.addTaskEventListener(this);
         jingleSessionMgr.init(connection);
 
-        recorderMgr = new RecorderManager();
+        recorderMgr = new StreamRecorderManager();
         recorderMgr.addTaskEventListener(this);
         recorderMgr.init(savingDir, dtlsControlMgr.getAllDtlsControl());
     }
@@ -192,8 +194,8 @@ public class Task
              * event.
              */
             if (!isAborted)
-                fireEvent(new JireconEvent(info.getMucJid(),
-                    JireconEvent.Type.TASK_FINISED));
+                fireEvent(new TaskManagerEvent(info.getMucJid(),
+                    TaskManagerEvent.Type.TASK_FINISED));
         }
     }
 
@@ -215,17 +217,9 @@ public class Task
                 JinglePacketParser.getSupportedMediaTypes(initIq);
 
             /*
-             * 3. Harvest local candidates. (audio type, video type and data
-             * type.)
+             * 3.1 Prepare for sending session-accept packet.
              */
-            for (MediaType mediaType : supportedMediaTypes)
-            {
-                transportMgr.harvestLocalCandidates(mediaType);
-            }
-
-            /*
-             * 4.1 Prepare for sending session-accept packet.
-             */
+            // Media format and payload type id.
             Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs = new HashMap<MediaType, Map<MediaFormat, Byte>>();
             for (MediaType mediaType : new MediaType[] {MediaType.AUDIO, MediaType.VIDEO})
             {
@@ -236,6 +230,11 @@ public class Task
             Map<MediaType, Long> localSsrcs = recorderMgr.getLocalSsrcs();
             
             // Transport packet extension.
+            for (MediaType mediaType : supportedMediaTypes)
+            {
+                transportMgr.harvestLocalCandidates(mediaType);
+            }
+            
             Map<MediaType, AbstractPacketExtension> transportPEs =
                 new HashMap<MediaType, AbstractPacketExtension>();
             for (MediaType mediaType : supportedMediaTypes)
@@ -258,15 +257,15 @@ public class Task
                     dtlsControlMgr.createFingerprintPacketExt(mediaType));
             }
 
-            /* 4.2 Send session-accept packet. */
+            /* 3.2 Send session-accept packet. */
             jingleSessionMgr.sendAcceptPacket(formatAndPTs, localSsrcs, transportPEs,
                 fingerprintPEs);
 
-            /* 4.3 Wait for session-ack packet. */
+            /* 3.3 Wait for session-ack packet. */
             jingleSessionMgr.waitForResultPacket();
 
             /*
-             * 5.1 Prepare for ICE connectivity establishment. Harvest remote
+             * 4.1 Prepare for ICE connectivity establishment. Harvest remote
              * candidates.
              */
             Map<MediaType, IceUdpTransportPacketExtension> remoteTransportPEs = new HashMap<MediaType, IceUdpTransportPacketExtension>();
@@ -277,13 +276,13 @@ public class Task
             transportMgr.harvestRemoteCandidates(remoteTransportPEs);
 
             /*
-             * 5.2 Start establishing ICE connectivity. Warning: that this
+             * 4.2 Start establishing ICE connectivity. Warning: that this
              * method is asynchronous method.
              */
             transportMgr.startConnectivityEstablishment();
 
             /*
-             * 6.1 Prepare for recording. Once transport manager has selected
+             * 5.1 Prepare for recording. Once transport manager has selected
              * candidates pairs, we can get stream connectors from it, otherwise
              * we have to wait. Notice that if ICE connectivity establishment
              * doesn't get selected pairs for a specified time(MAX_WAIT_TIME),
@@ -304,18 +303,18 @@ public class Task
                 mediaStreamTargets.put(mediaType, mediaStreamTarget);
             }
             
-            /* 6.2 Start recording. */
+            /* 5.2 Start recording. */
             recorderMgr.startRecording(formatAndPTs, streamConnectors,
                 mediaStreamTargets);
             
-            fireEvent(new JireconEvent(info.getMucJid(),
-                JireconEvent.Type.TASK_STARTED));
+            fireEvent(new TaskManagerEvent(info.getMucJid(),
+                TaskManagerEvent.Type.TASK_STARTED));
         }
         catch (Exception e)
         {
             e.printStackTrace();
-            fireEvent(new JireconEvent(info.getMucJid(),
-                JireconEvent.Type.TASK_ABORTED));
+            fireEvent(new TaskManagerEvent(info.getMucJid(),
+                TaskManagerEvent.Type.TASK_ABORTED));
         }
     }
 
@@ -353,7 +352,7 @@ public class Task
      * {@inheritDoc}
      */
     @Override
-    public void handleEvent(JireconEvent evt)
+    public void handleEvent(TaskManagerEvent evt)
     {
         for (JireconEventListener l : listeners)
         {
@@ -386,8 +385,8 @@ public class Task
             if (endpoints.isEmpty())
             {
                 stop();
-                fireEvent(new JireconEvent(info.getMucJid(),
-                    JireconEvent.Type.TASK_FINISED));
+                fireEvent(new TaskManagerEvent(info.getMucJid(),
+                    TaskManagerEvent.Type.TASK_FINISED));
             }
             else
             {
@@ -401,9 +400,9 @@ public class Task
      * 
      * @param evt is the <tt>JireconEvent</tt> you want to notify the listeners.
      */
-    private void fireEvent(JireconEvent evt)
+    private void fireEvent(TaskManagerEvent evt)
     {
-        if (JireconEvent.Type.TASK_ABORTED == evt.getType())
+        if (TaskManagerEvent.Type.TASK_ABORTED == evt.getType())
         {
             isAborted = true;
         }
@@ -431,8 +430,8 @@ public class Task
              * Exception can only be thrown by Task.
              */
             Task.this.stop();
-            fireEvent(new JireconEvent(info.getMucJid(),
-                JireconEvent.Type.TASK_ABORTED));
+            fireEvent(new TaskManagerEvent(info.getMucJid(),
+                TaskManagerEvent.Type.TASK_ABORTED));
         }
     }
 

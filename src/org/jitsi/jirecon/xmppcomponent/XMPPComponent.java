@@ -7,7 +7,7 @@ package org.jitsi.jirecon.xmppcomponent;
 
 import java.util.*;
 import org.jitsi.jirecon.*;
-import org.jitsi.jirecon.JireconEvent.*;
+import org.jitsi.jirecon.TaskManagerEvent.*;
 import org.jitsi.util.*;
 import org.xmpp.component.*;
 import org.xmpp.packet.*;
@@ -127,7 +127,7 @@ import org.xmpp.packet.*;
  * </pre>
  * 
  * @author lishunyang
- * @see Jirecon
+ * @see TaskManager
  */
 public class XMPPComponent
     extends AbstractComponent
@@ -161,7 +161,7 @@ public class XMPPComponent
     /**
      * Main part of <tt>JireconComponent</tt>.
      */
-    private Jirecon jirecon = new Jirecon();
+    private TaskManager jirecon = new TaskManager();
 
     /**
      * Recording sessions. It is used for caching some information.
@@ -287,7 +287,7 @@ public class XMPPComponent
      * started/stopped/aborted.
      */
     @Override
-    public void handleEvent(JireconEvent evt)
+    public void handleEvent(TaskManagerEvent evt)
     {
         final String mucJid = evt.getMucJid();
         RecordingSession session = null;
@@ -309,7 +309,7 @@ public class XMPPComponent
 
             IQ notification = null;
 
-            if (JireconEvent.Type.TASK_ABORTED == evt.getType())
+            if (TaskManagerEvent.Type.TASK_ABORTED == evt.getType())
             {
                 jirecon.stopJireconTask(evt.getMucJid(), false);
                 recordingSessions.remove(session);
@@ -319,7 +319,7 @@ public class XMPPComponent
                         RecordingIqUtils.Status.ABORTED.toString(),
                         session.getRid());
             }
-            else if (JireconEvent.Type.TASK_FINISED == evt.getType())
+            else if (TaskManagerEvent.Type.TASK_FINISED == evt.getType())
             {
                 jirecon.stopJireconTask(evt.getMucJid(), true);
                 recordingSessions.remove(session);
@@ -329,7 +329,7 @@ public class XMPPComponent
                         RecordingIqUtils.Status.STOPPED.toString(),
                         session.getRid());
             }
-            else if (JireconEvent.Type.TASK_STARTED == evt.getType())
+            else if (TaskManagerEvent.Type.TASK_STARTED == evt.getType())
             {
                 notification =
                     createIqSet(session,

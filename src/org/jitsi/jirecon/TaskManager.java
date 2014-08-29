@@ -8,9 +8,8 @@ package org.jitsi.jirecon;
 import java.text.*;
 import java.util.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import org.jitsi.jirecon.JireconEvent.*;
+import org.jitsi.jirecon.TaskManagerEvent.*;
 import org.jitsi.jirecon.protocol.extension.*;
-import org.jitsi.jirecon.task.*;
 import org.jitsi.jirecon.utils.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -19,22 +18,21 @@ import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.provider.*;
 
 /**
- * The manager of <tt>Task</tt>, each <tt>JireconTask</tt> represents a
- * recording task for specified Jitsi-meeting. <tt>JireconImpl</tt> is
- * responsible for create and stop those tasks.
+ * The manager of <tt>Task</tt>, each <tt>Task</tt> represents a
+ * recording task for specified Jitsi-meeting. 
  * 
  * @author lishunyang
  */
-public class Jirecon
+public class TaskManager
     implements JireconEventListener
 {
     /**
      * The <tt>Logger</tt>, used to log messages to standard output.
      */
-    private static final Logger logger = Logger.getLogger(Jirecon.class.getName());
+    private static final Logger logger = Logger.getLogger(TaskManager.class.getName());
     
     /**
-     * List of <tt>JireconEventListener</tt>, if something important happen,
+     * List of <tt>EventListener</tt>, if something important happen,
      * they will be notified.
      */
     private List<JireconEventListener> listeners =
@@ -63,10 +61,6 @@ public class Jirecon
      * to avoid double initialization.
      */
     private boolean isInitialized = false;
-
-    public Jirecon()
-    {
-    }
 
     /**
      * Initialize <tt>Jirecon</tt>.
@@ -315,7 +309,7 @@ public class Jirecon
      * {@inheritDoc}
      */
     @Override
-    public void handleEvent(JireconEvent evt)
+    public void handleEvent(TaskManagerEvent evt)
     {
         String mucJid = evt.getMucJid();
 
@@ -346,7 +340,7 @@ public class Jirecon
      * 
      * @param evt is the event that you want to send.
      */
-    private void fireEvent(JireconEvent evt)
+    private void fireEvent(TaskManagerEvent evt)
     {
         for (JireconEventListener l : listeners)
         {

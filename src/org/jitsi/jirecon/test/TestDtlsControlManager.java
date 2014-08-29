@@ -6,8 +6,10 @@
 package org.jitsi.jirecon.test;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import org.jitsi.jirecon.task.*;
+
+import org.jitsi.jirecon.DtlsControlManager;
 import org.jitsi.service.neomedia.*;
+
 import junit.framework.TestCase;
 
 public class TestDtlsControlManager
