@@ -15,10 +15,10 @@ if [[ "$1" == "--help"  || $# -lt 1 ]]; then
     exit 1
 fi
 
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 mainClass="org.jitsi.jirecon.Main"
 cp=$(JARS=($SCRIPT_DIR/jirecon.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo "${JARS[*]}")
-libs="$SCRIPT_DIR/lib/native/linux-64"
+libs="$SCRIPT_DIR/lib/native/macosx"
 
 java -Djava.library.path=$libs -cp $cp $mainClass $@
