@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ "$1" == "--help" ]]; then
+if [[ "$1" == "--help" ]] || [ $# -lt 2 ]; then
     echo -e "Usage:"
     echo -e "$0 [OPTIONS...]"
     echo -e "Start Jirecon XMPP external component."
@@ -18,15 +18,23 @@ if [[ "$1" == "--help" ]]; then
     exit 1
 fi
 
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
+kernel="$(uname -s)"
+if [ $kernel == "Linux" ] ;then
+    SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
+    architecture="linux"
+    machine="$(uname -m)"
+    if [ "$machine" == "x86_64" ] || [ "$machine" == "amd64" ] ; then
+        architecture=$architecture"-64"
+    fi
+else
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    architecture="macosx"
+fi
+
+libs="$SCRIPT_DIR/lib/native/$architecture"
 mainClass="org.jitsi.jirecon.xmppcomponent.ComponentLauncher"
 cp=$(JARS=($SCRIPT_DIR/jirecon.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo "${JARS[*]}")
-if [ `uname -o` == "GNU/Linux" ]
-then
-    libs="$SCRIPT_DIR/lib/native/linux-64"
-else
-    libs="$SCRIPT_DIR/lib/native/macosx"
-fi
 
 java -Djava.library.path=$libs -cp $cp $mainClass $@
