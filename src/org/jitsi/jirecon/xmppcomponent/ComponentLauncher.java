@@ -40,9 +40,14 @@ public class ComponentLauncher
     public static String DOMAIN_ARG_NAME = "--domain=";
     
     /**
-     * Prefix of "name" parameter.
+     * Prefix of "subdomain" parameter.
      */
-    public static String NAME_ARG_NAME = "--name=";
+    public static String SUBDOMAIN_ARG_NAME = "--subdomain=";
+
+    /**
+     * Prefix of the "host" parameter.
+     */
+    public static String HOST_ARG_NAME = "--host=";
 
     /**
      * Default value of configuration file path.
@@ -67,7 +72,12 @@ public class ComponentLauncher
     /**
      * Default value of XMPP component's name.
      */
-    public static String name = "jirecon";
+    public static String subdomain = "jirecon";
+
+    /**
+     * The default value of the hostname.
+     */
+    public static String host = "localhost";
 
     /**
      * Application entry.
@@ -94,23 +104,27 @@ public class ComponentLauncher
             {
                 domain = arg.substring(DOMAIN_ARG_NAME.length());
             }
-            else if (arg.startsWith(NAME_ARG_NAME))
+            else if (arg.startsWith(SUBDOMAIN_ARG_NAME))
             {
-                name = arg.substring(NAME_ARG_NAME.length());
+                subdomain = arg.substring(SUBDOMAIN_ARG_NAME.length());
+            }
+            else if (arg.startsWith(HOST_ARG_NAME))
+            {
+                host = arg.substring(HOST_ARG_NAME.length());
             }
         }
 
-        String[] tokens = domain.split("\\.", 2);
-        
+        // TODO: allow a separate hostname to be used
         ExternalComponentManager mgr =
-            new ExternalComponentManager(tokens[1], port);
+            new ExternalComponentManager(host, port);
 
-        mgr.setSecretKey(tokens[0], secret);
-        mgr.setServerName(tokens[1]);
+        mgr.setSecretKey(subdomain, secret);
+
+        mgr.setServerName(domain);
 
         try
         {
-            mgr.addComponent(tokens[0], new XMPPComponent(name + "@"
+            mgr.addComponent(subdomain, new XMPPComponent(subdomain + "."
                 + domain, conf));
         }
         catch (ComponentException e)
@@ -121,7 +135,7 @@ public class ComponentLauncher
 
         /*
          * Once we started the component, sleep and wake up every 10 second to
-         * recuce CPU load.
+         * reduce CPU load.
          */
         while (true)
         {

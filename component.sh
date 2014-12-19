@@ -13,7 +13,8 @@ if [[ "$1" == "--help" ]] || [ $# -lt 2 ]; then
     echo -e "\t--port\t sets the port of external XMPP component. Default value is 5275."
     echo -e "\t--secret\t sets the secret key of external XMPP component. Default value is xxxxx."
     echo -e "\t--domain\t sets the domain of external XMPP component. Default value is jirecon.example.com."
-    echo -e "\t--name\t sets the name external XMPP component. Default value is jirecon."
+    echo -e "\t--subdomain\t sets the subdomain of the external XMPP component. Default value is jirecon."
+    echo -e "\t--host\t sets the hostname which will be used for the XMPP server. The default value is \"localhost\""
     echo
     exit 1
 fi
