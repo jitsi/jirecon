@@ -108,8 +108,12 @@ public class JinglePacketParser
             new HashMap<MediaFormat, Byte>();
         final MediaFormatFactoryImpl fmtFactory = new MediaFormatFactoryImpl();
 
-        for (PayloadTypePacketExtension payloadTypePacketExt : getPayloadTypePacketExts(
-            jiq, mediaType))
+        List<PayloadTypePacketExtension> pts
+            = getPayloadTypePacketExts(jiq, mediaType);
+        if (pts == null)
+            return null;
+
+        for (PayloadTypePacketExtension payloadTypePacketExt : pts)
         {
             MediaFormat format =
                 fmtFactory.createMediaFormat(payloadTypePacketExt.getName(),
