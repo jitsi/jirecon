@@ -472,8 +472,6 @@ public class JingleSessionManager
      * @param transportManager is used for creating transport packet extension.
      * @param srtpControlManager is used to set fingerprint.
      * @return Jingle session-accept packet.
-     * @throws Exception if something failed and session-accept
-     *             packet can not be created.
      */
     private JingleIQ createAcceptPacket(
         Map<MediaType, Map<MediaFormat, Byte>> formatAndPTs,

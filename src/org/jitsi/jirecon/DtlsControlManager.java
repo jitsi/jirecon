@@ -14,7 +14,7 @@ import org.jitsi.service.neomedia.*;
 /**
  * DtlsControlManager is used for holding the <tt>DtlsControl</tt> of different
  * <tt>MediaType</tt>s. It can also be used for creating <tt>DtlsControl</tt>s
- * or fingerprint pakcets.
+ * or fingerprint packets.
  * 
  * @author lishunyang
  */
@@ -137,7 +137,7 @@ public class DtlsControlManager
 
         if (null != control)
         {
-            dtlsControls.get(mediaType).cleanup();
+            dtlsControls.get(mediaType).cleanup(null);
         }
     }
 

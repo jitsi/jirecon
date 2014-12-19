@@ -800,7 +800,7 @@ public class StreamRecorderManager
         public void disconnect()
         {
             streamManager.shutdown();
-            dtlsControl.cleanup();
+            dtlsControl.cleanup(null);
         }
 
         @Override
