@@ -5,6 +5,7 @@
  */
 package org.jitsi.jirecon;
 
+import java.beans.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -36,14 +37,9 @@ public class IceUdpTransportManager
         .getLogger(IceUdpTransportManager.class.getName());
 
     /**
-     * The minimum time (second) when wait for something.
+     * The maximum time in milliseconds to wait for ICE to complete.
      */
-    private static int MIN_WAIT_TIME = 1;
-
-    /**
-     * The maximum time (second) when wait for something.
-     */
-    private static int MAX_WAIT_TIME = 10;
+    private static int MAX_WAIT_TIME = 10000;
 
     /**
      * Instance of <tt>Agent</tt>.
@@ -149,6 +145,76 @@ public class IceUdpTransportManager
         logger.debug("startConnectivityEstablishment");
         
         iceAgent.startConnectivityEstablishment();
+    }
+
+    /**
+     * Wait until {@link #iceAgent} enters a final state (CONNECTED, TERMINATED,
+     * or FAILED). Wait for at most 10 seconds.
+     *
+     * Note: connectivity has to have been started using
+     * {@link #startConnectivityEstablishment()} before this method is called.
+     *
+     * @return <tt>true</tt> if ICE connectivity has been established, and
+     * <tt>false</tt> otherwise.
+     */
+    public boolean wrapupConnectivityEstablishment()
+    {
+        final Object syncRoot = new Object();
+        PropertyChangeListener propertyChangeListener
+                = new PropertyChangeListener()
+        {
+            @Override
+            public void propertyChange(PropertyChangeEvent ev)
+            {
+                Object newValue = ev.getNewValue();
+
+                if (IceProcessingState.COMPLETED.equals(newValue)
+                        || IceProcessingState.FAILED.equals(newValue)
+                        || IceProcessingState.TERMINATED.equals(newValue))
+                {
+                    Agent iceAgent = (Agent) ev.getSource();
+
+                    iceAgent.removeStateChangeListener(this);
+                    if (iceAgent == IceUdpTransportManager.this.iceAgent)
+                    {
+                        synchronized (syncRoot)
+                        {
+                            syncRoot.notify();
+                        }
+                    }
+                }
+            }
+        };
+
+        iceAgent.addStateChangeListener(propertyChangeListener);
+        synchronized (syncRoot)
+        {
+            long startWait = System.currentTimeMillis();
+            do
+            {
+                IceProcessingState iceState = iceAgent.getState();
+                if (IceProcessingState.COMPLETED.equals(iceState)
+                        || IceProcessingState.TERMINATED.equals(iceState)
+                        || IceProcessingState.FAILED.equals(iceState))
+                    break;
+
+                if (System.currentTimeMillis() - startWait > MAX_WAIT_TIME)
+                    break; // Don't run for more than 10 seconds
+
+                try
+                {
+                    syncRoot.wait(MAX_WAIT_TIME);
+                }
+                catch (InterruptedException ie)
+                {
+                    logger.fatal("Interrupted: " + ie);
+                    break;
+                }
+            }
+            while (true);
+        }
+
+        return true;
     }
 
     /**
@@ -421,12 +487,7 @@ public class IceUdpTransportManager
      * Get <tt>StreamConnector</tt> of specified <tt>MediaType</tt> created by
      * <tt>JireconTransportManager</tt>.
      * <p>
-     * <strong>Warning:</strong> This method will wait for the selected
-     * candidate pair which should be generated during establish ICE
-     * connectivity. If selected candidate pair hasn'e been generated, it will
-     * wait for at most MAX_WAIT_TIME. After that it will break and throw an
-     * exception.
-     * 
+     *
      * @param mediaType The specified <tt>MediaType</tt>
      * @return <tt>StreamConnector</tt>
      * @throws Exception if we can't get <tt>StreamConnector</tt>.
@@ -438,32 +499,6 @@ public class IceUdpTransportManager
         
         if (streamConnectors.containsKey(mediaType))
             return streamConnectors.get(mediaType);
-
-        int sumWaitTime = 0;
-        while (sumWaitTime <= MAX_WAIT_TIME)
-        {
-            try
-            {
-                if (IceProcessingState.TERMINATED == iceAgent.getState())
-                    break;
-
-                logger
-                    .debug("Could not get stream connector, sleep for a while. Already sleep for "
-                        + sumWaitTime + " seconds");
-                sumWaitTime += MIN_WAIT_TIME;
-                TimeUnit.SECONDS.sleep(MIN_WAIT_TIME);
-            }
-            catch (InterruptedException e)
-            {
-                e.printStackTrace();
-            }
-        }
-        if (IceProcessingState.TERMINATED != iceAgent.getState())
-        {
-            throw new Exception(
-                "Could not get stream connector, it seems that ICE connectivity establishment hung"
-                );
-        }
 
         StreamConnector streamConnector = null;
         IceMediaStream stream = getIceMediaStream(mediaType);
@@ -479,16 +514,16 @@ public class IceUdpTransportManager
         DatagramSocket rtcpSocket = null;
 
         rtpPair = stream.getComponent(Component.RTP).getSelectedPair();
-        rtpSocket = rtpPair.getLocalCandidate().getDatagramSocket();
+        rtpSocket = rtpPair.getIceSocketWrapper().getUDPSocket();
         
         /*
          * Yeah, only "audio" and "video" type need the second candidate pair
-         * for RTCP conenction.
+         * for RTCP connection.
          */
         if (MediaType.AUDIO == mediaType || MediaType.VIDEO == mediaType)
         {
             rtcpPair = stream.getComponent(Component.RTCP).getSelectedPair();
-            rtcpSocket = rtcpPair.getLocalCandidate().getDatagramSocket();
+            rtcpSocket = rtcpPair.getIceSocketWrapper().getUDPSocket();
         }
 
         streamConnector = new DefaultStreamConnector(rtpSocket, rtcpSocket);

@@ -283,6 +283,19 @@ public class Task
             transportMgr.startConnectivityEstablishment();
 
             /*
+             * 4.3 Wait for ICE to complete (or fail).
+             */
+            if(!transportMgr.wrapupConnectivityEstablishment())
+            {
+                logger.error("Failed to establish an ICE session.");
+                fireEvent(
+                    new TaskManagerEvent(info.getMucJid(),
+                                         TaskManagerEvent.Type.TASK_ABORTED));
+                return;
+            }
+            logger.info("ICE connection established (" + info.getMucJid() + ")");
+
+            /*
              * 5.1 Prepare for recording. Once transport manager has selected
              * candidates pairs, we can get stream connectors from it, otherwise
              * we have to wait. Notice that if ICE connectivity establishment
