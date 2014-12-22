@@ -124,7 +124,7 @@ public class StreamRecorderManager
 
         /*
          * NOTE: DtlsControl will be managed by MediaStream. So we don't need to
-         * open/close DtlsControl addtionally.
+         * open/close DtlsControl additionally.
          */
         createMediaStreams(dtlsControls);
         createDataChannel(dtlsControls.get(MediaType.DATA));
@@ -134,7 +134,7 @@ public class StreamRecorderManager
     /**
      * Start recording media streams.
      * 
-     * @param formatAndPTs
+     * @param formatAndDynamicPTs
      * @param connectors is the map between <tt>MediaType</tt> and
      *            <tt>StreamConnector</tt>. <tt>JireconRecorder</tt> needs those
      *            connectors to transfer stream data.
@@ -151,7 +151,7 @@ public class StreamRecorderManager
         throws Exception
     {
         /*
-         * Here we don't garuantee whether file path is available.
+         * Here we don't guarantee whether file path is available.
          * RecorderEventHandlerImpl needs check this and do some job.
          */
         final String filename = "metadata.json";
@@ -430,9 +430,11 @@ public class StreamRecorderManager
         for (MediaType mediaType : new MediaType[]
         { MediaType.AUDIO, MediaType.VIDEO })
         {
-            final MediaStream stream =
-                mediaService.createMediaStream(null, mediaType,
-                    dtlsControls.get(mediaType));
+            MediaStream stream =
+                mediaService.createMediaStream(
+                        null,
+                        mediaType,
+                        dtlsControls.get(mediaType));
             streams.put(mediaType, stream);
 
             stream.setName(mediaType.toString());
@@ -750,7 +752,7 @@ public class StreamRecorderManager
         private ExecutorService executorService = Executors
             .newSingleThreadExecutor();
         
-        private Object syncRoot = new Object();
+        private final Object syncRoot = new Object();
         
         public DataChannelAdapter(DtlsControl dtlsControl)
         {
@@ -789,8 +791,7 @@ public class StreamRecorderManager
                         }
                     }
 
-                    System.out.println("Get dataChannel! Good job!");
-
+                    logger.info("DataChannel connected (?)");
                     prepareDataChannel();
                 }
 

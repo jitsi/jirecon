@@ -526,7 +526,12 @@ public class IceUdpTransportManager
             rtcpSocket = rtcpPair.getIceSocketWrapper().getUDPSocket();
         }
 
-        streamConnector = new DefaultStreamConnector(rtpSocket, rtcpSocket);
+        // We set 'rtcpmux' for the "DATA" connector, in order to prevent
+        // attempts to connect a DTLS client for an nonexistent RTCP component.
+        streamConnector
+                = new DefaultStreamConnector(rtpSocket,
+                                             rtcpSocket,
+                                             MediaType.DATA.equals(mediaType));
 
         streamConnectors.put(mediaType, streamConnector);
 
