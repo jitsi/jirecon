@@ -213,7 +213,7 @@ public class XMPPComponent
             return;
         }
 
-        logger.info("Start Jireocn component");
+        logger.info("Start Jirecon component");
 
         jirecon.addEventListener(this);
         try
@@ -228,13 +228,13 @@ public class XMPPComponent
 
         isStarted = true;
 
-        logger.info("Jireocn component has been started successfully.");
+        logger.info("Jirecon component has been started successfully.");
     }
 
     @Override
     public void preComponentShutdown()
     {
-        logger.info("Shutdown Jireocn component");
+        logger.info("Shutdown Jirecon component");
 
         /*
          * If there is any recording session hasn'e been finished, "uninit"
