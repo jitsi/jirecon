@@ -74,11 +74,21 @@ public class IceUdpTransportManager
      */
     private final int MAX_STREAM_PORT;
 
+    /**
+     * Sync root for {@link #lastUsedPort}.
+     */
+    private static final Object lastUsedPortSyncRoot = new Object();
+
+    /**
+     * The last number used as preferred port number for candidate allocation.
+     */
+    private static int lastUsedPort = -1;
+
     public IceUdpTransportManager()
     {
         iceAgent = new Agent();
         /*
-         * We should set "controlling" to "false", becase iceAgent is act as an
+         * We should set "controlling" to "false", because iceAgent is act as an
          * client. See Interactive Connectivity Establishment (ICE): A Protocol
          * for Network Address Translator (NAT) Traversal for Offer/Answer
          * Protocols(http://tools.ietf.org/html/rfc5245#section-7.1.2.2)
@@ -96,7 +106,7 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Free the resources holded by <tt>JireconTransportManager</tt>.
+     * Free the resources held by <tt>JireconTransportManager</tt>.
      */
     public void free()
     {
@@ -107,7 +117,7 @@ public class IceUdpTransportManager
      * Create a <tt>IceUdpTransportPacketExtension</tt>.
      * 
      * @param mediaType Indicate which media type do you want.
-     * @return
+     * @return the created <tt>IceUdpTransportPacketExtension</tt>.
      */
     public IceUdpTransportPacketExtension createTransportPacketExt(MediaType mediaType)
     {
@@ -133,8 +143,6 @@ public class IceUdpTransportManager
      * established successfully. On the contrary, sometime it will never
      * finished. Fortunately, we need only one selected candidate pair, so we
      * don't care whether it terminates.
-     * 
-     * @throws Exception If any internal error happens.
      */
     public void startConnectivityEstablishment()
     {
@@ -158,25 +166,47 @@ public class IceUdpTransportManager
 
         try
         {
+            iceAgent.createComponent(stream, Transport.UDP, getPreferredPort(),
+                MIN_STREAM_PORT, MAX_STREAM_PORT);
+
             /*
              * As for "data" type, we only need to create one component for
              * establish connection, while as for "audio" and "video", we need
              * two components, one for RTP transmission and one for RTCP
              * transmission.
              */
-            iceAgent.createComponent(stream, Transport.UDP, MIN_STREAM_PORT,
-                MIN_STREAM_PORT, MAX_STREAM_PORT);
-
             if (MediaType.AUDIO == mediaType || MediaType.VIDEO == mediaType)
             {
-                iceAgent.createComponent(stream, Transport.UDP,
-                    MIN_STREAM_PORT, MIN_STREAM_PORT, MAX_STREAM_PORT);
+                lastUsedPort += 1;
+                iceAgent.createComponent(
+                        stream,
+                        Transport.UDP,
+                        getPreferredPort(),
+                        MIN_STREAM_PORT,
+                        MAX_STREAM_PORT);
             }
         }
         catch (Exception e)
         {
             throw new Exception("Could not create ICE component, "
                 + e.getMessage());
+        }
+    }
+
+    /**
+     * Gets the next port number to be used as a preferred port number for
+     * candidate allocation.
+     * @return the next port number to be used as a preferred port number for
+     * candidate allocation.
+     */
+    private int getPreferredPort()
+    {
+        synchronized (lastUsedPortSyncRoot)
+        {
+            lastUsedPort++;
+            if (lastUsedPort < MIN_STREAM_PORT || lastUsedPort > MAX_STREAM_PORT)
+                lastUsedPort = MIN_STREAM_PORT;
+            return lastUsedPort;
         }
     }
 
