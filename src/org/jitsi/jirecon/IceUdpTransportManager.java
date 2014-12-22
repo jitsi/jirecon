@@ -211,13 +211,13 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Parse and harvest remote candidates from an incoming
-     * <tt>IceUdpTransportPacketExtension</tt>.
-     * 
+     * Add all remote candidates from the values of <tt>transportPEs</tt> to the
+     * corresponding IceMediaStream.
+     *
      * @param transportPEs The <tt>IceUdpTransportPacketExtension</tt> to be
-     *            parsed.
+     * parsed.
      */
-    public void harvestRemoteCandidates(
+    public void addRemoteCandidates(
         Map<MediaType, IceUdpTransportPacketExtension> transportPEs)
     {
         logger.debug("harvestRemoteCandidates");

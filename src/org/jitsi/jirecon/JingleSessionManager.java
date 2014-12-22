@@ -366,6 +366,7 @@ public class JingleSessionManager
                 @Override
                 public void handlePacket(Packet packet)
                 {
+                    //TODO match for the ID as well...
                     if (packet instanceof IQ && IQ.Type.RESULT.equals(((IQ)packet).getType()))
                     {
                         resultList.add(packet);

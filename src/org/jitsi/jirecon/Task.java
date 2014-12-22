@@ -262,7 +262,8 @@ public class Task
                 fingerprintPEs);
 
             /* 3.3 Wait for session-ack packet. */
-            jingleSessionMgr.waitForResultPacket();
+            // Go on with ICE, no need to waste an RTT here.
+            //jingleSessionMgr.waitForResultPacket();
 
             /*
              * 4.1 Prepare for ICE connectivity establishment. Harvest remote
@@ -273,7 +274,7 @@ public class Task
             {
                 remoteTransportPEs.put(mediaType, JinglePacketParser.getTransportPacketExt(initIq, mediaType));
             }
-            transportMgr.harvestRemoteCandidates(remoteTransportPEs);
+            transportMgr.addRemoteCandidates(remoteTransportPEs);
 
             /*
              * 4.2 Start establishing ICE connectivity. Warning: that this
