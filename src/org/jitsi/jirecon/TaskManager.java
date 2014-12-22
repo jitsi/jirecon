@@ -47,7 +47,7 @@ public class TaskManager
     /**
      * Active <tt>JireconTask</tt>, map between Jitsi-meeting jid and task.
      */
-    private Map<String, Task> tasks =
+    private final Map<String, Task> tasks =
         new HashMap<String, Task>();
 
     /**

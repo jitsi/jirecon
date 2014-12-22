@@ -99,7 +99,7 @@ public class Task
      * @param mucJid indicates which meet you want to record.
      * @param connection is an existed <tt>XMPPConnection</tt> which will be
      *            used to send/receive Jingle packet.
-     * @param savingDir indicates where we should output the media fiels.
+     * @param savingDir indicates where we should output the media files.
      */
     public void init(String mucJid, XMPPConnection connection, String savingDir)
     {
@@ -210,7 +210,7 @@ public class Task
         {
             /* 1. Join MUC. */
             jingleSessionMgr.connect(info.getMucJid(), info.getNickname());
-            
+
             /* 2. Wait for session-init packet. */
             JingleIQ initIq = jingleSessionMgr.waitForInitPacket();
             MediaType[] supportedMediaTypes =
@@ -234,7 +234,7 @@ public class Task
             {
                 transportMgr.harvestLocalCandidates(mediaType);
             }
-            
+
             Map<MediaType, AbstractPacketExtension> transportPEs =
                 new HashMap<MediaType, AbstractPacketExtension>();
             for (MediaType mediaType : supportedMediaTypes)
@@ -306,7 +306,7 @@ public class Task
             /* 5.2 Start recording. */
             recorderMgr.startRecording(formatAndPTs, streamConnectors,
                 mediaStreamTargets);
-            
+
             fireEvent(new TaskManagerEvent(info.getMucJid(),
                 TaskManagerEvent.Type.TASK_STARTED));
         }

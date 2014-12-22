@@ -44,7 +44,7 @@ public class JingleSessionManager
     private static final int MAX_WAIT_TIME = 10000;
     
     /**
-     * The <tt>XMPPConnection</tt> is used to send/receive XMPP packet.
+     * The <tt>XMPPConnection</tt> is used to send/receive XMPP packets.
      */
     private XMPPConnection connection;
 
@@ -72,7 +72,7 @@ public class JingleSessionManager
     private String remoteFullJid;
 
     /**
-     * Jingle sessoin id which is used for making <tt>JingleIq</tt>.
+     * Jingle session id which is used for making <tt>JingleIq</tt>.
      */
     private String sid;
 
@@ -101,7 +101,7 @@ public class JingleSessionManager
     public void init(XMPPConnection connection)
     {
         /*
-         * We must make sure Libjitsi has bee nstarted.
+         * We must make sure Libjitsi has been started.
          */
         LibJitsi.start();
         this.connection = connection;
@@ -118,7 +118,7 @@ public class JingleSessionManager
                 @Override
                 public void handlePacket(Packet packet)
                 {
-                    if (Presence.class == packet.getClass())
+                    if (packet != null && packet instanceof Presence)
                         handlePresencePacket((Presence) packet);
                 }
             };
@@ -163,8 +163,6 @@ public class JingleSessionManager
     private void joinMUC(String mucJid, String nickname)
         throws Exception
     {
-        logger.info("joinMUC");
-
         muc = new MultiUserChat(connection, mucJid);
         int suffix = 1;
         String finalNickname = nickname;
@@ -186,6 +184,7 @@ public class JingleSessionManager
             }
         }
 
+        logger.info("Joined MUC as " + mucJid + "/" + finalNickname);
         Packet presence = new Presence(Presence.Type.available);
         presence.setTo(mucJid);
         presence.addExtension(new Nick(finalNickname));
@@ -467,10 +466,6 @@ public class JingleSessionManager
     /**
      * Create Jingle session-accept packet.
      * 
-     * @param initIq is the session-init packet, we need it to create
-     *            session-accept packet.
-     * @param transportManager is used for creating transport packet extension.
-     * @param srtpControlManager is used to set fingerprint.
      * @return Jingle session-accept packet.
      */
     private JingleIQ createAcceptPacket(
@@ -559,11 +554,6 @@ public class JingleSessionManager
     /**
      * Create content packet extension in Jingle session-accept packet.
      * 
-     * @param mediaType indicates the media type.
-     * @param initIqContent is the related content packet extension of Jingle
-     *            session-init packet.
-     * @param transportManager is used for creating transport packet extension.
-     * @param srtpControlManager is used for add fingerprint.
      * @return content packet extension.
      */
     private ContentPacketExtension createContentPacketExtension(

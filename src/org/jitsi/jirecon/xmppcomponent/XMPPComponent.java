@@ -161,12 +161,12 @@ public class XMPPComponent
     /**
      * Main part of <tt>JireconComponent</tt>.
      */
-    private TaskManager jirecon = new TaskManager();
+    private final TaskManager jirecon = new TaskManager();
 
     /**
      * Recording sessions. It is used for caching some information.
      */
-    private List<RecordingSession> recordingSessions =
+    private final List<RecordingSession> recordingSessions =
         new LinkedList<RecordingSession>();
 
     /**
@@ -250,17 +250,18 @@ public class XMPPComponent
     protected IQ handleIQGet(IQ iq)
     {
         /*
-         * According to the documentation of AbstracComponent, We have to return
+         * According to the documentation of AbstractComponent, We have to return
          * a result iq, otherwise component will send error iq back to remote
          * peer.
          */
+        logger.info("RECV IQ GET: " + iq.toXML());
         return IQ.createResultIQ(iq);
     }
 
     @Override
     protected IQ handleIQSet(IQ iq) throws Exception
     {
-        logger.info("RECV IQSET: " + iq.toXML());
+        logger.info("RECV IQ SET: " + iq.toXML());
 
         final String action =
             RecordingIqUtils.getAttribute(iq, RecordingIqUtils.ACTION_NAME);
@@ -354,24 +355,32 @@ public class XMPPComponent
     {
         String mucJid =
             RecordingIqUtils.getAttribute(iq, RecordingIqUtils.MUCJID_NAME);
-        /*
-         * Here we cut the 'resource' part of full-jid, because it seems that we
-         * can't join a MUC with full-jid.
-         */
-        mucJid = mucJid.split("/")[0];
 
-        RecordingSession session =
-            new RecordingSession(mucJid, iq.getFrom().toString());
+        RecordingSession newSession = null;
 
         synchronized (recordingSessions)
         {
-            recordingSessions.add(session);
+            for (RecordingSession session : recordingSessions)
+            {
+                if (session.getMucJid().equals(mucJid))
+                {
+                    logger.error("Failed to start a recording session,"
+                                    + " already recording.");
+                    return createIqResult(
+                            iq,
+                            RecordingIqUtils.Status.ABORTED.toString(),
+                            null);
+                }
+            }
+
+            newSession = new RecordingSession(mucJid, iq.getFrom().toString());
+            recordingSessions.add(newSession);
         }
 
         jirecon.startJireconTask(mucJid);
 
         return createIqResult(iq,
-            RecordingIqUtils.Status.INITIATING.toString(), session.getRid());
+            RecordingIqUtils.Status.INITIATING.toString(), newSession.getRid());
     }
 
     /**
@@ -434,7 +443,8 @@ public class XMPPComponent
         RecordingIqUtils.addAttribute(result, RecordingIqUtils.STATUS_NAME,
             status);
 
-        RecordingIqUtils.addAttribute(result, RecordingIqUtils.RID_NAME, rid);
+        if (rid != null)
+            RecordingIqUtils.addAttribute(result, RecordingIqUtils.RID_NAME, rid);
 
         return result;
     }
