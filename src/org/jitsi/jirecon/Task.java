@@ -29,12 +29,13 @@ import org.jivesoftware.smack.*;
  * <tt>JireconSession</tt>, <tt>JireconRecorder</tt> are the colleagues.
  * 
  * @author lishunyang
+ * @author Boris Grozev
  * 
  */
 public class Task
     implements JireconEventListener, 
-    TaskEventListener,
-    Runnable
+               TaskEventListener,
+               Runnable
 {
     /**
      * The <tt>Logger</tt>, used to log messages to standard output.
@@ -126,6 +127,7 @@ public class Task
         jingleSessionMgr = new JingleSessionManager();
         jingleSessionMgr.addTaskEventListener(this);
         jingleSessionMgr.init(connection);
+        addEventListener(jingleSessionMgr);
 
         recorderMgr = new StreamRecorderManager();
         recorderMgr.addTaskEventListener(this);

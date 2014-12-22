@@ -28,9 +28,11 @@ import org.jivesoftware.smackx.packet.*;
  * Manage Jingle session, join MUC, build Jingle session etc.
  * 
  * @author lishunyang
+ * @author Boris Grozev
  * 
  */
 public class JingleSessionManager
+    implements TaskManagerEvent.JireconEventListener
 {
     /**
      * The <tt>Logger</tt>, used to log messages to standard output.
@@ -39,9 +41,15 @@ public class JingleSessionManager
         .getLogger(JingleSessionManager.class.getName());
     
     /**
-     * Maximum wait time(microsecond).
+     * Maximum wait time in milliseconds.
      */
     private static final int MAX_WAIT_TIME = 10000;
+
+    /**
+     * The human-readable <tt>nickname</tt> which will be set in presence sent
+     * to the MUC. Not to be confused with the ID within the room.
+     */
+    private static final String NICKNAME = "Jirecon Recorder";
     
     /**
      * The <tt>XMPPConnection</tt> is used to send/receive XMPP packets.
@@ -52,7 +60,7 @@ public class JingleSessionManager
      * The <tt>JireconTaskEventListener</tt>, if <tt>JireconRecorder</tt> has
      * something important, it will notify them.
      */
-    private List<TaskEventListener> listeners =
+    private final List<TaskEventListener> listeners =
         new ArrayList<TaskEventListener>();
 
     /**
@@ -79,8 +87,8 @@ public class JingleSessionManager
     /**
      * <tt>Endpoint</tt>s in the meeting.
      */
-    private List<EndpointInfo> endpoints =
-        new ArrayList<EndpointInfo>();
+    private final Map<String, EndpointInfo> endpoints
+        = new HashMap<String, EndpointInfo>();
 
     /**
      * The list of <tt>JireconSessionPacketListener</tt> which is used for
@@ -187,7 +195,7 @@ public class JingleSessionManager
         logger.info("Joined MUC as " + mucJid + "/" + finalNickname);
         Packet presence = new Presence(Presence.Type.available);
         presence.setTo(mucJid);
-        presence.addExtension(new Nick(finalNickname));
+        presence.addExtension(new Nick(NICKNAME));
         connection.sendPacket(presence);
     }
 
@@ -458,9 +466,11 @@ public class JingleSessionManager
         // Otherwise we think that some new participant has joined the MUC.
         else
         {
-            addEndpoint(participantJid, ssrcs);
-            fireEvent(new TaskEvent(
-                TaskEvent.Type.PARTICIPANT_CAME));
+            if(addOrUpdateEndpoint(participantJid, ssrcs))
+            {
+                fireEvent(new TaskEvent(
+                        TaskEvent.Type.PARTICIPANT_CAME));
+            }
         }
     }
     
@@ -746,15 +756,34 @@ public class JingleSessionManager
             public boolean accept(Packet packet)
             {
                 if (null != localFullJid
-                    && !packet.getTo().equals(localFullJid))
+                        && !packet.getTo().equals(localFullJid))
                 {
                     logger.warn("packet rejected: \"to\" is " + packet.getTo()
-                        + ", but we are " + localFullJid);
+                                        + ", but we are " + localFullJid);
                     return false;
                 }
                 return true;
             }
         });
+    }
+
+    /**
+     * Handles events coming from the {@link org.jitsi.jirecon.Task} which owns
+     * us.
+     *
+     * @param evt is the specified event.
+     */
+    @Override
+    public void handleEvent(TaskManagerEvent evt)
+    {
+        /*
+        TaskManagerEvent.Type type = evt.getType();
+        if (TaskManagerEvent.Type.TASK_STARTED.equals(type))
+        {
+
+        }
+        */
+
     }
 
     /**
@@ -799,23 +828,33 @@ public class JingleSessionManager
      */
     public List<EndpointInfo> getEndpoints()
     {
-        return endpoints;
+        synchronized (endpoints)
+        {
+            return new LinkedList<EndpointInfo>(endpoints.values());
+        }
     }
 
     /**
-     * Record a newly found endpoint.
-     * <p>
-     * If there is an existed endpoint with same id, then we will override the
-     * old enpoint.
-     * 
+     * Add a new endpoint to {@link #endpoints}, or update the stored
+     * information for the endpoint if it is already in the list.
+     *
      * @param jid The endpoint id.
-     * @param ssrcs The endpoint ssrcs.
+     * @param ssrcs The SSRCs of the endpoint, according to media type.
+     *
+     * @return <tt>true</tt> if the endpoint was added to the list, and
+     * <tt>false</tt> otherwise.
      */
-    private void addEndpoint(String jid, Map<MediaType, Long> ssrcs)
+    private boolean addOrUpdateEndpoint(String jid, Map<MediaType, Long> ssrcs)
     {
         synchronized (endpoints)
         {
-            EndpointInfo endpoint = new EndpointInfo();
+            boolean added = false;
+            EndpointInfo endpoint = endpoints.get(jid);
+            if (endpoint == null)
+            {
+                endpoint = new EndpointInfo();
+                added = true;
+            }
             
             endpoint.setId(jid);
             for (MediaType mediaType : new MediaType[]
@@ -823,25 +862,16 @@ public class JingleSessionManager
             {
                 endpoint.setSsrc(mediaType, ssrcs.get(mediaType));
             }
-            
-            Iterator<EndpointInfo> iter = endpoints.iterator();
-            while (iter.hasNext())
-            {
-                if (0 == iter.next().getId().compareTo(jid))
-                {
-                    iter.remove();
-                }
-            }
-            
-            endpoints.remove(jid);
-            endpoints.add(endpoint);
+
+            endpoints.put(jid, endpoint);
+            return added;
         }
     }
 
     /**
-     * Remove a specified endpoint.
+     * Remove an endpoint with the given JID specified endpoint.
      * 
-     * @param jid Indicate which endpoint do you want to remove.
+     * @param jid Indicate which endpoint to remove.
      */
     private void removeEndpoint(String jid)
     {
@@ -849,14 +879,7 @@ public class JingleSessionManager
         
         synchronized (endpoints)
         {
-            Iterator<EndpointInfo> iter = endpoints.iterator();
-            while (iter.hasNext())
-            {
-                if (0 == iter.next().getId().compareTo(jid))
-                {
-                    iter.remove();
-                }
-            }
+            endpoints.remove(jid);
         }
     }
 }
