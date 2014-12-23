@@ -196,6 +196,7 @@ public class JingleSessionManager
         Packet presence = new Presence(Presence.Type.available);
         presence.setTo(mucJid);
         presence.addExtension(new Nick(NICKNAME));
+        presence.addExtension(new RecorderExtension(null));
         connection.sendPacket(presence);
     }
 
@@ -776,14 +777,40 @@ public class JingleSessionManager
     @Override
     public void handleEvent(TaskManagerEvent evt)
     {
-        /*
         TaskManagerEvent.Type type = evt.getType();
         if (TaskManagerEvent.Type.TASK_STARTED.equals(type))
         {
-
+            sendRecordingOnPresence();
         }
-        */
+        else if (TaskManagerEvent.Type.TASK_ABORTED.equals(type)
+            || TaskManagerEvent.Type.TASK_FINISED.equals(type))
+        {
+            sendRecordingOffPresence();
+        }
+    }
 
+    /**
+     * Send local presence to the MUC, indicating that recording is turned on.
+     */
+    private void sendRecordingOnPresence()
+    {
+        Packet presence = new Presence(Presence.Type.available);
+        presence.setTo(muc.getRoom());
+        presence.addExtension(new Nick(NICKNAME));
+        presence.addExtension(new RecorderExtension("true"));
+        connection.sendPacket(presence);
+    }
+
+    /**
+     * Send local presence to the MUC, indicating that recording is turned off.
+     */
+    private void sendRecordingOffPresence()
+    {
+        Packet presence = new Presence(Presence.Type.available);
+        presence.setTo(muc.getRoom());
+        presence.addExtension(new Nick(NICKNAME));
+        presence.addExtension(new RecorderExtension("false"));
+        connection.sendPacket(presence);
     }
 
     /**

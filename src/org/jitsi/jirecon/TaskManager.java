@@ -267,19 +267,25 @@ public class TaskManager
     }
 
     /**
-     * Add packet provider to connection.
+     * Register the <tt>PacketExtensionProvider</tt>s.
      */
     private void initiatePacketProviders()
     {
         logger.info(this.getClass() + "initiatePacketProviders");
         ProviderManager providerManager = ProviderManager.getInstance();
 
-        providerManager.addIQProvider(JingleIQ.ELEMENT_NAME,
-            JingleIQ.NAMESPACE, new JingleIQProvider());
-        providerManager.addExtensionProvider(MediaExtension.ELEMENT_NAME,
-            MediaExtension.NAMESPACE, new MediaExtensionProvider());
-        providerManager.addExtensionProvider(SctpMapExtension.ELEMENT_NAME,
-            SctpMapExtension.NAMESPACE, new SctpMapExtensionProvider());
+        providerManager.addIQProvider(
+                JingleIQ.ELEMENT_NAME,
+                JingleIQ.NAMESPACE,
+                new JingleIQProvider());
+        providerManager.addExtensionProvider(
+                MediaExtension.ELEMENT_NAME,
+                MediaExtension.NAMESPACE,
+                new MediaExtensionProvider());
+        providerManager.addExtensionProvider(
+                SctpMapExtension.ELEMENT_NAME,
+                SctpMapExtension.NAMESPACE,
+                new SctpMapExtensionProvider());
     }
 
     /**
