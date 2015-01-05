@@ -27,6 +27,7 @@ import org.jitsi.util.*;
  * 2. Create <tt>IceUdpTransportPacketExtension</tt>
  * 
  * @author lishunyang
+ * @author Boris Grozev
  */
 public class IceUdpTransportManager
 {
@@ -83,14 +84,10 @@ public class IceUdpTransportManager
     public IceUdpTransportManager()
     {
         iceAgent = new Agent();
-        /*
-         * We should set "controlling" to "false", because iceAgent is act as an
-         * client. See Interactive Connectivity Establishment (ICE): A Protocol
-         * for Network Address Translator (NAT) Traversal for Offer/Answer
-         * Protocols(http://tools.ietf.org/html/rfc5245#section-7.1.2.2)
-         */
+
+        // TODO: set the role of the Agent according to the offer we received.
         iceAgent.setControlling(false);
-        
+
         LibJitsi.start();
         ConfigurationService configuration = LibJitsi.getConfigurationService();
         MIN_STREAM_PORT =
@@ -132,26 +129,24 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Start establishing ICE connectivity.
+     * Starts ICE connectivity establishment and returns immediately.
      * <p>
      * <strong>Warning:</strong> This method is asynchronous, it will return
      * immediately while it doesn't means the ICE connectivity has been
-     * established successfully. On the contrary, sometime it will never
-     * finished. Fortunately, we need only one selected candidate pair, so we
-     * don't care whether it terminates.
+     * established successfully.
      */
     public void startConnectivityEstablishment()
     {
         logger.debug("startConnectivityEstablishment");
-        
+
         iceAgent.startConnectivityEstablishment();
     }
 
     /**
-     * Wait until {@link #iceAgent} enters a final state (CONNECTED, TERMINATED,
-     * or FAILED). Wait for at most 10 seconds.
+     * Waits until {@link #iceAgent} enters a final state (CONNECTED, TERMINATED,
+     * or FAILED). Waits for at most 10 seconds.
      *
-     * Note: connectivity has to have been started using
+     * Note: connectivity establishment has to have been started using
      * {@link #startConnectivityEstablishment()} before this method is called.
      *
      * @return <tt>true</tt> if ICE connectivity has been established, and
@@ -235,12 +230,7 @@ public class IceUdpTransportManager
             iceAgent.createComponent(stream, Transport.UDP, getPreferredPort(),
                 MIN_STREAM_PORT, MAX_STREAM_PORT);
 
-            /*
-             * As for "data" type, we only need to create one component for
-             * establish connection, while as for "audio" and "video", we need
-             * two components, one for RTP transmission and one for RTCP
-             * transmission.
-             */
+            // We don't need an RTCP component for DATA.
             if (MediaType.AUDIO == mediaType || MediaType.VIDEO == mediaType)
             {
                 lastUsedPort += 1;
@@ -310,7 +300,7 @@ public class IceUdpTransportManager
              * matching the rel-addr/rel-port attribute.
              */
             Collections.sort(candidates);
-            
+
             for (CandidatePacketExtension candidate : candidates)
             {
                 if (candidate.getGeneration() != iceAgent.getGeneration())
@@ -360,12 +350,14 @@ public class IceUdpTransportManager
      */
     private IceMediaStream getIceMediaStream(MediaType mediaType)
     {
-        if (null == iceAgent.getStream(mediaType.toString()))
+        IceMediaStream stream = iceAgent.getStream(mediaType.toString());
+
+        if (stream == null)
         {
-            iceAgent.createMediaStream(mediaType.toString());
+            stream = iceAgent.createMediaStream(mediaType.toString());
         }
-        
-        return iceAgent.getStream(mediaType.toString());
+
+        return stream;
     }
 
     /**
@@ -374,7 +366,8 @@ public class IceUdpTransportManager
      * @param mediaType
      * @return List of <tt>CandidatePacketExtension</tt>
      */
-    private List<CandidatePacketExtension> createLocalCandidatePacketExts(MediaType mediaType)
+    private List<CandidatePacketExtension>
+        createLocalCandidatePacketExts(MediaType mediaType)
     {
         List<CandidatePacketExtension> candidatePEs =
             new ArrayList<CandidatePacketExtension>();
@@ -424,7 +417,8 @@ public class IceUdpTransportManager
     /**
      * Get <tt>MediaStreamTarget</tt> of specified <tt>MediaType</tt>.
      * <p>
-     * If there is no specified <tt>MediaStreamTarget</tt>, we will create a new one.
+     * If there is no specified <tt>MediaStreamTarget</tt>, we will create a
+     * new one.
      * 
      * @param mediaType The specified <tt>MediaType</tt>.
      * @return
@@ -432,7 +426,7 @@ public class IceUdpTransportManager
     public MediaStreamTarget getStreamTarget(MediaType mediaType)
     {
         logger.debug("getStreamTarget");
-        
+
         if (mediaStreamTargets.containsKey(mediaType))
             return mediaStreamTargets.get(mediaType);
 
@@ -440,46 +434,38 @@ public class IceUdpTransportManager
         MediaStreamTarget streamTarget = null;
         if (stream != null)
         {
-            List<InetSocketAddress> streamTargetAddresses =
-                new ArrayList<InetSocketAddress>();
+            InetSocketAddress rtpAddress = null;
+            InetSocketAddress rtcpAddress = null;
 
             for (Component component : stream.getComponents())
             {
                 if (component != null)
                 {
                     CandidatePair selectedPair = component.getSelectedPair();
+                    int id = component.getComponentID();
 
                     if (selectedPair != null)
                     {
-                        InetSocketAddress streamTargetAddress =
+                        InetSocketAddress address =
                             selectedPair.getRemoteCandidate()
                                 .getTransportAddress();
 
-                        if (streamTargetAddress != null)
+                        if (address != null)
                         {
-                            streamTargetAddresses.add(streamTargetAddress);
+                            if (id == Component.RTP)
+                                rtpAddress = address;
+                            else if (id == Component.RTCP)
+                                rtcpAddress = address;
                         }
                     }
                 }
             }
-            if (streamTargetAddresses.size() == 2)
-            {
-                streamTarget =
-                    new MediaStreamTarget(
-                        streamTargetAddresses.get(0) /* RTP */,
-                        streamTargetAddresses.get(1) /* RTCP */);
-                mediaStreamTargets.put(mediaType, streamTarget);
-            }
-            else if (streamTargetAddresses.size() == 1)
-            {
-                streamTarget =
-                    new MediaStreamTarget(
-                        streamTargetAddresses.get(0),
-                        null);
-                mediaStreamTargets.put(mediaType, streamTarget);
-            }
+
+            streamTarget =
+                new MediaStreamTarget(rtpAddress, rtcpAddress);
+            mediaStreamTargets.put(mediaType, streamTarget);
         }
-        
+
         return streamTarget;
     }
 
@@ -496,7 +482,7 @@ public class IceUdpTransportManager
         throws Exception
     {
         logger.debug("getStreamConnector " + mediaType);
-        
+
         if (streamConnectors.containsKey(mediaType))
             return streamConnectors.get(mediaType);
 
@@ -515,11 +501,7 @@ public class IceUdpTransportManager
 
         rtpPair = stream.getComponent(Component.RTP).getSelectedPair();
         rtpSocket = rtpPair.getIceSocketWrapper().getUDPSocket();
-        
-        /*
-         * Yeah, only "audio" and "video" type need the second candidate pair
-         * for RTCP connection.
-         */
+
         if (MediaType.AUDIO == mediaType || MediaType.VIDEO == mediaType)
         {
             rtcpPair = stream.getComponent(Component.RTCP).getSelectedPair();

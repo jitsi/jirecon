@@ -34,11 +34,12 @@ public class DtlsControlManager
      * @param fingerprintPE The fingerprint packet extension comes from remote
      *            peer.
      */
-    public void setRemoteFingerprint(MediaType mediaType, DtlsFingerprintPacketExtension fingerprintPE)
+    public void setRemoteFingerprint(MediaType mediaType,
+                                     DtlsFingerprintPacketExtension fingerprintPE)
     {
         final DtlsControl dtlsControl = getDtlsControl(mediaType);
         final Map<String, String> fingerprints = new HashMap<String, String>();
-        
+
         fingerprints.put(fingerprintPE.getHash(),
             fingerprintPE.getFingerprint());
         dtlsControl.setRemoteFingerprints(fingerprints);
@@ -78,12 +79,12 @@ public class DtlsControlManager
     {
         Map<MediaType, DtlsControl> controls =
             new HashMap<MediaType, DtlsControl>();
-        
+
         for (MediaType mediaType : MediaType.values())
         {
             controls.put(mediaType, getDtlsControl(mediaType));
         }
-        
+
         return controls;
     }
 
@@ -159,23 +160,17 @@ public class DtlsControlManager
         {
             if (MediaType.DATA == mediaType)
             {
-                /*
-                 * As for "data" type, We have to create DtlsControlImpl directly instead of through
-                 * MediaService, because MediaService can only create
-                 * DtlsControl without Srtp support(The argument in construct
-                 * method is "false").
-                 */
-                control = new DtlsControlImpl(true);
+                // Do add SRTP extensions, because the server-side code
+                // (org.jitsi.impl.neomedia.transform.dtls.TlsServerImpl)
+                // expects them in all cases.
+                control = new DtlsControlImpl(false);
             }
             else
             {
                 LibJitsi.start();
-                
-                /*
-                 * As for the other media type(such as "audio" or "video"), we
-                 * can use MediaService to create DtlsControl.
-                 * TODO: Why not we just create DtlsControl directly in all cases?
-                 */
+
+                 // As for the other media types (such as "audio" or "video"), we
+                 // can use MediaService to create DtlsControl.
                 MediaService mediaService = LibJitsi.getMediaService();
                 control =
                     (DtlsControl) mediaService
