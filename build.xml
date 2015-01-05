@@ -72,9 +72,9 @@
 		</jar>
 	</target>
 
-	<target name="build" depends="compile,jar" description="Incrementally compile and jar/package the project." />
+	<target name="make" depends="compile,jar" description="Incrementally compile and jar/package the project." />
 
-	<target name="rebuild" depends="clean, build" description="Clean and build the project." />
+	<target name="rebuild" depends="clean,make" description="Clean and build the project." />
 
 	<!-- JAVADOC -->
 	<target name="javadoc" description="Generates project javadoc.">
@@ -103,7 +103,7 @@
 		</javadoc>
 	</target>
 
-	<target name="dist.lin64" depends="build">
+	<target name="dist.lin64" depends="make">
 		<zip destfile="${dist}/linux/${packname.lin64}.zip">
 			<zipfileset file="jirecon.jar" prefix="${packname.lin64}" />
 			<zipfileset dir="lib" prefix="${packname.lin64}/lib">
@@ -113,7 +113,7 @@
 		</zip>
 	</target>
 
-	<target name="dist.macosx" depends="build">
+	<target name="dist.macosx" depends="make">
 		<zip destfile="${dist}/macosx/${packname.macosx}.zip">
 			<zipfileset file="jirecon.jar" prefix="${packname.macosx}" />
 			<zipfileset dir="lib" prefix="${packname.macosx}/lib">
@@ -123,7 +123,7 @@
 		</zip>
 	</target>
 
-	<target name="dist.src" depends="build">
+	<target name="dist.src" depends="make">
 		<zip destfile="${dist}/src/${packname.src}.zip">
 			<zipfileset dir="." prefix="${packname.src}">
 				<exclude name="classes/" />
