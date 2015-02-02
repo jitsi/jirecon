@@ -7,6 +7,8 @@ package org.jitsi.jirecon;
 
 import java.text.*;
 import java.util.*;
+
+import net.java.sip.communicator.impl.protocol.jabber.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.jirecon.TaskManagerEvent.*;
 import org.jitsi.jirecon.protocol.extension.*;
@@ -16,6 +18,7 @@ import org.jitsi.service.libjitsi.*;
 import org.jitsi.util.*;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.provider.*;
+import org.jivesoftware.smackx.*;
 
 /**
  * The manager of <tt>Task</tt>, each <tt>Task</tt> represents a
@@ -243,6 +246,30 @@ public class TaskManager
             new ConnectionConfiguration(xmppHost, xmppPort);
         connection = new XMPPConnection(conf);
         connection.connect();
+
+        // Register Jingle Features.
+        ServiceDiscoveryManager discoManager
+            = ServiceDiscoveryManager.getInstanceFor(connection);
+        if (discoManager != null)
+        {
+            discoManager.addFeature(
+                ProtocolProviderServiceJabberImpl.URN_XMPP_JINGLE_RTP_VIDEO);
+            discoManager.addFeature(
+                ProtocolProviderServiceJabberImpl.URN_XMPP_JINGLE_RTP_AUDIO);
+            discoManager.addFeature(
+                ProtocolProviderServiceJabberImpl.URN_XMPP_JINGLE_ICE_UDP_1);
+
+            // XXX(gp) I'm hard coding the dtls-sctp feature here because it is
+            // not yet part of ProtocolProviderServiceJabberImpl. I'm unsure if
+            // it should be.
+            discoManager.addFeature("urn:xmpp:jingle:transports:dtls-sctp:1");
+        }
+        else
+        {
+            logger.warn("Could not register Jingle features because the " +
+                "ServiceDiscoveryManager for this XMPPConnection could not " +
+                "be found.");
+        }
     }
 
     /**
