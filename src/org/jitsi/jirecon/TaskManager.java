@@ -78,7 +78,7 @@ public class TaskManager
      * @throws Exception if failed to initialize Jirecon.
      * 
      */
-    public void init(String configurationPath) 
+    public void init(String configurationPath)
         throws Exception
     {
         if (isInitialized) 
@@ -118,11 +118,14 @@ public class TaskManager
             configuration.getString(ConfigurationKey.XMPP_HOST_KEY);
         final int xmppPort =
             configuration.getInt(ConfigurationKey.XMPP_PORT_KEY, -1);
-        
+        final String xmppUser =
+            configuration.getString(ConfigurationKey.XMPP_USER_KEY);
+        final String xmppPass =
+            configuration.getString(ConfigurationKey.XMPP_PASS_KEY);
+
         try
         {
-            connect(xmppHost, xmppPort);
-            loginAnonymously();
+            connect(xmppHost, xmppPort, xmppUser, xmppPass);
         }
         catch (XMPPException e)
         {
@@ -239,7 +242,9 @@ public class TaskManager
      * @param xmppPort is the port of XMPP server.
      * @throws XMPPException if failed to build connection.
      */
-    private void connect(String xmppHost, int xmppPort) throws XMPPException
+    private void connect(String xmppHost, int xmppPort,
+                         String xmppUser, String xmppPass)
+        throws XMPPException
     {
         logger.info(this.getClass() + "connect");
         ConnectionConfiguration conf =
@@ -270,6 +275,21 @@ public class TaskManager
                 "ServiceDiscoveryManager for this XMPPConnection could not " +
                 "be found.");
         }
+
+        // Login either anonymously or with a provided username & password.
+
+        if (StringUtils.isNullOrEmpty(xmppUser)
+            || StringUtils.isNullOrEmpty(xmppPass))
+        {
+            logger.info(this.getClass() + " login anonymously.");
+            connection.loginAnonymously();
+        }
+        else
+        {
+            logger.info(this.getClass() + " login with user/pass.");
+            connection.login(xmppUser, xmppPass);
+        }
+
     }
 
     /**
@@ -280,17 +300,6 @@ public class TaskManager
         logger.info(this.getClass() + "closeConnection");
         if (connection.isConnected())
             connection.disconnect();
-    }
-
-    /**
-     * Login XMPP server anonymously.
-     * 
-     * @throws XMPPException
-     */
-    private void loginAnonymously() throws XMPPException
-    {
-        logger.info(this.getClass() + "login");
-        connection.loginAnonymously();
     }
 
     /**

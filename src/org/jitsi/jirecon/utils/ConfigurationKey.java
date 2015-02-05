@@ -36,6 +36,18 @@ public class ConfigurationKey
     public final static String XMPP_PORT_KEY = PREFIX + ".XMPP_PORT";
 
     /**
+     * The name of configuration property that specifies the user name used by
+     * jirecon to login to XMPP server.
+     */
+    public final static String XMPP_USER_KEY = PREFIX + ".XMPP_USER";
+
+    /**
+     * The name of configuration property that specifies login password of the
+     * jirecon user. If not provided then anonymous login method is used.
+     */
+    public final static String XMPP_PASS_KEY = PREFIX + ".XMPP_PASS";
+
+    /**
      * The directory name indicates where to output recording files.
      */
     public final static String SAVING_DIR_KEY = PREFIX + ".OUTPUT_DIR";
