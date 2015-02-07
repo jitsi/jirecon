@@ -50,10 +50,9 @@ public class MediaExtensionProvider
 
                 if (count > 0)
                 {
-                    //TODO do not depend on order
-                    String type = parser.getAttributeValue(0);
-                    String ssrc = parser.getAttributeValue(1);
-                    String direction = parser.getAttributeValue(2);
+                    String type = parser.getAttributeValue("", "type");
+                    String ssrc = parser.getAttributeValue("", "ssrc");
+                    String direction = parser.getAttributeValue("", "direction");
                     if (type.equalsIgnoreCase("audio")
                         || type.equalsIgnoreCase("video"))
                     {
