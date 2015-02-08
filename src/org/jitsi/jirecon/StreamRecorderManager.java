@@ -257,6 +257,8 @@ public class StreamRecorderManager
             Recorder recorder = mediaService.createRecorder(e.getValue());
             recorders.put(e.getKey(), recorder);
         }
+
+        updateSynchronizers();
     }
 
     /**
@@ -537,6 +539,14 @@ public class StreamRecorderManager
         synchronized (endpoints)
         {
             endpoints = newEndpoints;
+            updateSynchronizers();
+        }
+    }
+
+    void updateSynchronizers()
+    {
+        synchronized (endpoints)
+        {
             for (EndpointInfo endpoint : endpoints)
             {
                 final String endpointId = endpoint.getId();
@@ -544,9 +554,17 @@ public class StreamRecorderManager
                     .entrySet())
                 {
                     Recorder recorder = recorders.get(ssrc.getKey());
-                    Synchronizer synchronizer = recorder.getSynchronizer();
-                    synchronizer.setEndpoint(ssrc.getValue(), endpointId);
-
+                    // During the ICE connectivity establishment and after we've
+                    // joined the MUC, there is a high probability that we
+                    // process a media type/ssrc for which we *don't* have a
+                    // recorder yet (because we get XMPP presence packets before
+                    // the recorders are prepared (see method
+                    // prepareRecorders())
+                    if (recorder != null)
+                    {
+                        Synchronizer synchronizer = recorder.getSynchronizer();
+                        synchronizer.setEndpoint(ssrc.getValue(), endpointId);
+                    }
                     logger.info("endpoint: " + endpointId + " " + ssrc.getKey()
                         + " " + ssrc.getValue());
                 }
