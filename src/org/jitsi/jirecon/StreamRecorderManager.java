@@ -242,6 +242,21 @@ public class StreamRecorderManager
     }
 
     /**
+     * The shared synchronizer between the audio and the video recorder.
+     */
+    private Synchronizer synchronizer;
+
+    private Synchronizer getSynchronizer()
+    {
+        if (synchronizer == null)
+        {
+            synchronizer = new SynchronizerImpl();
+        }
+
+        return synchronizer;
+    }
+
+    /**
      * Make the <tt>JireconRecorderImpl</tt> ready to start recording media
      * streams.
      * 
@@ -255,6 +270,10 @@ public class StreamRecorderManager
         for (Entry<MediaType, RTPTranslator> e : rtpTranslators.entrySet())
         {
             Recorder recorder = mediaService.createRecorder(e.getValue());
+            // The idea is for the two recorders (for audio and video) to share
+            // a Synchronizer instance. Otherwise audio and video will not be
+            // synced.
+            recorder.setSynchronizer(getSynchronizer());
             recorders.put(e.getKey(), recorder);
         }
 
