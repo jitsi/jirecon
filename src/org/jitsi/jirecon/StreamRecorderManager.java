@@ -25,7 +25,8 @@ import org.json.simple.parser.*;
  /**
  * <tt>StreamRecorderManager</tt> is used to record media
  * streams and save them into local files.
- * 
+ *
+ * @todo Review thread safety.
  * @author lishunyang
  */
 public class StreamRecorderManager
@@ -77,13 +78,18 @@ public class StreamRecorderManager
      * The <tt>JireconTaskEventListener</tt>, if <tt>JireconRecorder</tt> has
      * something important, it will notify them.
      */
-    private List<TaskEventListener> listeners =
+    private final List<TaskEventListener> listeners =
         new ArrayList<TaskEventListener>();
 
     /**
      * Active endpoints in the meeting currently.
      */
     private List<EndpointInfo> endpoints = new ArrayList<EndpointInfo>();
+
+    /**
+     * The endpoints sync root.
+     */
+    private Object endpointsSyncRoot = new Object();
 
     /**
      * Map between <tt>MediaType</tt> and local recorder's ssrc.
@@ -503,7 +509,7 @@ public class StreamRecorderManager
      */
     private long getAssociatedSsrc(long ssrc, MediaType mediaType)
     {
-        synchronized (endpoints)
+        synchronized (endpointsSyncRoot)
         {
             for (EndpointInfo endpoint : endpoints)
             {
@@ -535,7 +541,7 @@ public class StreamRecorderManager
      */
     private long getEndpointSsrc(String endpointId, MediaType mediaType)
     {
-        synchronized (endpoints)
+        synchronized (endpointsSyncRoot)
         {
             for (EndpointInfo endpoint : endpoints)
             {
@@ -555,7 +561,7 @@ public class StreamRecorderManager
      */
     public void setEndpoints(List<EndpointInfo> newEndpoints)
     {
-        synchronized (endpoints)
+        synchronized (endpointsSyncRoot)
         {
             endpoints = newEndpoints;
             updateSynchronizers();
@@ -564,7 +570,7 @@ public class StreamRecorderManager
 
     void updateSynchronizers()
     {
-        synchronized (endpoints)
+        synchronized (endpointsSyncRoot)
         {
             for (EndpointInfo endpoint : endpoints)
             {
