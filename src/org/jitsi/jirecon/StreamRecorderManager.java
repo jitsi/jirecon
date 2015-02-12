@@ -511,17 +511,24 @@ public class StreamRecorderManager
     {
         synchronized (endpointsSyncRoot)
         {
-            for (EndpointInfo endpoint : endpoints)
+            if (endpoints != null && !endpoints.isEmpty())
             {
-                Map<MediaType, Long> ssrcs = endpoint.getSsrcs();
-
-                if (ssrcs.size() < 2)
-                    continue;
-
-                if (ssrcs.containsValue(ssrc))
+                for (EndpointInfo endpoint : endpoints)
                 {
-                    return ssrcs.get(mediaType);
+                    Map<MediaType, Long> ssrcs = endpoint.getSsrcs();
+
+                    if (ssrcs.size() < 2)
+                        continue;
+
+                    if (ssrcs.containsValue(ssrc))
+                    {
+                        return ssrcs.get(mediaType);
+                    }
                 }
+            }
+            else
+            {
+                logger.warn("The endpoints collection is empty!");
             }
         }
 
@@ -543,16 +550,54 @@ public class StreamRecorderManager
     {
         synchronized (endpointsSyncRoot)
         {
-            for (EndpointInfo endpoint : endpoints)
+            if (endpoints != null && !endpoints.isEmpty())
             {
-                if (0 == endpoint.getId().compareTo(endpointId)
-                    || 0 == endpoint.getBareId().compareTo(endpointId))
+                for (EndpointInfo endpoint : endpoints)
                 {
-                    return endpoint.getSsrc(mediaType);
+                    if (0 == endpoint.getId().compareTo(endpointId)
+                        || 0 == endpoint.getBareId().compareTo(endpointId))
+                    {
+                        return endpoint.getSsrc(mediaType);
+                    }
                 }
+            }
+            else
+            {
+                logger.warn("The endpoints collection is empty!");
             }
 
             return -1;
+        }
+    }
+
+    /**
+     * Finds the endpoint ID by SSRC.
+     *
+     * @param ssrc the SSRC of the endpoint.
+     * @param mediaType the SSRC media type.
+     * @return the endpoint ID or an empty string if the endpoint ID is not
+     * found
+     */
+    private String getEndpointId(long ssrc, MediaType mediaType)
+    {
+        synchronized (endpointsSyncRoot)
+        {
+            if (endpoints != null && !endpoints.isEmpty())
+            {
+                for (EndpointInfo endpoint : endpoints)
+                {
+                    if (endpoint.getSsrc(mediaType) == ssrc)
+                    {
+                        return endpoint.getId();
+                    }
+                }
+            }
+            else
+            {
+                logger.warn("The endpoints collection is empty!");
+            }
+
+            return "";
         }
     }
 
@@ -745,7 +790,7 @@ public class StreamRecorderManager
                  */
                 logger.debug("SPEAKER_CHANGED audio ssrc: "
                     + event.getAudioSsrc());
-                
+
                 final long audioSsrc = event.getAudioSsrc();
                 final long videoSsrc =
                     getAssociatedSsrc(audioSsrc, MediaType.VIDEO);
@@ -762,6 +807,46 @@ public class StreamRecorderManager
                 // for the moment just use the first SSRC
                 event.setSsrc(videoSsrc);
             }
+
+            String endpointId = event.getEndpointId();
+            if (StringUtils.isNullOrEmpty(endpointId))
+            {
+                // Here we find and set the event.endpointId field of the event,
+                // if hasn't already been set.
+                //
+                // The value of the SSRC field depends on the MediaType of the
+                // Event. If it is VIDEO -- it is the video SSRC, if it is AUDIO
+                // then it is the audio SSRC. The audioSsrc field is just an
+                // additional field, which is only used for certain VIDEO
+                // events.
+
+                // If the event.audioSsrc field is set, try to find the endpoint
+                // ID by that field.
+                long audioSsrc = event.getAudioSsrc();
+                if (audioSsrc != -1) // we need a constant for easier grepping
+                {
+                    endpointId = getEndpointId(audioSsrc, MediaType.AUDIO);
+                    if (!StringUtils.isNullOrEmpty(endpointId))
+                    {
+                        event.setEndpointId(endpointId);
+                    }
+                }
+
+                // If we failed to find the endpoint ID by the event.audioSsrc
+                // field and if the event.ssrc field is set, try to find the
+                // endpoint ID by the event.ssrc field.
+                long ssrc = event.getSsrc();
+                if (StringUtils.isNullOrEmpty(endpointId) && ssrc != -1)
+                {
+                    // First assume the event.ssrc field contains an audio SSRC.
+                    endpointId = getEndpointId(ssrc, event.getMediaType());
+                    if (!StringUtils.isNullOrEmpty(endpointId))
+                    {
+                        event.setEndpointId(endpointId);
+                    }
+                }
+            }
+
             return handler.handleEvent(event);
         }
     }
