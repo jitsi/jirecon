@@ -198,6 +198,22 @@ public class StreamRecorderManager
         stopRecordingStreams();
         stopReceivingStreams();
         closeDataChannel();
+
+        // Create an empty ".recording_finished" file in the output directory in
+        // order to mark the directory as containing a finished recording.
+        File recordingFinished
+                = new File(outputDir + File.pathSeparator + ".recording_finished");
+        try
+        {
+            if (!recordingFinished.createNewFile())
+                logger.warn(".recording_finished already exists");
+        }
+        catch (IOException ioe)
+        {
+            logger.warn("Failed to create .recording_finished: " + ioe);
+        }
+
+        /*
         /*
          * NOTE: We don't need to stop translators because those media streams
          * will do it.
