@@ -38,4 +38,4 @@ libs="$SCRIPT_DIR/lib/native/$architecture"
 mainClass="org.jitsi.jirecon.xmppcomponent.ComponentLauncher"
 cp=$(JARS=($SCRIPT_DIR/jirecon.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo "${JARS[*]}")
 
-java -Djava.library.path=$libs -cp $cp $mainClass $@
+LD_LIBRARY_PATH=$libs java -Djava.library.path=$libs -cp $cp $mainClass $@
