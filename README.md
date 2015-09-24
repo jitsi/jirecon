@@ -1,6 +1,6 @@
 # jirecon
 
-Jitsi Recording Container. A Standalone recording container for Jitsi Videobridge conferences that would allow us to run a video recorder as a separat MUC participant.
+Jitsi Recording Container. A Standalone recording container for Jitsi Videobridge conferences that would allow us to run a video recorder as a separate MUC participant.
 
 ----------
 
@@ -21,7 +21,7 @@ Jirecon is a server-side application to record audio/video streams and meta data
 In short, Jirecon firstly joins the conference as an dummy participant, then it captures various audio/video streams and output them into local files. 
 
 ## Top-down introduction
-Jirecon can record different conference simontaneously, each recording progress is called a "task". There is a "task manager" which acts as user interface for starting or stopping those tasks.
+Jirecon can record different conference simultaneously, each recording progress is called a "task". There is a "task manager" which acts as user interface for starting or stopping those tasks.
 ```
 /*
  *                      /     +------+
@@ -55,7 +55,7 @@ As for "Stream recorder manager", it's pretty simple too:
   2. Record media streams.
   3. Record meta data.
   
-The meta data is actually a human readable message that descripts the whole recording procedure. We'll talk about it later.
+The meta data is actually a human readable message that describes the whole recording procedure. We'll talk about it later.
 
 So we got a primitive class graph:
 ```
@@ -75,7 +75,7 @@ So we got a primitive class graph:
 
 ## Some details
 ### Managers
-You may have noticed that there are so many "manager"s in Jirecon project. Well, that's because most classes in Jirecon are organized hieratically, in other words, under "mediator pattern". For example:
+You may have noticed that there are so many "manager"s in Jirecon project. Well, that's because most classes in Jirecon are organized hierarchically, in other words, under "mediator pattern". For example:
 ```
 /*
  *                   +-----------+
@@ -101,7 +101,7 @@ You may have noticed that there are so many "manager"s in Jirecon project. Well,
 Upper class can access lower class directly, not the other way. Lower class can only send message to upper class through event mechanism. That's why most of the "manager"s implement listener-interface.
 
 ### Recording Procedure
-The StreamRecorderManager reuses audio/video recorders in libjitsi. Audio streams and video streams are recorded separeately in two recorders, audio recorder and video recorder. The recorder can recognize different media stream from different conference participant by its "ssrc" property. Here is a roughly graph.
+The StreamRecorderManager reuses audio/video recorders in libjitsi. Audio streams and video streams are recorded separately in two recorders, audio recorder and video recorder. The recorder can recognize different media stream from different conference participant by its "ssrc" property. Here is a roughly graph.
 ```
 /*
  *                          \
