@@ -94,7 +94,7 @@ You may have noticed that there are so many "manager"s in Jirecon project. Well,
  *                                |Recorder|
  *                                +--------+
  *
- *            pic 3. Class archetecture
+ *            pic 3. Class architecture
  */
 ```
 
