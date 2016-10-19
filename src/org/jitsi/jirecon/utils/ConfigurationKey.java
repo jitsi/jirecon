@@ -62,6 +62,17 @@ public class ConfigurationKey
     public final static String XMPP_PASS_KEY = PREFIX + ".XMPP_PASS";
 
     /**
+     * The name of configuration property that specifies the xmpp service name
+     */
+    public final static String XMPP_SERVICE = PREFIX + ".XMPP_SERVICE";
+
+    /**
+     * The name of configuration property that specifies whether or not enter in
+     * debug mode
+     */
+    public final static String XMPP_DEBUG = PREFIX + ".XMPP_DEBUG";
+
+    /**
      * The directory name indicates where to output recording files.
      */
     public final static String SAVING_DIR_KEY = PREFIX + ".OUTPUT_DIR";

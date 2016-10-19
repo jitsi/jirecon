@@ -133,10 +133,14 @@ public class TaskManager
         final int xmppPort = cfg.getInt(ConfigurationKey.XMPP_PORT_KEY, -1);
         final String xmppUser = cfg.getString(ConfigurationKey.XMPP_USER_KEY);
         final String xmppPass = cfg.getString(ConfigurationKey.XMPP_PASS_KEY);
+        final String xmppService = cfg.getString(ConfigurationKey.XMPP_SERVICE);
+        final boolean xmppDebug = cfg.getBoolean(ConfigurationKey.XMPP_DEBUG, false);
+
+        XMPPConnection.DEBUG_ENABLED = xmppDebug;
 
         try
         {
-            connect(xmppHost, xmppPort, xmppUser, xmppPass);
+            connect(xmppHost, xmppPort, xmppUser, xmppPass, xmppService);
         }
         catch (XMPPException e)
         {
@@ -260,11 +264,12 @@ public class TaskManager
      * @throws XMPPException in case of failure to connect and login.
      */
     private void connect(String xmppHost, int xmppPort,
-                         String xmppUser, String xmppPass)
+                         String xmppUser, String xmppPass,
+                         String xmppService)
         throws XMPPException
     {
         ConnectionConfiguration conf =
-            new ConnectionConfiguration(xmppHost, xmppPort);
+            new ConnectionConfiguration(xmppHost, xmppPort, xmppService);
         connection = new XMPPConnection(conf);
         connection.connect();
 
